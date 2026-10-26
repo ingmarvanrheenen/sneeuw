@@ -1,0 +1,24 @@
+# Sneeuw Daddy
+
+Snowboard-PWA (React 19 + Vite + TS + Tailwind v4 + Dexie, optioneel Supabase). Zie README.md, docs/ARCHITECTURE.md en docs/DESIGN.md.
+
+## Commando's
+
+- `npm run dev`: dev-server
+- `npm test`: vitest
+- `npm run lint`: prettier-check + typecheck
+- `npm run format`: prettier write
+- `npm run build`: productie-build
+
+Draai vóór elke commit `npm run lint && npm test && npm run build`.
+
+## Afspraken
+
+- **Nooit emoji** in UI, content of toasts. Iconen komen uit `src/design/icons.tsx` (24-grid, stroke 1.8, square caps, miter joins). Nieuw icoon nodig? Daar toevoegen. `src/test/design.test.ts` bewaakt dit.
+- Kleuren alleen via tokens (`bg-surface`, `text-muted`, `text-accent-text`, ...), nooit hardcoded, behalve de pistekleuren.
+- Alle UI-tekst in het Nederlands, chill en direct, met Engelse snowboardtermen waar dat normaal is.
+- Data altijd via `src/lib/repo.ts` (`create`/`update`/`remove`/`setTrickStatus`), zodat de dirty-vlag en sync kloppen. Nooit hard deleten.
+- XP/levels/badges worden afgeleid in `src/lib/progress.ts`, niet opgeslagen.
+- iOS eerst: safe areas (`pt-safe`/`pb-safe`), inputs ≥ 16px, geen afhankelijkheid van install-prompts of vibratie.
+- Nieuwe trick: voeg toe aan `src/content/tricks.ts` met een animatie uit `src/content/anims.ts`; de content-tests checken de rest.
+- De Anthropic API-key leeft alleen als Supabase secret, nooit in de client.

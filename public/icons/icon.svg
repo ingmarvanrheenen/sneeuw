@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="112" fill="#0b0d0a"/>
+  <g fill="none" stroke="#9be564" stroke-linecap="round">
+    <!-- sneeuwvlok -->
+    <g stroke-width="18" transform="translate(256 200)">
+      <path d="M0-92V92M-80-46 80 46M-80 46 80-46"/>
+      <path d="M-22-74 0-52 22-74M-22 74 0 52 22 74" stroke-width="14"/>
+      <path d="M-75-16-46-28-57-58M75 16 46 28 57 58M-75 16-46 28-57 58M75-16 46-28 57-58" stroke-width="14"/>
+    </g>
+  </g>
+  <!-- board -->
+  <rect x="86" y="356" width="340" height="56" rx="28" fill="#9be564" transform="rotate(-8 256 384)"/>
+  <circle cx="190" cy="392" r="9" fill="#0b0d0a" transform="rotate(-8 256 384)"/>
+  <circle cx="322" cy="392" r="9" fill="#0b0d0a" transform="rotate(-8 256 384)"/>
+</svg>

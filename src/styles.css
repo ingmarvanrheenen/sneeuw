@@ -1,0 +1,179 @@
+@import 'tailwindcss';
+@import '@fontsource-variable/space-grotesk';
+@import '@fontsource-variable/jetbrains-mono';
+
+/* ── Design tokens ────────────────────────────────────────────────────────
+   Zwart + groen, rustig en clean met een underground randje:
+   mono-labels, dunne lijnen, veel ruimte. */
+:root {
+  --bg: #0b0d0a;
+  --surface: #131611;
+  --surface-2: #1b1f18;
+  --line: #262b22;
+  --text: #ecefe6;
+  --muted: #8b9483;
+  --accent: #9be564;
+  --accent-ink: #0b0d0a;
+  --accent-text: #9be564;
+  --accent-soft: rgba(155, 229, 100, 0.12);
+  --warn: #ffb347;
+  --danger: #ff6b5c;
+  --heel: #6cc3ff;
+  --toe: #ff9f5c;
+  --shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+  color-scheme: dark;
+}
+
+:root[data-theme='light'] {
+  --bg: #efede4;
+  --surface: #f8f7f1;
+  --surface-2: #e7e4d8;
+  --line: #d3cfbf;
+  --text: #141611;
+  --muted: #676b5d;
+  --accent: #9be564;
+  --accent-ink: #0b0d0a;
+  --accent-text: #2f7a14;
+  --accent-soft: rgba(63, 140, 30, 0.12);
+  --warn: #b36b00;
+  --danger: #c23a2b;
+  --heel: #1d7fc4;
+  --toe: #c8621a;
+  --shadow: 0 10px 30px rgba(40, 40, 20, 0.12);
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme='dark']) {
+    --bg: #efede4;
+    --surface: #f8f7f1;
+    --surface-2: #e7e4d8;
+    --line: #d3cfbf;
+    --text: #141611;
+    --muted: #676b5d;
+    --accent-text: #2f7a14;
+    --accent-soft: rgba(63, 140, 30, 0.12);
+    --warn: #b36b00;
+    --danger: #c23a2b;
+    --heel: #1d7fc4;
+    --toe: #c8621a;
+    --shadow: 0 10px 30px rgba(40, 40, 20, 0.12);
+    color-scheme: light;
+  }
+}
+
+@theme {
+  --font-sans: 'Space Grotesk Variable', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono Variable', ui-monospace, monospace;
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-line: var(--line);
+  --color-text: var(--text);
+  --color-muted: var(--muted);
+  --color-accent: var(--accent);
+  --color-accent-ink: var(--accent-ink);
+  --color-accent-text: var(--accent-text);
+  --color-accent-soft: var(--accent-soft);
+  --color-warn: var(--warn);
+  --color-danger: var(--danger);
+  --color-heel: var(--heel);
+  --color-toe: var(--toe);
+}
+
+html,
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior-y: none;
+}
+
+body {
+  min-height: 100dvh;
+  /* Subtiel raster, net wat anders dan normaal */
+  background-image: radial-gradient(color-mix(in srgb, var(--text) 7%, transparent) 1px, transparent 1px);
+  background-size: 22px 22px;
+  background-attachment: fixed;
+}
+
+/* iOS zoomt in op inputs < 16px */
+input,
+select,
+textarea {
+  font-size: 16px;
+}
+
+button {
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.pt-safe {
+  padding-top: max(env(safe-area-inset-top), 12px);
+}
+.pb-safe {
+  padding-bottom: max(env(safe-area-inset-bottom), 10px);
+}
+
+.label {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.num {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+}
+
+.hairline {
+  border-color: var(--line);
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  scrollbar-width: none;
+}
+
+@keyframes pop-in {
+  from {
+    transform: translateY(8px) scale(0.98);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+.pop-in {
+  animation: pop-in 0.28s cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+}
+
+@keyframes blink {
+  50% {
+    opacity: 0.25;
+  }
+}
+.blink {
+  animation: blink 1.2s steps(2) infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pop-in,
+  .blink {
+    animation: none;
+  }
+}

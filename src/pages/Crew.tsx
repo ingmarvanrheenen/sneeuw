@@ -1,0 +1,400 @@
+import { useCallback, useEffect, useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
+import { Button, Card, Empty, Field, Page, PageHeader, Section, Segmented, Sheet, cx, inputCls } from '../components/ui'
+import { Icon, Mood, Spinner } from '../design/icons'
+import { MediaThumb, MediaViewer } from '../components/Media'
+import { authStore } from '../lib/auth'
+import { hasBackend } from '../lib/supabase'
+import {
+  REACTIONS,
+  createCrew,
+  crewFeed,
+  crewMembers,
+  joinCrew,
+  leaveCrew,
+  myCrews,
+  reactionsFor,
+  toPosts,
+  toggleReaction,
+  type Crew as CrewT,
+  type CrewMember,
+  type FeedPost,
+  type Reaction,
+} from '../lib/crew'
+import { TRICK_BY_ID } from '../content/tricks'
+import { fmtDate } from '../lib/format'
+import { toast } from '../lib/toast'
+import type { MediaMeta } from '../lib/types'
+
+function NeedAccount() {
+  const nav = useNavigate()
+  return (
+    <Empty
+      icon={<Icon name="crew" size={40} className="text-accent-text" />}
+      title={hasBackend ? 'Log in voor je crew' : 'Crew nog niet gekoppeld'}
+      body={
+        hasBackend
+          ? 'Maak een account aan, start een crew en deel de code met je vrienden. Dan zie je elkaars dagen, tricks en clips.'
+          : 'De crew-functies hebben een server nodig (Supabase). In de README staat in 5 minuten hoe je die koppelt. Je logboek werkt intussen gewoon offline.'
+      }
+      action={hasBackend ? <Button onClick={() => nav('/instellingen')}>Inloggen</Button> : undefined}
+    />
+  )
+}
+
+function Post({
+  post,
+  member,
+  reactions,
+  me,
+  onReact,
+}: {
+  post: FeedPost
+  member?: CrewMember
+  reactions: Reaction[]
+  me: string
+  onReact: (key: string, mine: boolean) => void
+}) {
+  const [open, setOpen] = useState<MediaMeta | null>(null)
+  const s = post.session
+  const t = post.trick
+  return (
+    <Card className="p-0">
+      <div className="flex items-center gap-3 p-4 pb-3">
+        <div className="grid size-9 place-items-center rounded-full bg-accent text-sm font-bold text-accent-ink">
+          {(member?.display_name ?? '?').slice(0, 1).toUpperCase()}
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="truncate text-sm font-semibold">{member?.display_name ?? 'Rider'}</div>
+          <div className="label">{fmtDate(post.at)}</div>
+        </div>
+        {s && <Mood value={s.mood} className="text-accent-text" />}
+        {t && <Icon name="stomp" size={24} className="text-accent-text" />}
+      </div>
+      <div className="px-4 pb-3">
+        {s && (
+          <>
+            <div className="font-medium">{s.resortName || 'Dag op de plank'}</div>
+            {s.highlight && <div className="mt-0.5 text-sm text-muted">“{s.highlight}”</div>}
+            <div className="num mt-2 text-xs text-muted">
+              {s.hours}u · {s.falls} val · {s.landed.length} geland
+            </div>
+            {s.landed.length > 0 && (
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {s.landed.map((id) => (
+                  <Link key={id} to={`/tricks/${id}`} className="rounded-full bg-accent px-2.5 py-1 text-xs text-accent-ink">
+                    {TRICK_BY_ID.get(id)?.name ?? id}
+                  </Link>
+                ))}
+              </div>
+            )}
+          </>
+        )}
+        {t && (
+          <div>
+            <span className="text-muted">landde </span>
+            <Link to={`/tricks/${t.trickId}`} className="font-semibold text-accent-text">
+              {TRICK_BY_ID.get(t.trickId)?.name ?? t.trickId}
+            </Link>
+          </div>
+        )}
+      </div>
+      {post.media.length > 0 && (
+        <div className={cx('grid gap-0.5', post.media.length === 1 ? 'grid-cols-1' : 'grid-cols-2')}>
+          {post.media.slice(0, 4).map((m) => (
+            <MediaThumb
+              key={m.id}
+              m={m}
+              onClick={() => setOpen(m)}
+              className={cx('w-full rounded-none', post.media.length === 1 ? 'aspect-[4/3]' : 'aspect-square')}
+            />
+          ))}
+        </div>
+      )}
+      <div className="flex gap-1.5 p-3">
+        {REACTIONS.map((r) => {
+          const all = reactions.filter((x) => x.emoji === r.key)
+          const mine = all.some((x) => x.user_id === me)
+          return (
+            <button
+              key={r.key}
+              aria-label={r.label}
+              onClick={() => onReact(r.key, mine)}
+              className={cx(
+                'flex h-8 items-center gap-1 rounded-full border px-2.5 text-xs transition active:scale-90',
+                mine ? 'border-accent bg-accent-soft text-accent-text' : 'hairline text-muted',
+              )}
+            >
+              <Icon name={r.icon} size={15} />
+              {all.length > 0 && <span className="num">{all.length}</span>}
+            </button>
+          )
+        })}
+      </div>
+      <MediaViewer m={open} onClose={() => setOpen(null)} />
+    </Card>
+  )
+}
+
+export default function Crew() {
+  const { user } = authStore.use()
+  const [crews, setCrews] = useState<CrewT[] | null>(null)
+  const [active, setActive] = useState<string | null>(null)
+  const [tab, setTab] = useState<'feed' | 'board'>('feed')
+  const [posts, setPosts] = useState<FeedPost[]>([])
+  const [members, setMembers] = useState<CrewMember[]>([])
+  const [reactions, setReactions] = useState<Reaction[]>([])
+  const [loading, setLoading] = useState(false)
+  const [sheet, setSheet] = useState<'new' | 'join' | null>(null)
+  const [input, setInput] = useState('')
+
+  const loadCrews = useCallback(async () => {
+    try {
+      const list = await myCrews()
+      setCrews(list)
+      setActive((a) => a ?? list[0]?.id ?? null)
+    } catch (e) {
+      setCrews([])
+      toast({ title: 'Crew laden mislukt', body: (e as Error).message, tone: 'error', icon: 'alert' })
+    }
+  }, [])
+
+  const loadFeed = useCallback(async (crewId: string) => {
+    setLoading(true)
+    try {
+      const [items, mem] = await Promise.all([crewFeed(crewId), crewMembers(crewId)])
+      const p = toPosts(items)
+      setPosts(p)
+      setMembers(mem)
+      setReactions(await reactionsFor(p.map((x) => x.id)))
+    } catch (e) {
+      toast({ title: 'Offline?', body: (e as Error).message, tone: 'error', icon: 'cloudOff' })
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (user) void loadCrews()
+  }, [user, loadCrews])
+  useEffect(() => {
+    if (active) void loadFeed(active)
+  }, [active, loadFeed])
+
+  if (!hasBackend || !user)
+    return (
+      <Page>
+        <PageHeader kicker="03 / Crew" title="Crew" />
+        <NeedAccount />
+      </Page>
+    )
+
+  const crew = crews?.find((c) => c.id === active)
+
+  async function submit() {
+    try {
+      const c = sheet === 'new' ? await createCrew(input.trim()) : await joinCrew(input)
+      setSheet(null)
+      setInput('')
+      await loadCrews()
+      setActive(c.id)
+      toast({ title: sheet === 'new' ? 'Crew aangemaakt' : 'Welkom in de crew', body: c.name, icon: 'crew', tone: 'success' })
+    } catch (e) {
+      toast({ title: 'Lukt niet', body: (e as Error).message, tone: 'error', icon: 'alert' })
+    }
+  }
+
+  return (
+    <Page>
+      <PageHeader
+        kicker="03 / Crew"
+        title={crew?.name ?? 'Crew'}
+        right={
+          <>
+            <button
+              aria-label="Crew joinen"
+              onClick={() => setSheet('join')}
+              className="grid size-9 place-items-center rounded-full border hairline"
+            >
+              <Icon name="link" size={16} />
+            </button>
+            <button
+              aria-label="Nieuwe crew"
+              onClick={() => setSheet('new')}
+              className="grid size-9 place-items-center rounded-full bg-accent text-accent-ink"
+            >
+              <Icon name="plus" size={16} />
+            </button>
+          </>
+        }
+      />
+
+      {crews === null ? (
+        <div className="flex justify-center py-10 text-muted">
+          <Spinner size={22} />
+        </div>
+      ) : !crews.length ? (
+        <Empty
+          icon={<Icon name="crew" size={40} className="text-accent-text" />}
+          title="Nog geen crew"
+          body="Start een crew voor je vriendengroep of join met een code die je van een maat kreeg."
+          action={
+            <div className="flex gap-2">
+              <Button onClick={() => setSheet('new')}>Crew starten</Button>
+              <Button variant="ghost" onClick={() => setSheet('join')}>
+                Code invullen
+              </Button>
+            </div>
+          }
+        />
+      ) : (
+        <>
+          {crews.length > 1 && (
+            <div className="no-scrollbar -mx-4 mb-3 flex gap-2 overflow-x-auto px-4">
+              {crews.map((c) => (
+                <button
+                  key={c.id}
+                  onClick={() => setActive(c.id)}
+                  className={cx(
+                    'h-9 shrink-0 rounded-full border px-4 text-sm',
+                    c.id === active ? 'border-accent bg-accent text-accent-ink' : 'hairline',
+                  )}
+                >
+                  {c.name}
+                </button>
+              ))}
+            </div>
+          )}
+          {crew && (
+            <Card className="mb-3 flex items-center justify-between">
+              <div>
+                <div className="label">Invite-code</div>
+                <div className="num text-2xl font-semibold tracking-[0.2em]">{crew.invite_code}</div>
+              </div>
+              <Button
+                size="sm"
+                variant="ghost"
+                icon={<Icon name="share" size={16} />}
+                onClick={async () => {
+                  const text = `Join mijn crew "${crew.name}" in Sneeuw Daddy met code ${crew.invite_code}`
+                  try {
+                    if (navigator.share) await navigator.share({ text })
+                    else {
+                      await navigator.clipboard.writeText(crew.invite_code)
+                      toast({ title: 'Code gekopieerd', icon: 'copy' })
+                    }
+                  } catch {
+                    /* geannuleerd */
+                  }
+                }}
+              >
+                Deel
+              </Button>
+            </Card>
+          )}
+          <Segmented
+            value={tab}
+            onChange={setTab}
+            options={[
+              { value: 'feed', label: 'Feed' },
+              { value: 'board', label: 'Leaderboard' },
+            ]}
+          />
+          {loading && (
+            <div className="flex justify-center py-6 text-muted">
+              <Spinner size={20} />
+            </div>
+          )}
+          {tab === 'feed' && !loading && (
+            <div className="mt-4 space-y-3">
+              {!posts.length && (
+                <Empty
+                  icon={<Icon name="image" size={36} className="text-muted" />}
+                  title="Nog stil hier"
+                  body="Kies bij het loggen van een dag 'Delen' met deze crew. Dan verschijnt hij hier, met je foto's en video's."
+                />
+              )}
+              {posts.map((p) => (
+                <Post
+                  key={p.id}
+                  post={p}
+                  member={members.find((m) => m.user_id === p.userId)}
+                  reactions={reactions.filter((r) => r.record_id === p.id)}
+                  me={user.id}
+                  onReact={async (key, mine) => {
+                    setReactions((rs) =>
+                      mine
+                        ? rs.filter((r) => !(r.record_id === p.id && r.user_id === user.id && r.emoji === key))
+                        : [...rs, { record_id: p.id, user_id: user.id, emoji: key }],
+                    )
+                    try {
+                      await toggleReaction(p.id, key, mine)
+                    } catch {
+                      toast({ title: 'Reactie mislukt', tone: 'error', icon: 'alert' })
+                    }
+                  }}
+                />
+              ))}
+            </div>
+          )}
+          {tab === 'board' && !loading && (
+            <Section title="Op XP">
+              <ol className="card divide-y divide-[var(--line)] overflow-hidden p-0">
+                {members.map((m, i) => (
+                  <li key={m.user_id} className={cx('flex items-center gap-3 px-4 py-3', m.user_id === user.id && 'bg-accent-soft')}>
+                    <span className={cx('num w-6 text-lg font-semibold', i === 0 ? 'text-accent-text' : 'text-muted')}>{i + 1}</span>
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate font-medium">{m.display_name}</div>
+                      <div className="label">
+                        {m.stats.levelName ?? 'Groentje'} · {m.stats.days ?? 0} dagen · {m.stats.tricksLanded ?? 0} tricks
+                      </div>
+                    </div>
+                    <div className="num text-right">
+                      <div className="font-semibold">{m.stats.xp ?? 0}</div>
+                      <div className="label">xp</div>
+                    </div>
+                  </li>
+                ))}
+              </ol>
+              <p className="mt-2 text-xs text-muted">
+                Stats worden bijgewerkt bij elke sync. Valpartijen tellen niet mee voor de ranking (gelukkig).
+              </p>
+            </Section>
+          )}
+          {crew && (
+            <button
+              onClick={async () => {
+                if (!confirm(`Crew "${crew.name}" verlaten?`)) return
+                await leaveCrew(crew.id)
+                setActive(null)
+                await loadCrews()
+              }}
+              className="label mt-8 w-full py-3 text-center"
+            >
+              Crew verlaten
+            </button>
+          )}
+        </>
+      )}
+
+      <Sheet open={sheet !== null} onClose={() => setSheet(null)} title={sheet === 'new' ? 'Nieuwe crew' : 'Crew joinen'}>
+        <Field
+          label={sheet === 'new' ? 'Naam' : 'Code'}
+          hint={sheet === 'new' ? 'Bijvoorbeeld de naam van je groepsapp.' : '6 tekens, gekregen van een maat.'}
+        >
+          <input
+            value={input}
+            onChange={(e) => setInput(sheet === 'join' ? e.target.value.toUpperCase() : e.target.value)}
+            maxLength={sheet === 'join' ? 6 : 60}
+            placeholder={sheet === 'new' ? 'Shredheads' : 'ABC123'}
+            className={cx(inputCls, sheet === 'join' && 'num tracking-[0.3em]')}
+            autoFocus
+          />
+        </Field>
+        <Button className="mb-4 mt-4 w-full" disabled={!input.trim()} onClick={submit}>
+          {sheet === 'new' ? 'Starten' : 'Joinen'}
+        </Button>
+      </Sheet>
+    </Page>
+  )
+}

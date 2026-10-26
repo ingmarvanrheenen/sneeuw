@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="nl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Sneeuw Daddy</title>
+    <meta name="description" content="Je snowboard logboek, trick-bijbel en crew in één app." />
+    <meta name="theme-color" content="#0b0d0a" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#efede4" media="(prefers-color-scheme: light)" />
+    <!-- iOS: als app op beginscherm, statusbalk over de app heen (Dynamic Island-proof via safe areas) -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Sneeuw Daddy" />
+    <meta name="format-detection" content="telephone=no" />
+    <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+    <link rel="icon" type="image/svg+xml" href="icons/icon.svg" />
+    <script>
+      // Thema vóór de eerste paint zetten, anders flitst het wit.
+      try {
+        var t = localStorage.getItem('sd-theme')
+        if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t
+      } catch (e) {}
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
