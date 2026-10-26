@@ -27,3 +27,13 @@ describe('key kiezen uit env', () => {
     expect(pickSupabaseKey({ SUPABASE_ANON_KEY: 'sb_secret_x' }).key).toBe('')
   })
 })
+
+describe('foutmeldingen', () => {
+  it('maakt van Supabase-objecten leesbare tekst', async () => {
+    const { errMsg } = await import('../lib/errors')
+    expect(errMsg({ code: 'PGRST205', message: "Could not find the table 'public.records' in the schema cache" })).toMatch(/SQL-migratie/)
+    expect(errMsg({ message: 'iets', code: 'X1' })).toBe('iets (X1)')
+    expect(errMsg(new Error('boem'))).toBe('boem')
+    expect(errMsg({})).not.toBe('[object Object]')
+  })
+})

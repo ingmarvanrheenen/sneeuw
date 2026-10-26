@@ -25,6 +25,7 @@ import { TRICK_BY_ID } from '../content/tricks'
 import { fmtDate } from '../lib/format'
 import { toast } from '../lib/toast'
 import type { MediaMeta } from '../lib/types'
+import { errMsg } from '../lib/errors'
 
 function NeedAccount() {
   const nav = useNavigate()
@@ -155,7 +156,7 @@ export default function Crew() {
       setActive((a) => a ?? list[0]?.id ?? null)
     } catch (e) {
       setCrews([])
-      toast({ title: 'Crew laden mislukt', body: (e as Error).message, tone: 'error', icon: 'alert' })
+      toast({ title: 'Crew laden mislukt', body: errMsg(e), tone: 'error', icon: 'alert' })
     }
   }, [])
 
@@ -168,7 +169,7 @@ export default function Crew() {
       setMembers(mem)
       setReactions(await reactionsFor(p.map((x) => x.id)))
     } catch (e) {
-      toast({ title: 'Offline?', body: (e as Error).message, tone: 'error', icon: 'cloudOff' })
+      toast({ title: 'Offline?', body: errMsg(e), tone: 'error', icon: 'cloudOff' })
     } finally {
       setLoading(false)
     }
@@ -200,7 +201,7 @@ export default function Crew() {
       setActive(c.id)
       toast({ title: sheet === 'new' ? 'Crew aangemaakt' : 'Welkom in de crew', body: c.name, icon: 'crew', tone: 'success' })
     } catch (e) {
-      toast({ title: 'Lukt niet', body: (e as Error).message, tone: 'error', icon: 'alert' })
+      toast({ title: 'Lukt niet', body: errMsg(e), tone: 'error', icon: 'alert' })
     }
   }
 

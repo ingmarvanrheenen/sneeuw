@@ -11,6 +11,7 @@ import { toast } from '../lib/toast'
 import { sfx } from '../lib/sounds'
 import { isIOS, isStandalone } from '../lib/pwa'
 import type { Profile } from '../lib/types'
+import { errMsg } from '../lib/errors'
 
 function Toggle({ on, onChange, label, sub }: { on: boolean; onChange: (v: boolean) => void; label: string; sub?: string }) {
   return (
@@ -123,7 +124,7 @@ function Account() {
               toast({ title: 'Ingelogd', body: 'Je data wordt gesynct', icon: 'cloud', tone: 'success' })
             }
           } catch (err) {
-            toast({ title: 'Mislukt', body: (err as Error).message, icon: 'alert', tone: 'error' })
+            toast({ title: 'Mislukt', body: errMsg(err), icon: 'alert', tone: 'error' })
           } finally {
             setBusy(false)
           }

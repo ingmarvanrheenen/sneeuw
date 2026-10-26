@@ -6,6 +6,7 @@ import { cachedWeather, fetchWeather, wmoIcon, wmoLabel, type ResortWeather } fr
 import { getProfile, saveProfile } from '../lib/auth'
 import { parseISO } from '../lib/format'
 import type { Profile } from '../lib/types'
+import { errMsg } from '../lib/errors'
 
 const DAY = ['zo', 'ma', 'di', 'wo', 'do', 'vr', 'za']
 
@@ -84,7 +85,7 @@ export default function Weather() {
     try {
       setData(await fetchWeather(outdoor))
     } catch (e) {
-      setError(navigator.onLine ? (e as Error).message : 'Offline: je ziet de laatst opgehaalde voorspelling.')
+      setError(navigator.onLine ? errMsg(e) : 'Offline: je ziet de laatst opgehaalde voorspelling.')
     } finally {
       setLoading(false)
     }

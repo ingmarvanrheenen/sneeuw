@@ -7,6 +7,7 @@ import { getCurrentUserId } from './auth-state'
 import { createStore } from './store'
 import { setOnLocalChange } from './repo'
 import type { AnyRecord, MediaMeta, Profile } from './types'
+import { errMsg } from './errors'
 
 export interface SyncState {
   status: 'local' | 'idle' | 'syncing' | 'offline' | 'error'
@@ -181,7 +182,7 @@ export async function syncNow(): Promise<void> {
     await pushProfile(userId)
     syncStore.set({ status: 'idle', pending: await countPending(), lastSync: Date.now() })
   } catch (e) {
-    const msg = e instanceof Error ? e.message : String(e)
+    const msg = errMsg(e)
     syncStore.set({ status: 'error', pending: await countPending(), error: msg, lastSync: syncStore.get().lastSync })
   } finally {
     running = false
