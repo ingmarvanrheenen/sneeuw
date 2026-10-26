@@ -62,14 +62,19 @@ language plpgsql security definer set search_path = public as $$
 declare
   c public.crews;
   code text;
+  alphabet constant text := 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
 begin
   if auth.uid() is null then raise exception 'niet ingelogd'; end if;
+  if char_length(trim(crew_name)) = 0 then raise exception 'Geef je crew een naam'; end if;
   insert into profiles (user_id) values (auth.uid()) on conflict do nothing;
   loop
-    code := upper(substr(translate(encode(gen_random_bytes(6), 'base64'), '/+=0O1lI', ''), 1, 6));
-    exit when char_length(code) = 6 and not exists (select 1 from crews where invite_code = code);
+    code := '';
+    for i in 1..6 loop
+      code := code || substr(alphabet, 1 + floor(random() * char_length(alphabet))::int, 1);
+    end loop;
+    exit when not exists (select 1 from crews where invite_code = code);
   end loop;
-  insert into crews (name, invite_code, created_by) values (crew_name, code, auth.uid()) returning * into c;
+  insert into crews (name, invite_code, created_by) values (trim(crew_name), code, auth.uid()) returning * into c;
   insert into crew_members (crew_id, user_id, role) values (c.id, auth.uid(), 'owner');
   return c;
 end $$;
