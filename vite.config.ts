@@ -4,7 +4,7 @@ import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
 import pkg from './package.json' with { type: 'json' }
-import { isSecretSupabaseKey } from './src/lib/supabaseKey'
+import { pickSupabaseKey } from './src/lib/supabaseKey'
 
 // BASE_PATH is gezet door de GitHub Pages workflow (bijv. "/sneeuw/").
 const base = process.env.BASE_PATH ?? '/'
@@ -16,20 +16,16 @@ const first = (env: Record<string, string | undefined>, names: string[]) => name
 export default defineConfig(({ mode }) => {
   const env = { ...loadEnv(mode, process.cwd(), ''), ...process.env }
   const supabaseUrl = first(env, ['VITE_SUPABASE_URL', 'NEXT_PUBLIC_SUPABASE_URL', 'SUPABASE_URL'])
-  const supabaseKey = first(env, [
-    'VITE_SUPABASE_ANON_KEY',
-    'VITE_SUPABASE_PUBLISHABLE_KEY',
-    'NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY',
-    'NEXT_PUBLIC_SUPABASE_ANON_KEY',
-    'SUPABASE_PUBLISHABLE_KEY',
-    'SUPABASE_ANON_KEY',
-  ])
-  if (isSecretSupabaseKey(supabaseKey)) {
+  const { key: supabaseKey, source: keySource, secretVars } = pickSupabaseKey(env)
+  if (secretVars.length && !supabaseKey) {
     // Liever een gefaalde build dan een gelekte key die je hele database openzet.
     throw new Error(
-      'Je Supabase-key is een SECRET/service_role key. Die mag nooit in de app. ' +
-        'Gebruik de publishable (sb_publishable_...) of anon key, en trek de secret key in via Supabase → Project Settings → API Keys.',
+      `Supabase: ${secretVars.join(', ')} bevat een SECRET/service_role key en er is geen publieke key gevonden. ` +
+        'Zet de publishable (sb_publishable_...) of anon key in VITE_SUPABASE_ANON_KEY en trek de secret key in via Supabase → Project Settings → API Keys.',
     )
+  }
+  if (secretVars.length) {
+    console.warn(`\n[sneeuw] Let op: ${secretVars.join(', ')} bevat een secret key. Die wordt genegeerd; de app gebruikt ${keySource}.\n`)
   }
   return {
     base,
@@ -37,6 +33,7 @@ export default defineConfig(({ mode }) => {
       __APP_VERSION__: JSON.stringify(pkg.version),
       'import.meta.env.VITE_SUPABASE_URL': JSON.stringify(supabaseUrl),
       'import.meta.env.VITE_SUPABASE_ANON_KEY': JSON.stringify(supabaseKey),
+      'import.meta.env.VITE_SUPABASE_KEY_SOURCE': JSON.stringify(keySource),
     },
     plugins: [
       react(),

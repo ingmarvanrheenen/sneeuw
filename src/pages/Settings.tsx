@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { Button, Card, Field, Page, PageHeader, Section, Segmented, cx, inputCls } from '../components/ui'
 import { Icon, Spinner } from '../design/icons'
 import { authStore, getProfile, saveProfile, signIn, signOut, signUp } from '../lib/auth'
-import { hasBackend } from '../lib/supabase'
+import { backendInfo, hasBackend } from '../lib/supabase'
 import { syncNow, syncStore } from '../lib/sync'
 import { settingsStore, updateSettings } from '../lib/settings'
 import { db } from '../lib/db'
@@ -157,6 +157,33 @@ function Account() {
   )
 }
 
+const KEY_LABEL: Record<string, string> = {
+  publishable: 'publishable (goed)',
+  anon: 'anon (goed)',
+  secret: 'SECRET, geblokkeerd',
+  onbekend: 'onbekend formaat',
+  geen: 'geen',
+}
+
+function Connection() {
+  const bad = backendInfo.keyKind === 'secret' || backendInfo.keyKind === 'onbekend'
+  return (
+    <Card className="text-sm">
+      <div className="flex items-center gap-2 font-medium">
+        <Icon name={hasBackend ? 'cloud' : 'device'} size={18} /> Verbinding
+      </div>
+      <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1">
+        <dt className="text-muted">Project</dt>
+        <dd className="num truncate">{backendInfo.host || 'niet ingesteld'}</dd>
+        <dt className="text-muted">Key</dt>
+        <dd className={cx(bad && 'text-danger')}>{KEY_LABEL[backendInfo.keyKind]}</dd>
+        <dt className="text-muted">Uit variabele</dt>
+        <dd className="num truncate">{backendInfo.keySource || '–'}</dd>
+      </dl>
+    </Card>
+  )
+}
+
 export default function Settings() {
   const settings = settingsStore.use()
   const [profile, setProfile] = useState<Profile | null>(null)
@@ -178,6 +205,9 @@ export default function Settings() {
       <PageHeader kicker="Instellingen" title="Instellingen" back />
       <Section title="Account" className="mt-0">
         <Account />
+        <div className="mt-2">
+          <Connection />
+        </div>
       </Section>
 
       {profile && (
