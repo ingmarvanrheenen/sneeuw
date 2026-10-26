@@ -1,7 +1,10 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
+import { isSecretSupabaseKey } from './supabaseKey'
 
 const url = import.meta.env.VITE_SUPABASE_URL as string | undefined
-const key = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined
+const rawKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined
+// Vangnet: een secret key wordt nooit gebruikt (de build blokkeert hem ook al).
+const key = isSecretSupabaseKey(rawKey) ? undefined : rawKey
 
 /** null = geen backend geconfigureerd → app draait 100% lokaal. */
 export const supabase: SupabaseClient | null =

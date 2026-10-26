@@ -4,6 +4,7 @@ import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
 import pkg from './package.json' with { type: 'json' }
+import { isSecretSupabaseKey } from './src/lib/supabaseKey'
 
 // BASE_PATH is gezet door de GitHub Pages workflow (bijv. "/sneeuw/").
 const base = process.env.BASE_PATH ?? '/'
@@ -23,6 +24,13 @@ export default defineConfig(({ mode }) => {
     'SUPABASE_PUBLISHABLE_KEY',
     'SUPABASE_ANON_KEY',
   ])
+  if (isSecretSupabaseKey(supabaseKey)) {
+    // Liever een gefaalde build dan een gelekte key die je hele database openzet.
+    throw new Error(
+      'Je Supabase-key is een SECRET/service_role key. Die mag nooit in de app. ' +
+        'Gebruik de publishable (sb_publishable_...) of anon key, en trek de secret key in via Supabase → Project Settings → API Keys.',
+    )
+  }
   return {
     base,
     define: {
