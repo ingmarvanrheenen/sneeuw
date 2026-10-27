@@ -2,7 +2,7 @@
 // Gebruik: const sb = fakeSupabase(); vi.mock('../lib/supabase', () => ({ supabase: sb.client, hasBackend: true }))
 export interface Call {
   table: string
-  op: 'select' | 'insert' | 'update' | 'delete'
+  op: 'select' | 'insert' | 'update' | 'delete' | 'upsert' | 'upload'
   payload?: unknown
   filters: [string, string, unknown][]
   single: boolean
@@ -25,14 +25,17 @@ export function fakeSupabase() {
       select: () => b,
       insert: (payload: unknown) => ((call.op = 'insert'), (call.payload = payload), b),
       update: (payload: unknown) => ((call.op = 'update'), (call.payload = payload), b),
+      upsert: (payload: unknown) => ((call.op = 'upsert'), (call.payload = payload), b),
       delete: () => ((call.op = 'delete'), b),
       eq: (col: string, v: unknown) => (call.filters.push(['eq', col, v]), b),
       neq: (col: string, v: unknown) => (call.filters.push(['neq', col, v]), b),
+      gt: (col: string, v: unknown) => (call.filters.push(['gt', col, v]), b),
       not: (col: string, o: string, v: unknown) => (call.filters.push([`not.${o}`, col, v]), b),
       in: (col: string, v: unknown) => (call.filters.push(['in', col, v]), b),
       order: () => b,
       limit: () => b,
       single: () => ((call.single = true), b),
+      maybeSingle: () => ((call.single = true), b),
       then: (res: (v: { data: unknown; error: unknown }) => unknown, rej?: (e: unknown) => unknown) => {
         record()
         const r = respond(call)
@@ -42,8 +45,21 @@ export function fakeSupabase() {
     return b
   }
 
+  // Storage: upload(path, blob) wordt vastgelegd als op 'upload' met table = bucket
+  const storage = {
+    from: (bucket: string) => ({
+      upload: async (path: string, body: Blob) => {
+        const call: Call = { table: bucket, op: 'upload', payload: { path, body }, filters: [], single: false }
+        calls.push(call)
+        const r = respond(call)
+        return { data: r.data ?? { path }, error: r.error ?? null }
+      },
+      createSignedUrl: async (path: string) => ({ data: { signedUrl: `https://fake/${path}` }, error: null }),
+    }),
+  }
+
   return {
-    client: { from } as unknown,
+    client: { from, storage } as unknown,
     calls,
     respond(fn: Responder) {
       respond = fn
