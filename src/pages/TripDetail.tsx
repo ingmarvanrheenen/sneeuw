@@ -6,7 +6,7 @@ import { remove, update, useKind, useRecord } from '../lib/repo'
 import { daysUntil, fmtShort } from '../lib/format'
 import { uid } from '../lib/ids'
 import { sfx } from '../lib/sounds'
-import { celebrate } from '../lib/toast'
+import { celebrate, undoToast } from '../lib/toast'
 import type { PackItem } from '../lib/types'
 
 export default function TripDetail() {
@@ -67,8 +67,8 @@ export default function TripDetail() {
       <Section
         title={`Paklijst ${packed}/${trip.packing.length}`}
         action={
-          <button onClick={() => setHideDone((h) => !h)} className="label !text-accent-text">
-            {hideDone ? 'toon alles' : 'verberg ingepakt'}
+          <button onClick={() => setHideDone((h) => !h)} className="-my-2.5 -mr-2 px-2 py-2.5 text-[15px] text-accent-text">
+            {hideDone ? 'Toon alles' : 'Verberg ingepakt'}
           </button>
         }
       >
@@ -81,27 +81,37 @@ export default function TripDetail() {
               <div className="label mb-1.5">{cat}</div>
               <div className="card divide-y divide-[var(--line)] overflow-hidden p-0">
                 {shown.map((item) => (
-                  <div key={item.id} className="flex items-center gap-3 px-4 py-3">
+                  <div key={item.id} className="flex items-center">
+                    {/* hele rij is de knop: ook met handschoenen raak je hem */}
                     <button
-                      aria-label={item.checked ? 'Uitvinken' : 'Afvinken'}
+                      role="checkbox"
+                      aria-checked={!!item.checked}
                       onClick={() => {
                         sfx.toggle()
                         void setPacking(trip.packing.map((p) => (p.id === item.id ? { ...p, checked: !p.checked } : p)))
                       }}
-                      className={cx(
-                        'grid size-6 shrink-0 place-items-center rounded-md border-2',
-                        item.checked ? 'border-accent bg-accent text-accent-ink' : 'border-line',
-                      )}
+                      className="flex min-h-12 flex-1 items-center gap-3 py-2.5 pl-4 text-left active:bg-surface-2"
                     >
-                      {item.checked && <Icon name="check" size={14} stroke={2.6} />}
+                      <span
+                        className={cx(
+                          'grid size-6 shrink-0 place-items-center rounded-md border-2',
+                          item.checked ? 'border-accent bg-accent text-accent-ink' : 'border-line',
+                        )}
+                      >
+                        {item.checked && <Icon name="check" size={14} stroke={2.6} />}
+                      </span>
+                      <span className={cx('flex-1 text-[15px]', item.checked && 'text-muted line-through')}>{item.label}</span>
                     </button>
-                    <span className={cx('flex-1 text-sm', item.checked && 'text-muted line-through')}>{item.label}</span>
                     <button
-                      aria-label="Verwijderen"
-                      onClick={() => setPacking(trip.packing.filter((p) => p.id !== item.id))}
-                      className="text-muted/60"
+                      aria-label={`${item.label} verwijderen`}
+                      onClick={async () => {
+                        const before = trip.packing
+                        await setPacking(before.filter((p) => p.id !== item.id))
+                        undoToast(`${item.label} weg`, () => void setPacking(before))
+                      }}
+                      className="grid size-12 shrink-0 place-items-center text-muted/60 active:text-danger"
                     >
-                      <Icon name="close" size={14} />
+                      <Icon name="close" size={16} />
                     </button>
                   </div>
                 ))}

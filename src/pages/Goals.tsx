@@ -3,9 +3,9 @@ import { Link } from 'react-router-dom'
 import { Button, Card, Empty, Page, PageHeader, Section, cx, inputCls } from '../components/ui'
 import { Icon } from '../design/icons'
 import { TrickPicker } from '../components/Pickers'
-import { create, getTrickProgress, remove, setTrickStatus, update, useKind } from '../lib/repo'
+import { create, getTrickProgress, remove, restore, setTrickStatus, update, useKind } from '../lib/repo'
 import { TRICK_BY_ID } from '../content/tricks'
-import { celebrate } from '../lib/toast'
+import { celebrate, undoToast } from '../lib/toast'
 import type { Goal } from '../lib/types'
 
 export default function Goals() {
@@ -29,16 +29,20 @@ export default function Goals() {
   }
 
   const row = (g: Goal) => (
-    <div key={g.id} className="flex items-center gap-3 px-4 py-3">
+    <div key={g.id} className="flex items-center gap-1 py-1.5 pl-2">
       <button
         aria-label={g.done ? 'Markeer als open' : 'Markeer als gehaald'}
         onClick={() => toggle(g)}
-        className={cx(
-          'grid size-7 shrink-0 place-items-center rounded-lg border-2',
-          g.done ? 'border-accent bg-accent text-accent-ink' : 'border-line',
-        )}
+        className="grid size-12 shrink-0 place-items-center"
       >
-        {g.done && <Icon name="check" size={16} stroke={2.4} />}
+        <span
+          className={cx(
+            'grid size-7 place-items-center rounded-lg border-2',
+            g.done ? 'border-accent bg-accent text-accent-ink' : 'border-line',
+          )}
+        >
+          {g.done && <Icon name="check" size={16} stroke={2.4} />}
+        </span>
       </button>
       <div className="min-w-0 flex-1">
         <div className={cx('text-sm', g.done && 'text-muted line-through')}>{g.title}</div>
@@ -51,8 +55,15 @@ export default function Goals() {
           {g.tripId && <span>{trips?.find((t) => t.id === g.tripId)?.name}</span>}
         </div>
       </div>
-      <button aria-label="Verwijderen" onClick={() => remove(g)} className="text-muted">
-        <Icon name="trash" size={16} />
+      <button
+        aria-label={`${g.title} verwijderen`}
+        onClick={async () => {
+          await remove(g)
+          undoToast('Doel verwijderd', () => void restore(g))
+        }}
+        className="grid size-12 shrink-0 place-items-center text-muted active:text-danger"
+      >
+        <Icon name="trash" size={17} />
       </button>
     </div>
   )
@@ -89,7 +100,7 @@ export default function Goals() {
             Toevoegen
           </Button>
           <Button variant="ghost" icon={<Icon name="book" size={16} />} onClick={() => setPick(true)}>
-            Trick kiezen
+            Trick
           </Button>
         </div>
       </Card>

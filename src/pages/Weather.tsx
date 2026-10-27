@@ -16,8 +16,12 @@ function Row({ r, w, fav, onFav }: { r: Resort; w?: ResortWeather; fav: boolean;
   const week = w ? Math.round(w.days.reduce((a, d) => a + d.snowCm, 0)) : 0
   const pow = week >= 20
   return (
-    <Card className={cx('p-0', pow && 'border-accent')}>
-      <button onClick={() => setOpen((o) => !o)} className="flex w-full items-center gap-3 p-3.5 text-left">
+    <div>
+      <button
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+        className="flex w-full items-center gap-3 px-4 py-3 text-left active:bg-surface-2"
+      >
         <CountryTag code={r.country} />
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
@@ -39,9 +43,10 @@ function Row({ r, w, fav, onFav }: { r: Resort; w?: ResortWeather; fav: boolean;
         ) : (
           <span className="label">–</span>
         )}
+        <Icon name="chevron" size={14} className={cx('shrink-0 text-muted transition-transform duration-200', open && 'rotate-90')} />
       </button>
       {open && w && (
-        <div className="pop-in border-t hairline px-3.5 pb-3.5 pt-3">
+        <div className="pop-in px-4 pb-4 pt-1">
           <div className="grid grid-cols-7 gap-1 text-center">
             {w.days.map((d) => (
               <div key={d.date} className="flex flex-col items-center gap-1">
@@ -67,7 +72,7 @@ function Row({ r, w, fav, onFav }: { r: Resort; w?: ResortWeather; fav: boolean;
           <p className="mt-2 text-xs text-muted">{r.note}</p>
         </div>
       )}
-    </Card>
+    </div>
   )
 }
 
@@ -139,7 +144,7 @@ export default function Weather() {
           <Icon name="cloudOff" size={16} /> {error}
         </Card>
       )}
-      <div className="space-y-2">
+      <div className="card divide-y divide-[var(--line)] overflow-hidden">
         {list.map((r) => (
           <Row key={r.id} r={r} w={data[r.id]} fav={favs.includes(r.id)} onFav={() => toggleFav(r.id)} />
         ))}

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Button, Card, Field, Page, PageHeader, Section, Segmented, cx, inputCls } from '../components/ui'
+import { Button, Card, Field, Page, PageHeader, Section, Segmented, cx, inputCls, List, Row } from '../components/ui'
 import { Icon, Spinner } from '../design/icons'
 import { authStore, getProfile, saveProfile, signIn, signOut, signUp } from '../lib/auth'
 import { backendInfo, hasBackend } from '../lib/supabase'
@@ -207,7 +207,7 @@ export default function Settings() {
       <Section title="Account" className="mt-0">
         <Account />
         <div className="mt-2">
-          <Connection />
+          {(import.meta.env.DEV || !hasBackend || backendInfo.keyKind === 'secret' || backendInfo.keyKind === 'onbekend') && <Connection />}
         </div>
       </Section>
 
@@ -271,17 +271,9 @@ export default function Settings() {
       )}
 
       <Section title="Data">
-        <div className="grid grid-cols-2 gap-2">
-          <Button variant="ghost" icon={<Icon name="download" size={16} />} onClick={exportData}>
-            Exporteer
-          </Button>
-          <Link
-            to="/design"
-            className="inline-flex h-11 items-center justify-center gap-2 rounded-full border hairline text-[15px] font-medium"
-          >
-            <Icon name="palette" size={16} /> Design
-          </Link>
-        </div>
+        <List>
+          <Row icon="download" title="Exporteer je data" detail="Alles als JSON-bestand, voor een back-up" onClick={exportData} />
+        </List>
       </Section>
 
       <p className="label mt-10 text-center">Sneeuw Daddy v{__APP_VERSION__}</p>

@@ -21,7 +21,8 @@ const GROUPS: Item[][] = [
   ],
   [
     { to: '/instellingen', label: 'Instellingen', icon: 'sliders' },
-    { to: '/design', label: 'Design system', icon: 'palette' },
+    // ontwikkelaarspagina: alleen in dev zichtbaar
+    ...(import.meta.env.DEV ? [{ to: '/design', label: 'Design system', icon: 'palette' as const }] : []),
   ],
 ]
 

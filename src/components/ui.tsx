@@ -166,7 +166,7 @@ export function Section({
 /** Tekstlink rechts in een sectiekop, iOS-stijl. */
 export function SectionLink({ to, children }: { to: string; children: ReactNode }) {
   return (
-    <Link to={to} className="text-[15px] text-accent-text">
+    <Link to={to} className="-my-2.5 -mr-2 px-2 py-2.5 text-[15px] text-accent-text">
       {children}
     </Link>
   )

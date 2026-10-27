@@ -9,10 +9,21 @@ export interface Toast {
   body?: string
   icon?: IconName
   tone?: 'default' | 'success' | 'error' | 'badge' | 'level'
+  /** knop in de toast, bijv. "Terugzetten" na verwijderen */
+  action?: { label: string; run: () => void }
 }
 
 export const toastStore = createStore<Toast[]>([])
 let n = 0
+
+export function dismissToast(id: number) {
+  toastStore.set((list) => list.filter((x) => x.id !== id))
+}
+
+/** Verwijderd? Laat even een "Terugzetten" zien in plaats van eerst te vragen. */
+export function undoToast(title: string, undo: () => void) {
+  toast({ title, icon: 'trash', action: { label: 'Terugzetten', run: undo } }, 5000)
+}
 
 export function toast(t: Omit<Toast, 'id'>, ms = 3200) {
   const id = ++n

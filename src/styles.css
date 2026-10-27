@@ -173,6 +173,13 @@ button {
   border-radius: 14px;
 }
 
+/* velden in een kaart: een tint dieper, anders vallen ze weg tegen de kaart */
+.card input:not([type='checkbox'], [type='radio'], [type='range']),
+.card textarea,
+.card select {
+  background-color: var(--surface-2);
+}
+
 .hairline {
   border-color: var(--line);
 }

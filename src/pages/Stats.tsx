@@ -29,7 +29,7 @@ export default function Stats() {
       label: MOOD_LABELS[m - 1],
       value: sessions.filter((s) => s.mood === m).length,
       tick: <Mood value={m} size={18} className="mx-auto" />,
-      detail: `${MOOD_LABELS[m - 1]}: ${sessions.filter((s) => s.mood === m).length} dagen`,
+      detail: `${MOOD_LABELS[m - 1]}: ${sessions.filter((s) => s.mood === m).length} ${sessions.filter((s) => s.mood === m).length === 1 ? 'dag' : 'dagen'}`,
     }))
     const pistes = PISTES.map((pi) => ({ ...pi, n: sessions.filter((s) => s.pistes.includes(pi.id)).length }))
     const first = sessions.slice(0, 3)
@@ -109,7 +109,7 @@ export default function Stats() {
           <Section title="Pistes">
             <Card className="space-y-3">
               {data.pistes.map((pi) => (
-                <HBar key={pi.id} label={pi.label} value={pi.n} total={s.days} right={`${pi.n} dagen`} />
+                <HBar key={pi.id} label={pi.label} value={pi.n} total={s.days} right={`${pi.n} ${pi.n === 1 ? 'dag' : 'dagen'}`} />
               ))}
             </Card>
           </Section>

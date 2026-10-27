@@ -7,12 +7,21 @@ import { hasBackend } from '../lib/supabase'
 export function SyncBadge() {
   const s = syncStore.use()
   const { user } = authStore.use()
+  // zonder server is alles lokaal en valt er niks te melden
+  if (!hasBackend) return null
+  if (!user)
+    return (
+      <Link
+        to="/instellingen"
+        className="flex h-8 items-center gap-1.5 rounded-full bg-surface px-3 text-[13px] font-medium text-accent-text"
+      >
+        <Icon name="user" size={14} />
+        Inloggen
+      </Link>
+    )
   let icon = <Icon name="cloud" size={14} />
   let text = 'gesynct'
-  if (!hasBackend || !user) {
-    icon = <Icon name="device" size={14} />
-    text = 'lokaal'
-  } else if (s.status === 'syncing') {
+  if (s.status === 'syncing') {
     icon = <Spinner size={14} />
     text = 'sync'
   } else if (s.status === 'offline') {

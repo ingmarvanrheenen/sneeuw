@@ -51,6 +51,12 @@ export async function remove(rec: AnyRecord) {
   if (rec.kind === 'media') await db.blobs.delete(rec.id)
 }
 
+/** Soft delete terugdraaien (voor "Terugzetten" na verwijderen). */
+export async function restore(rec: AnyRecord) {
+  const cur = await db.records.get(rec.id)
+  if (cur) await update(cur, { deleted: false } as Partial<AnyRecord>)
+}
+
 export async function listKind<K extends RecordKind>(kind: K): Promise<KindMap[K][]> {
   const rows = await db.records.where('kind').equals(kind).toArray()
   return rows.filter((r) => !r.deleted) as KindMap[K][]

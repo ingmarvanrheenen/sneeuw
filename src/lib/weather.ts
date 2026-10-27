@@ -76,7 +76,8 @@ export async function fetchWeather(resorts: Resort[]): Promise<Record<string, Re
     forecast_hours: '1',
     timezone: 'Europe/Paris',
   })
-  const res = await fetch(`https://api.open-meteo.com/v1/forecast?${params}`)
+  // slecht bereik op de berg: niet eindeloos blijven wachten
+  const res = await fetch(`https://api.open-meteo.com/v1/forecast?${params}`, { signal: AbortSignal.timeout(12000) })
   if (!res.ok) throw new Error(`Weer ophalen mislukt (${res.status})`)
   const json = (await res.json()) as OMResponse | OMResponse[]
   const list = Array.isArray(json) ? json : [json]
