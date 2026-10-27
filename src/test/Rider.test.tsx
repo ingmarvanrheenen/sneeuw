@@ -117,6 +117,8 @@ describe('je eigen skipas', () => {
     expect(screen.getByText('En nooit opgegeven')).toBeTruthy()
     expect(screen.getByText('max 9 op een dag')).toBeTruthy()
     expect(screen.getByText('6 u')).toBeTruthy()
+    // één dag: enkelvoud
+    expect(screen.getByText('Dag')).toBeTruthy()
     expect(screen.getByRole('link', { name: 'Ollie' })).toBeTruthy()
     expect(api.nicknameInbox).not.toHaveBeenCalled()
   })
@@ -177,6 +179,7 @@ describe('skipas van een crewgenoot', () => {
     expect(within(pass).getByText('“Sendlord”')).toBeTruthy()
     expect(within(pass).getByText('Ischgl')).toBeTruthy()
     expect(screen.getByText('31 keer gevallen')).toBeTruthy()
+    expect(screen.getByRole('heading', { level: 1, name: 'Skipas' })).toBeTruthy()
     expect(screen.getByText('Lege plekken zijn nog te verdienen.', { exact: false })).toBeTruthy()
     expect(screen.queryByRole('button', { name: 'Bewerk' })).toBeNull()
     expect(api.riderMedia).toHaveBeenCalledWith('daan')

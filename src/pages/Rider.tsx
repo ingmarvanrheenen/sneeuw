@@ -91,9 +91,9 @@ function RiderView({
 
       <Section title="Eerlijke stats">
         <StatGroup>
-          <Stat label="Dagen" value={stats.days ?? 0} />
-          <Stat label="Uren" value={fmtHours(stats.hours ?? 0)} />
-          <Stat label="Valpartijen" value={falls} />
+          <Stat label={stats.days === 1 ? 'Dag' : 'Dagen'} value={stats.days ?? 0} />
+          <Stat label={stats.hours === 1 ? 'Uur' : 'Uren'} value={fmtHours(stats.hours ?? 0)} />
+          <Stat label={falls === 1 ? 'Valpartij' : 'Valpartijen'} value={falls} />
         </StatGroup>
         <List className="mt-3">
           <Row
@@ -407,7 +407,7 @@ function CrewRiderPage({ userId }: { userId: string }) {
 
   return (
     <Page>
-      <PageHeader title={rider.name} back />
+      <PageHeader title="Skipas" back />
       <RiderView userId={rider.userId} name={rider.name} profile={rider.profile} stats={rider.stats} media={media} isMe={false}>
         {navigator.onLine && (
           <Button variant="ghost" className="mt-3 w-full" onClick={() => setSuggest(true)}>
