@@ -126,6 +126,15 @@ export interface Profile {
   angleBack?: number
   stanceWidth?: number
   favoriteResorts: string[]
+  /** profielfoto als kleine jpeg (data-URL, ±10 KB), synct mee met je profiel */
+  photo?: string
+  /** één zin onder je naam */
+  motto?: string
+  homeResort?: string
+  /** de trick waar je het trotst op bent */
+  signatureTrick?: string
+  /** bijnaam die je crew voorstelde en jij goedkeurde */
+  nickname?: string
 }
 
 export type AnyRecord = Session | TrickProgress | Goal | Trip | Gear | MediaMeta

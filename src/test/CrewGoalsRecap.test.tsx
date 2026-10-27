@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { MemoryRouter } from 'react-router-dom'
 
 const api = vi.hoisted(() => ({
   listGoals: vi.fn(),
@@ -192,7 +193,11 @@ describe('trip-recap', () => {
       shared(ME, '2027-01-16', { hours: 6, falls: 1, landed: ['ollie'] }),
       shared('daan', '2027-01-16', { hours: 4, falls: 7, landed: [] }),
     ])
-    render(<TripRecap tripId="t1" crewId="c1" trip={{ startDate: '2027-01-16', endDate: '2027-01-23' }} />)
+    render(
+      <MemoryRouter>
+        <TripRecap tripId="t1" crewId="c1" trip={{ startDate: '2027-01-16', endDate: '2027-01-23' }} />
+      </MemoryRouter>,
+    )
     expect(await screen.findByText('Meeste uren op de plank')).toBeTruthy()
     expect(screen.getByText('Jij · 6 u')).toBeTruthy()
     expect(screen.getByText('Daan · 7x')).toBeTruthy()
@@ -201,19 +206,42 @@ describe('trip-recap', () => {
     expect(screen.getByText(/Geland deze trip: Ollie/)).toBeTruthy()
   })
 
+  it('een persoon opent zijn skipas (jij: je eigen)', async () => {
+    api.tripDays.mockResolvedValue([shared(ME, '2027-01-16', { hours: 6 }), shared('daan', '2027-01-16', { hours: 4 })])
+    render(
+      <MemoryRouter>
+        <TripRecap tripId="t1" crewId="c1" trip={{ startDate: '2027-01-16' }} />
+      </MemoryRouter>,
+    )
+    expect((await screen.findByText('Daan')).closest('a')?.getAttribute('href')).toBe('/rider/daan')
+    expect(screen.getByText('Jij').closest('a')?.getAttribute('href')).toBe('/rider/ik')
+  })
+
   it('nog geen gedeelde dagen: uitleg hoe je hem vult', async () => {
     api.tripDays.mockResolvedValue([])
-    render(<TripRecap tripId="t1" crewId="c1" trip={{ startDate: '2027-01-16' }} />)
+    render(
+      <MemoryRouter>
+        <TripRecap tripId="t1" crewId="c1" trip={{ startDate: '2027-01-16' }} />
+      </MemoryRouter>,
+    )
     expect(await screen.findByText(/Nog geen gedeelde dagen/)).toBeTruthy()
   })
 
   it('offline: de laatst berekende recap', async () => {
     api.tripDays.mockResolvedValue([shared(ME, '2027-01-16', { hours: 3 })])
-    const { unmount } = render(<TripRecap tripId="t1" crewId="c1" trip={{ startDate: '2027-01-16' }} />)
+    const { unmount } = render(
+      <MemoryRouter>
+        <TripRecap tripId="t1" crewId="c1" trip={{ startDate: '2027-01-16' }} />
+      </MemoryRouter>,
+    )
     await screen.findByText('Jij')
     unmount()
     online(false)
-    render(<TripRecap tripId="t1" crewId="c1" trip={{ startDate: '2027-01-16' }} />)
+    render(
+      <MemoryRouter>
+        <TripRecap tripId="t1" crewId="c1" trip={{ startDate: '2027-01-16' }} />
+      </MemoryRouter>,
+    )
     expect(await screen.findByText('Jij')).toBeTruthy()
     expect(api.tripDays).toHaveBeenCalledTimes(1)
   })

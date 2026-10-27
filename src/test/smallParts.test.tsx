@@ -3,7 +3,7 @@ import { act, cleanup, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 
-const crew = vi.hoisted(() => ({ myCrews: vi.fn(), crewFeed: vi.fn(), crewMembers: vi.fn() }))
+const crew = vi.hoisted(() => ({ myCrews: vi.fn(), crewFeed: vi.fn(), crewMembers: vi.fn(), reactionsFor: vi.fn() }))
 vi.mock('../lib/supabase', () => ({ supabase: null, hasBackend: true, backendInfo: { keyKind: 'publishable' } }))
 vi.mock('../lib/crew', async (orig) => ({ ...(await orig<typeof import('../lib/crew')>()), ...crew }))
 
@@ -115,5 +115,48 @@ describe('crew offline', () => {
     expect((await screen.findAllByText('Shredheads')).length).toBeGreaterThan(0)
     expect(screen.queryByText('Nog geen crew')).toBeNull()
     expect(toastStore.get().some((t) => t.title === 'Crew laden mislukt')).toBe(false)
+  })
+})
+
+describe('crew naar de skipas', () => {
+  it('auteur in de feed en een rij in het leaderboard openen de skipas', async () => {
+    online(true)
+    crew.myCrews.mockResolvedValue([{ id: 'c1', name: 'Shredheads', invite_code: 'ABC123', created_by: 'me' }])
+    crew.crewFeed.mockResolvedValue([
+      {
+        id: 'd1',
+        user_id: 'daan',
+        kind: 'session',
+        updated_at: '2027-01-16',
+        data: { date: '2027-01-16', resortName: 'Tignes', hours: 5, falls: 2, landed: [], mood: 4, mediaIds: [] },
+      },
+    ])
+    crew.crewMembers.mockResolvedValue([
+      { user_id: 'daan', display_name: 'Daan', role: 'member', stats: { xp: 300 } },
+      { user_id: 'me', display_name: 'Ingmar', role: 'owner', stats: { xp: 100 } },
+    ])
+    crew.reactionsFor.mockResolvedValue([])
+    inRouter(<Crew />)
+    expect((await screen.findByText('Tignes')) && screen.getAllByRole('link', { name: /Daan/ })[0].getAttribute('href')).toBe('/rider/daan')
+    await userEvent.setup().click(screen.getByRole('tab', { name: 'Leaderboard' }))
+    const links = await screen.findAllByRole('link', { name: /Daan/ })
+    expect(links.at(-1)!.getAttribute('href')).toBe('/rider/daan')
+  })
+})
+
+describe('Field', () => {
+  it('group: knoppen houden hun eigen naam en een tik op de hint doet niks', async () => {
+    const { Field } = await import('../components/ui')
+    const onClick = vi.fn()
+    render(
+      <Field label="Signature trick" hint="Kies er een" group>
+        <button onClick={onClick}>Ollie</button>
+        <button>Shifty</button>
+      </Field>,
+    )
+    expect(screen.getByRole('group', { name: 'Signature trick' })).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Ollie' })).toBeTruthy()
+    await userEvent.setup().click(screen.getByText('Kies er een'))
+    expect(onClick).not.toHaveBeenCalled()
   })
 })

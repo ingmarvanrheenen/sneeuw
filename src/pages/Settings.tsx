@@ -232,6 +232,9 @@ export default function Settings() {
                 placeholder="Hoe heet je?"
               />
             </Field>
+            <Link to="/rider/ik" className="mt-3 flex items-center justify-between text-sm">
+              Je skipas (profiel) <Icon name="chevron" size={16} className="text-muted" />
+            </Link>
             <Link to="/gear" className="mt-3 flex items-center justify-between text-sm">
               Stance & bindingen <Icon name="chevron" size={16} className="text-muted" />
             </Link>

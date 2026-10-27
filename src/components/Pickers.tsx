@@ -70,17 +70,19 @@ export function ResortPicker({
   open,
   onClose,
   onPick,
+  title = 'Waar was je?',
 }: {
   open: boolean
   onClose: () => void
   onPick: (r: { id?: string; name: string; resort?: Resort }) => void
+  title?: string
 }) {
   const [q, setQ] = useState('')
   const list = RESORTS.filter(
     (r) => !q || r.name.toLowerCase().includes(q.toLowerCase()) || r.region.toLowerCase().includes(q.toLowerCase()),
   )
   return (
-    <Sheet open={open} onClose={onClose} title="Waar was je?">
+    <Sheet open={open} onClose={onClose} title={title}>
       <div className="relative mb-3">
         <Icon name="search" size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted" />
         <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Zoek of typ een naam…" className={cx(inputCls, 'pl-10')} />

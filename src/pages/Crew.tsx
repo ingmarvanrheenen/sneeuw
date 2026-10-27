@@ -29,6 +29,8 @@ import { toast } from '../lib/toast'
 import type { MediaMeta } from '../lib/types'
 import { errMsg } from '../lib/errors'
 import { PushNudge } from '../components/PushSettings'
+import { RiderAvatar } from '../components/RiderParts'
+import { riderProfiles, type CrewRider } from '../lib/riders'
 
 function NeedAccount() {
   const nav = useNavigate()
@@ -49,12 +51,14 @@ function NeedAccount() {
 function Post({
   post,
   member,
+  photo,
   reactions,
   me,
   onReact,
 }: {
   post: FeedPost
   member?: CrewMember
+  photo?: string
   reactions: Reaction[]
   me: string
   onReact: (key: string, mine: boolean) => void
@@ -65,13 +69,13 @@ function Post({
   return (
     <Card className="p-0">
       <div className="flex items-center gap-3 p-4 pb-3">
-        <div className="grid size-9 place-items-center rounded-full bg-accent text-sm font-bold text-accent-ink">
-          {(member?.display_name ?? '?').slice(0, 1).toUpperCase()}
-        </div>
-        <div className="min-w-0 flex-1">
-          <div className="truncate text-sm font-semibold">{member?.display_name ?? 'Rider'}</div>
-          <div className="label">{fmtDate(post.at)}</div>
-        </div>
+        <Link to={`/rider/${post.userId}`} className="flex min-w-0 flex-1 items-center gap-3">
+          <RiderAvatar photo={photo} name={member?.display_name ?? '?'} size={36} />
+          <div className="min-w-0 flex-1">
+            <div className="truncate text-sm font-semibold">{member?.display_name ?? 'Rider'}</div>
+            <div className="label">{fmtDate(post.at)}</div>
+          </div>
+        </Link>
         {s && <Mood value={s.mood} className="text-accent-text" />}
         {t && <Icon name="stomp" size={24} className="text-accent-text" />}
       </div>
@@ -147,6 +151,7 @@ export default function Crew() {
   const [tab, setTab] = useState<'feed' | 'board'>('feed')
   const [posts, setPosts] = useState<FeedPost[]>([])
   const [members, setMembers] = useState<CrewMember[]>([])
+  const [riders, setRiders] = useState<Record<string, CrewRider>>({})
   const [reactions, setReactions] = useState<Reaction[]>([])
   const [loading, setLoading] = useState(false)
   const [sheet, setSheet] = useState<'new' | 'join' | null>(null)
@@ -175,6 +180,10 @@ export default function Crew() {
       const p = toPosts(items)
       setPosts(p)
       setMembers(mem)
+      // foto's en bijnamen voor de feed; lukt het niet, dan gewoon de letter
+      riderProfiles(mem.map((m) => m.user_id))
+        .then(setRiders)
+        .catch(() => {})
       setReactions(await reactionsFor(p.map((x) => x.id)))
     } catch (e) {
       if (!quiet) toast({ title: 'Offline?', body: errMsg(e), tone: 'error', icon: 'cloudOff' })
@@ -341,6 +350,7 @@ export default function Crew() {
                   key={p.id}
                   post={p}
                   member={members.find((m) => m.user_id === p.userId)}
+                  photo={riders[p.userId]?.profile.photo}
                   reactions={reactions.filter((r) => r.record_id === p.id)}
                   me={user.id}
                   onReact={async (key, mine) => {
@@ -363,19 +373,22 @@ export default function Crew() {
             <Section title="Op XP">
               <ol className="card divide-y divide-[var(--line)] overflow-hidden p-0">
                 {members.map((m, i) => (
-                  <li key={m.user_id} className={cx('flex items-center gap-3 px-4 py-3', m.user_id === user.id && 'bg-accent-soft')}>
-                    <span className={cx('num w-6 text-lg font-semibold', i === 0 ? 'text-accent-text' : 'text-muted')}>{i + 1}</span>
-                    <div className="min-w-0 flex-1">
-                      <div className="truncate font-medium">{m.display_name}</div>
-                      <div className="label">
-                        {m.stats.levelName ?? 'Groentje'} · {plural(m.stats.days ?? 0, 'dag', 'dagen')} ·{' '}
-                        {plural(m.stats.tricksLanded ?? 0, 'trick', 'tricks')}
+                  <li key={m.user_id} className={cx(m.user_id === user.id && 'bg-accent-soft')}>
+                    <Link to={`/rider/${m.user_id}`} className="flex items-center gap-3 px-4 py-3 active:bg-surface-2">
+                      <span className={cx('num w-6 text-lg font-semibold', i === 0 ? 'text-accent-text' : 'text-muted')}>{i + 1}</span>
+                      <RiderAvatar photo={riders[m.user_id]?.profile.photo} name={m.display_name} size={32} />
+                      <div className="min-w-0 flex-1">
+                        <div className="truncate font-medium">{m.display_name}</div>
+                        <div className="label">
+                          {m.stats.levelName ?? 'Groentje'} · {plural(m.stats.days ?? 0, 'dag', 'dagen')} ·{' '}
+                          {plural(m.stats.tricksLanded ?? 0, 'trick', 'tricks')}
+                        </div>
                       </div>
-                    </div>
-                    <div className="num text-right">
-                      <div className="font-semibold">{m.stats.xp ?? 0}</div>
-                      <div className="label">xp</div>
-                    </div>
+                      <div className="num text-right">
+                        <div className="font-semibold">{m.stats.xp ?? 0}</div>
+                        <div className="label">xp</div>
+                      </div>
+                    </Link>
                   </li>
                 ))}
               </ol>

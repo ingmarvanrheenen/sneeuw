@@ -26,6 +26,7 @@ const TripDetail = lazy(() => import('./pages/TripDetail'))
 const CrewTripDetail = lazy(() => import('./pages/CrewTripDetail'))
 const Weather = lazy(() => import('./pages/Weather'))
 const GearPage = lazy(() => import('./pages/Gear'))
+const Rider = lazy(() => import('./pages/Rider'))
 const Settings = lazy(() => import('./pages/Settings'))
 const Badges = lazy(() => import('./pages/Badges'))
 const DesignSystem = lazy(() => import('./pages/DesignSystem'))
@@ -166,6 +167,7 @@ export default function App() {
               <Route path="/reizen/:id" element={<TripDetail />} />
               <Route path="/weer" element={<Weather />} />
               <Route path="/gear" element={<GearPage />} />
+              <Route path="/rider/:id" element={<Rider />} />
               <Route path="/instellingen" element={<Settings />} />
               <Route path="/design" element={<DesignSystem />} />
               <Route path="*" element={<Home />} />

@@ -361,13 +361,21 @@ export function Stepper({
   )
 }
 
-export function Field({ label, children, hint }: { label: string; children: ReactNode; hint?: string }) {
-  return (
-    <label className="mt-4 block">
+/** `group`: voor knoppen of chips. Een <label> zou zijn naam aan de eerste knop geven en tikken doorsturen. */
+export function Field({ label, children, hint, group }: { label: string; children: ReactNode; hint?: string; group?: boolean }) {
+  const body = (
+    <>
       <span className="label pl-1">{label}</span>
       <div className="mt-1.5">{children}</div>
       {hint && <p className="mt-1 pl-1 text-[13px] text-muted">{hint}</p>}
-    </label>
+    </>
+  )
+  return group ? (
+    <div role="group" aria-label={label} className="mt-4 block">
+      {body}
+    </div>
+  ) : (
+    <label className="mt-4 block">{body}</label>
   )
 }
 

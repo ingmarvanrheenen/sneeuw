@@ -11,16 +11,16 @@
 
 ## Data
 
-Alles wat sync nodig heeft is een *record* in één Dexie-tabel `records` (`src/lib/types.ts`):
+Alles wat sync nodig heeft is een _record_ in één Dexie-tabel `records` (`src/lib/types.ts`):
 
-| kind | wat |
-| --- | --- |
-| `session` | een gelogde dag |
-| `trick` | jouw status per trick (wil/bezig/geland/beheerst), eerste landing, clips |
-| `goal` | doel, optioneel gekoppeld aan trick en/of trip |
-| `trip` | reis met paklijst |
-| `gear` | spullen (eigen/huur/wishlist) |
-| `media` | metadata van foto/video; de blob zelf staat in tabel `blobs` |
+| kind      | wat                                                                      |
+| --------- | ------------------------------------------------------------------------ |
+| `session` | een gelogde dag                                                          |
+| `trick`   | jouw status per trick (wil/bezig/geland/beheerst), eerste landing, clips |
+| `goal`    | doel, optioneel gekoppeld aan trick en/of trip                           |
+| `trip`    | reis met paklijst                                                        |
+| `gear`    | spullen (eigen/huur/wishlist)                                            |
+| `media`   | metadata van foto/video; de blob zelf staat in tabel `blobs`             |
 
 Elk record heeft `id` (uuid), `userId`, `createdAt`, `updatedAt`, `deleted` (soft delete), `dirty` (nog niet gesynct) en optioneel `crewId` (gedeeld met die crew).
 
@@ -56,6 +56,15 @@ Foto's worden op het toestel verkleind naar max 2048 px (JPEG). Video's gaan doo
 - **Trip-recap**: geen eigen tabel. `tripDays()` haalt de met de crew gedeelde dagen (`records` kind `session` met die `crewId`) binnen de tripperiode op, `computeRecap()` (puur) telt per persoon dagen, uren, valpartijen en tricks op. De laatste recap staat in `kv` voor offline.
 - **Online-first lijsten** (groepslijst, doelen): een lege cache wordt online genegeerd (spinner tot de server antwoordt), en een refresh die liep terwijl jij iets wijzigde, wordt weggegooid zodat hij je net gezette vinkje niet terugdraait.
 - Je crewlijst staat ook lokaal (`kv: crews`), zodat je zonder bereik een dag met je crew kunt delen. De feed ververst stil bij terugkomen, weer online en elke minuut.
+
+## Rider-profiel (skipas)
+
+- Route `/rider/:id` (`ik` = jezelf, werkt ook zonder account). Je eigen pas rekent alles live uit je logboek (`useProgress` → `riderStats()` in `src/lib/rider.ts`); die van een crewgenoot komt uit `profiles` (laatst bekende in `kv: rider:<id>` voor offline).
+- **Wat je crew ziet**: `profiles.data` (naam, stance, foto, motto, thuisresort, signature trick, bijnaam) en `profiles.stats` = `riderStats()`: XP, level, eerlijke stats, gelande trick-ids, badge-ids. Dat gaat mee met de bestaande profiel-sync; afgeleid, dus nooit uit de pas met je logboek.
+- **Foto**: vierkant uitgesneden, 192 px jpeg als data-URL in je profiel (max ±60 KB; database-check op de profielgrootte). Geen Storage nodig, werkt offline en je crew ziet hem meteen.
+- **Stickerboek**: alle tricks per track (`stickerBook()`), randkleur = moeilijkheid als pistekleur; lege plekken zijn nog te verdienen.
+- **Bijnamen** (`nicknames`, migratie `20261029000000`): een crewgenoot stelt voor (max 3 open per persoon, niet dezelfde twee keer), alleen jij zet de status op ja/nee; bij ja komt hij in je profiel. 20 scenario's in `test:db`.
+- Feed, leaderboard en trip-recap linken naar de skipas; de feed toont profielfoto's.
 
 ## Push-meldingen
 

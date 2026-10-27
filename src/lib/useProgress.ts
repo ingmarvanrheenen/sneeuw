@@ -1,6 +1,7 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db, kvGet } from './db'
 import { levelFor, stats, totalXP, unlockedBadges, type ProgressInput } from './progress'
+import { riderStats } from './rider'
 import type { AnyRecord, Gear, Goal, MediaMeta, Session, TrickProgress, Trip } from './types'
 
 export async function loadProgressInput(): Promise<ProgressInput> {
@@ -30,17 +31,7 @@ export function useProgress(): Progress | undefined {
   return useLiveQuery(async () => computeProgress(await loadProgressInput()), [])
 }
 
-/** Stats die je crew ziet in het leaderboard. */
+/** Stats die je crew ziet: leaderboard en je rider-profiel. */
 export async function crewStats() {
-  const p = computeProgress(await loadProgressInput())
-  return {
-    xp: p.xp,
-    level: p.level.level,
-    levelName: p.level.name,
-    days: p.stats.days,
-    hours: p.stats.hours,
-    tricksLanded: p.stats.tricksLanded,
-    falls: p.stats.falls,
-    badges: p.badges.length,
-  }
+  return riderStats(computeProgress(await loadProgressInput()))
 }

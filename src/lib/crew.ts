@@ -5,6 +5,7 @@ import { supabase } from './supabase'
 import { kvGet, kvSet } from './db'
 import type { AnyRecord, MediaMeta, Session, TrickProgress } from './types'
 import type { IconName } from '../design/icons'
+import type { RiderStats } from './rider'
 
 export interface Crew {
   id: string
@@ -17,7 +18,7 @@ export interface CrewMember {
   user_id: string
   role: string
   display_name: string
-  stats: { xp?: number; level?: number; levelName?: string; days?: number; hours?: number; tricksLanded?: number; falls?: number }
+  stats: Partial<RiderStats>
 }
 
 export interface FeedItem {

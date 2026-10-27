@@ -169,8 +169,8 @@ async function pull(userId: string) {
 }
 
 /** Stats voor je crew (leaderboard) gaan mee met je profiel. */
-let statsProvider: (() => Promise<Record<string, unknown>>) | null = null
-export function setStatsProvider(fn: () => Promise<Record<string, unknown>>) {
+let statsProvider: (() => Promise<object>) | null = null
+export function setStatsProvider(fn: () => Promise<object>) {
   statsProvider = fn
 }
 

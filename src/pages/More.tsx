@@ -6,6 +6,7 @@ type Item = { to: string; label: string; icon: IconName }
 
 // Gegroepeerd op wat je ermee doet, zoals iOS Instellingen.
 const GROUPS: Item[][] = [
+  [{ to: '/rider/ik', label: 'Je skipas', icon: 'user' }],
   [
     { to: '/coach', label: 'Coach Daddy', icon: 'chat' },
     { to: '/stats', label: 'Stats', icon: 'chart' },

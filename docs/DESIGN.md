@@ -17,19 +17,19 @@ De levende referentie staat in de app op **Meer → Design system** (`/#/design`
 
 Licht is de basis (fel buitenlicht), donker is eersteklas voor 's avonds. Neutralen hebben een lichte groene tint, nooit puur zwart.
 
-| Token | Licht | Donker | Gebruik |
-| --- | --- | --- | --- |
-| `--bg` | `#f3f5f2` | `#0d100e` | achtergrond |
-| `--surface` | `#ffffff` | `#151916` | gegroepeerde lijsten |
-| `--surface-2` | `#e8ece7` | `#1e231f` | tracks, controls |
-| `--line` | `#d7ddd6` | `#2a312b` | scheidingslijnen |
-| `--text` | `#0f1410` | `#edf1eb` | tekst |
-| `--muted` | `#576157` | `#98a297` | secundaire tekst (≥ 4.5:1) |
-| `--accent` | `#1f7a3d` | `#73cf80` | knoppen, selectie, voortgang |
-| `--accent-ink` | `#ffffff` | `#09120b` | tekst op accent |
-| `--accent-text` | `#1c6f37` | `#7fd78b` | groene tekst en links |
-| `--heel` / `--toe` | blauw / oranje | | edges in animaties |
-| `--jacket` / `--pants` | | | kleding van de rider |
+| Token                  | Licht          | Donker    | Gebruik                      |
+| ---------------------- | -------------- | --------- | ---------------------------- |
+| `--bg`                 | `#f3f5f2`      | `#0d100e` | achtergrond                  |
+| `--surface`            | `#ffffff`      | `#151916` | gegroepeerde lijsten         |
+| `--surface-2`          | `#e8ece7`      | `#1e231f` | tracks, controls             |
+| `--line`               | `#d7ddd6`      | `#2a312b` | scheidingslijnen             |
+| `--text`               | `#0f1410`      | `#edf1eb` | tekst                        |
+| `--muted`              | `#576157`      | `#98a297` | secundaire tekst (≥ 4.5:1)   |
+| `--accent`             | `#1f7a3d`      | `#73cf80` | knoppen, selectie, voortgang |
+| `--accent-ink`         | `#ffffff`      | `#09120b` | tekst op accent              |
+| `--accent-text`        | `#1c6f37`      | `#7fd78b` | groene tekst en links        |
+| `--heel` / `--toe`     | blauw / oranje |           | edges in animaties           |
+| `--jacket` / `--pants` |                |           | kleding van de rider         |
 
 ## Typografie
 

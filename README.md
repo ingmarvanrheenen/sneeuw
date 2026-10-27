@@ -11,24 +11,25 @@ Je snowboard-logboek, trick-bijbel en crew in één app. Gebouwd als PWA: instal
 
 ## Wat zit erin
 
-| Onderdeel | Wat het doet |
-| --- | --- |
-| **Logboek** | Per dag: waar, uren, valpartijen, pistes, sneeuw & weer, mood, wat je oefende en landde, pijntjes, met wie, foto's/video's, notities. Per seizoen gegroepeerd. |
-| **Trick-bijbel** | 63 skills en tricks in 7 tracks (basis, liften, bochten, carven, flatland, park, freeride) met stappen, veelgemaakte fouten, veiligheid, tips en een YouTube-zoeklink. |
-| **Animaties** | Elke trick heeft een eigen animatie (pseudo-3D rider) met stappen die meelopen, slow-motion, scrubben, bewegingssporen en een goofy-spiegeling. Bochten in bovenaanzicht met heel/toe-edges. |
-| **Skill tree** | Voorkennis per trick als advies, nooit als slot. Je mag alles proberen. |
-| **Woordenboek** | 120 termen: board, gear, Berg 101 (FR vs AT), sneeuw, park, trick-namen, slang. |
-| **Kluis** | Al je gelande tricks met je eigen clips erbij. |
-| **Levels & badges** | XP uit je echte data. 11 levels van *Groentje* tot *Sneeuw Daddy*, 27 badges. |
-| **Stats** | Dagen per maand, valpartijen per uur, progressie per onderdeel, mood, pistes. |
-| **Doelen & trips** | Doelen per trick of trip, aftellen, paklijst met standaard template. |
-| **Sneeuwradar** | 7-daagse voorspelling + sneeuwhoogte voor 27 gebieden in Frankrijk en Oostenrijk (Open-Meteo), offline gecachet. |
-| **Gear & stance** | Je setup, bindinghoeken met tekening, boardlengte-check. |
-| **Quiz** | Termen, definities, "welke trick zie je" (met animatie) en voorkennis. |
-| **Crew** | Vriendengroep met invite-code: gedeelde feed van dagen, tricks en media, reacties en een XP-leaderboard. |
-| **Coach Daddy** | AI-buddy (Claude) die je logboek, tricks en doelen kent. Tips, oefenplannen, uitleg. |
-| **Meldingen** | Push op je iPhone (vanaf het beginscherm): crew deelt een dag, crew-doel gehaald, en om 17:00 tijdens een trip "Log je dag". Per soort aan/uit. |
-| **Story delen** | Maak van een dag een 1080×1920 story-kaart in de huisstijl en deel hem via het iOS-deelmenu. |
+| Onderdeel            | Wat het doet                                                                                                                                                                                                                                            |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Logboek**          | Per dag: waar, uren, valpartijen, pistes, sneeuw & weer, mood, wat je oefende en landde, pijntjes, met wie, foto's/video's, notities. Per seizoen gegroepeerd.                                                                                          |
+| **Trick-bijbel**     | 63 skills en tricks in 7 tracks (basis, liften, bochten, carven, flatland, park, freeride) met stappen, veelgemaakte fouten, veiligheid, tips en een YouTube-zoeklink.                                                                                  |
+| **Animaties**        | Elke trick heeft een eigen animatie (pseudo-3D rider) met stappen die meelopen, slow-motion, scrubben, bewegingssporen en een goofy-spiegeling. Bochten in bovenaanzicht met heel/toe-edges.                                                            |
+| **Skill tree**       | Voorkennis per trick als advies, nooit als slot. Je mag alles proberen.                                                                                                                                                                                 |
+| **Woordenboek**      | 120 termen: board, gear, Berg 101 (FR vs AT), sneeuw, park, trick-namen, slang.                                                                                                                                                                         |
+| **Kluis**            | Al je gelande tricks met je eigen clips erbij.                                                                                                                                                                                                          |
+| **Levels & badges**  | XP uit je echte data. 11 levels van _Groentje_ tot _Sneeuw Daddy_, 27 badges.                                                                                                                                                                           |
+| **Stats**            | Dagen per maand, valpartijen per uur, progressie per onderdeel, mood, pistes.                                                                                                                                                                           |
+| **Doelen & trips**   | Doelen per trick of trip, aftellen, paklijst met standaard template.                                                                                                                                                                                    |
+| **Sneeuwradar**      | 7-daagse voorspelling + sneeuwhoogte voor 27 gebieden in Frankrijk en Oostenrijk (Open-Meteo), offline gecachet.                                                                                                                                        |
+| **Gear & stance**    | Je setup, bindinghoeken met tekening, boardlengte-check.                                                                                                                                                                                                |
+| **Quiz**             | Termen, definities, "welke trick zie je" (met animatie) en voorkennis.                                                                                                                                                                                  |
+| **Crew**             | Vriendengroep met invite-code: gedeelde feed van dagen, tricks en media, reacties en een XP-leaderboard.                                                                                                                                                |
+| **Coach Daddy**      | AI-buddy (Claude) die je logboek, tricks en doelen kent. Tips, oefenplannen, uitleg.                                                                                                                                                                    |
+| **Skipas (profiel)** | Je eigen pagina als skipas: foto, stance, thuisresort, level. Stickerboek met je gelande tricks, eerlijke stats (valpartijen als trofee), signature trick, badges en highlights. Je crew stelt bijnamen voor, jij kiest. Alleen zichtbaar voor je crew. |
+| **Meldingen**        | Push op je iPhone (vanaf het beginscherm): crew deelt een dag, crew-doel gehaald, en om 17:00 tijdens een trip "Log je dag". Per soort aan/uit.                                                                                                         |
+| **Story delen**      | Maak van een dag een 1080×1920 story-kaart in de huisstijl en deel hem via het iOS-deelmenu.                                                                                                                                                            |
 
 Plus: offline-first met sync, donker/licht thema, zachte geluidjes en confetti, eigen icon-set (nooit emoji), safe areas voor de Dynamic Island.
 
@@ -48,9 +49,9 @@ Zonder verdere configuratie draait de app **volledig lokaal**: alles staat in In
 
 1. Maak een gratis project op [supabase.com](https://supabase.com).
 2. **Database**: open de SQL editor en voer `supabase/migrations/20261026000000_init.sql` uit (of `supabase db push` met de CLI). Dit maakt de tabellen, Row Level Security, de crew-functies en de `media` storage-bucket aan.
-3. **Auth**: zet onder *Authentication → Providers* e-mail aan. Wil je zonder mailbevestiging kunnen inloggen, zet dan *Confirm email* uit.
-4. **Env**: kopieer `.env.example` naar `.env.local` en vul `VITE_SUPABASE_URL` en `VITE_SUPABASE_ANON_KEY` in (*Project Settings → API*).
-5. Start opnieuw met `npm run dev`. In *Meer → Instellingen* kun je nu een account maken. Wat je al lokaal had gelogd, gaat automatisch mee.
+3. **Auth**: zet onder _Authentication → Providers_ e-mail aan. Wil je zonder mailbevestiging kunnen inloggen, zet dan _Confirm email_ uit.
+4. **Env**: kopieer `.env.example` naar `.env.local` en vul `VITE_SUPABASE_URL` en `VITE_SUPABASE_ANON_KEY` in (_Project Settings → API_).
+5. Start opnieuw met `npm run dev`. In _Meer → Instellingen_ kun je nu een account maken. Wat je al lokaal had gelogd, gaat automatisch mee.
 
 ### Coach Daddy aanzetten
 
@@ -80,7 +81,7 @@ Over de kosten: de coach gebruikt Claude Opus 5.5 met `effort: low` (snel en zui
 
 **Vercel / Netlify**: importeer de repo, build command `npm run build`, output `dist`, en zet de twee `VITE_SUPABASE_*` variabelen. Gebruik je de Vercel-Supabase-integratie, dan hoeft dat niet: de build pakt ook `NEXT_PUBLIC_SUPABASE_URL` / `SUPABASE_ANON_KEY` (en de publishable-varianten) op. De service-role key wordt nooit in de app gebakken.
 
-**GitHub Pages**: de workflow `.github/workflows/pages.yml` bouwt en publiceert bij elke push naar `main`. Zet in de repo-instellingen *Pages → Source* op *GitHub Actions* en voeg (optioneel) de secrets `VITE_SUPABASE_URL` en `VITE_SUPABASE_ANON_KEY` toe.
+**GitHub Pages**: de workflow `.github/workflows/pages.yml` bouwt en publiceert bij elke push naar `main`. Zet in de repo-instellingen _Pages → Source_ op _GitHub Actions_ en voeg (optioneel) de secrets `VITE_SUPABASE_URL` en `VITE_SUPABASE_ANON_KEY` toe.
 
 ### Op je iPhone zetten
 

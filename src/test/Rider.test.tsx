@@ -1,0 +1,210 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { cleanup, render, screen, waitFor, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { MemoryRouter, Route, Routes } from 'react-router-dom'
+
+const api = vi.hoisted(() => ({
+  cachedRider: vi.fn(),
+  loadRider: vi.fn(),
+  riderMedia: vi.fn(),
+  nicknameInbox: vi.fn(),
+  answerNickname: vi.fn(),
+  suggestNickname: vi.fn(),
+  makeAvatar: vi.fn(),
+}))
+vi.mock('../lib/riders', async (orig) => ({ ...(await orig<typeof import('../lib/riders')>()), ...api }))
+vi.mock('../lib/sync', async (orig) => ({ ...(await orig<typeof import('../lib/sync')>()), scheduleSync: vi.fn() }))
+
+import Rider from '../pages/Rider'
+import { SkiPass, StickerBook } from '../components/RiderParts'
+import { authStore, getProfile, saveProfile } from '../lib/auth'
+import { setCurrentUserId } from '../lib/auth-state'
+import { db } from '../lib/db'
+import { create } from '../lib/repo'
+import { EMPTY_DRAFT } from '../lib/sessions'
+import { toastStore } from '../lib/toast'
+import { TRICKS } from '../content/tricks'
+
+const online = (on: boolean) => Object.defineProperty(navigator, 'onLine', { configurable: true, get: () => on })
+const at = (path: string) =>
+  render(
+    <MemoryRouter initialEntries={[path]}>
+      <Routes>
+        <Route path="/rider/:id" element={<Rider />} />
+      </Routes>
+    </MemoryRouter>,
+  )
+
+beforeEach(async () => {
+  await db.records.clear()
+  await db.kv.clear()
+  setCurrentUserId(null)
+  authStore.set({ ...authStore.get(), user: null })
+  online(true)
+  toastStore.set([])
+  api.riderMedia.mockResolvedValue([])
+  api.nicknameInbox.mockResolvedValue([])
+  api.answerNickname.mockResolvedValue(undefined)
+  api.suggestNickname.mockResolvedValue(undefined)
+  api.cachedRider.mockResolvedValue(null)
+})
+afterEach(() => {
+  cleanup()
+  vi.clearAllMocks()
+})
+
+describe('skipas en stickerboek', () => {
+  it('skipas: naam, bijnaam, motto, stance, thuisresort, seizoen en pasnummer', () => {
+    render(
+      <SkiPass
+        userId="a1b2c3d4-0000"
+        name="Ingmar"
+        profile={{
+          nickname: 'Valkoning',
+          motto: 'Vallen is ook een trick',
+          stance: 'goofy',
+          angleFront: 15,
+          angleBack: -15,
+          homeResort: 'val-thorens',
+        }}
+        level={3}
+        levelName="Zijslipper"
+        progress={0.4}
+        now={new Date(2026, 10, 1)}
+      />,
+    )
+    const pass = screen.getByRole('group', { name: 'Skipas van Ingmar' })
+    for (const t of ['Ingmar', '“Valkoning”', 'Vallen is ook een trick', 'Goofy · 15° / -15°', '26/27', 'A1B2 C3D4'])
+      expect(within(pass).getByText(t)).toBeTruthy()
+    expect(within(pass).getByText(/Zijslipper/)).toBeTruthy()
+    expect(within(pass).getByRole('progressbar').getAttribute('aria-valuenow')).toBe('40')
+  })
+
+  it('skipas zonder keuzes: nette lege velden, geen voortgangsbalk voor een crewgenoot', () => {
+    render(<SkiPass userId={null} name="Sem" profile={{}} level={1} levelName="Groentje" />)
+    expect(screen.getAllByText('Nog niet gekozen')).toHaveLength(2)
+    expect(screen.getByText('LOKAAL')).toBeTruthy()
+    expect(screen.queryByRole('progressbar')).toBeNull()
+  })
+
+  it('stickerboek: verdiende stickers en lege plekken, allemaal naar de trick', () => {
+    render(
+      <MemoryRouter>
+        <StickerBook landed={['ollie']} />
+      </MemoryRouter>,
+    )
+    expect(screen.getByRole('link', { name: 'Ollie' }).getAttribute('href')).toBe('/tricks/ollie')
+    expect(screen.getAllByRole('link', { name: /nog te verdienen$/ })).toHaveLength(TRICKS.length - 1)
+  })
+})
+
+describe('je eigen skipas', () => {
+  async function seed() {
+    await saveProfile({ ...(await getProfile()), displayName: 'Ingmar', stance: 'regular', motto: 'Send it' })
+    await create('session', { ...EMPTY_DRAFT, date: '2027-01-16', hours: 6, falls: 9, pistes: ['rood'] })
+    await create('trick', { trickId: 'ollie', status: 'geland', mediaIds: [] })
+    // een trick die niet meer in de bijbel staat
+    await create('trick', { trickId: 'oude-trick', status: 'geland', mediaIds: [] })
+  }
+
+  it('werkt zonder account: skipas, eerlijke stats en stickerboek uit je logboek', async () => {
+    await seed()
+    at('/rider/ik')
+    const pass = await screen.findByRole('group', { name: 'Skipas van Ingmar' })
+    expect(within(pass).getByText('Send it')).toBeTruthy()
+    expect(within(pass).getByText('LOKAAL')).toBeTruthy()
+    expect(screen.getByText('9 keer gevallen')).toBeTruthy()
+    expect(screen.getByText('En nooit opgegeven')).toBeTruthy()
+    expect(screen.getByText('max 9 op een dag')).toBeTruthy()
+    expect(screen.getByText('6 u')).toBeTruthy()
+    expect(screen.getByRole('link', { name: 'Ollie' })).toBeTruthy()
+    expect(api.nicknameInbox).not.toHaveBeenCalled()
+  })
+
+  it('bewerken: motto, signature trick en thuisresort komen op je pas', async () => {
+    const user = userEvent.setup()
+    await seed()
+    at('/rider/ik')
+    await user.click(await screen.findByRole('button', { name: 'Bewerk' }))
+    const motto = screen.getByPlaceholderText(/vallen is ook een trick/)
+    await user.clear(motto)
+    await user.type(motto, 'Altijd de eerste lift')
+    expect(screen.queryByRole('button', { name: 'oude-trick' })).toBeNull()
+    await user.click(screen.getByRole('button', { name: 'Ollie' }))
+    await user.click(screen.getByRole('button', { name: 'Klaar' }))
+    await waitFor(async () => expect((await getProfile()).motto).toBe('Altijd de eerste lift'))
+    expect((await getProfile()).signatureTrick).toBe('ollie')
+    expect(await screen.findByText('Signature trick')).toBeTruthy()
+    expect(within(screen.getByRole('group', { name: /Skipas/ })).getByText('Altijd de eerste lift')).toBeTruthy()
+  })
+
+  it('bijnaam-voorstel van je crew: ja zet hem op je pas', async () => {
+    const user = userEvent.setup()
+    await seed()
+    setCurrentUserId('me')
+    authStore.set({ ...authStore.get(), user: { id: 'me' } as never })
+    api.nicknameInbox.mockResolvedValue([{ id: 'n1', from_user: 'daan', fromName: 'Daan', nickname: 'Valkoning' }])
+    at('/rider/ik')
+    expect(await screen.findByText('van Daan')).toBeTruthy()
+    await user.click(screen.getByRole('button', { name: 'Ja' }))
+    expect(api.answerNickname).toHaveBeenCalledWith(expect.objectContaining({ id: 'n1' }), true)
+    expect(screen.queryByText('van Daan')).toBeNull()
+    expect(toastStore.get().some((t) => t.title === 'Je heet nu “Valkoning”')).toBe(true)
+  })
+
+  it('je eigen user-id in de link is ook je eigen pas', async () => {
+    await seed()
+    setCurrentUserId('me')
+    authStore.set({ ...authStore.get(), user: { id: 'me' } as never })
+    at('/rider/me')
+    expect(await screen.findByRole('button', { name: 'Bewerk' })).toBeTruthy()
+    expect(api.loadRider).not.toHaveBeenCalled()
+  })
+})
+
+describe('skipas van een crewgenoot', () => {
+  const daan = {
+    userId: 'daan',
+    name: 'Daan',
+    profile: { nickname: 'Sendlord', signatureTrick: 'ollie', homeResort: 'Ischgl' },
+    stats: { level: 4, levelName: 'Falling Leaf', days: 5, hours: 22, falls: 31, landed: ['ollie', 'shifty'], badgeIds: [] },
+  }
+
+  it('laat zijn pas, stats en stickers zien, zonder bewerken', async () => {
+    api.loadRider.mockResolvedValue(daan)
+    at('/rider/daan')
+    const pass = await screen.findByRole('group', { name: 'Skipas van Daan' })
+    expect(within(pass).getByText('“Sendlord”')).toBeTruthy()
+    expect(within(pass).getByText('Ischgl')).toBeTruthy()
+    expect(screen.getByText('31 keer gevallen')).toBeTruthy()
+    expect(screen.getByText('Lege plekken zijn nog te verdienen.', { exact: false })).toBeTruthy()
+    expect(screen.queryByRole('button', { name: 'Bewerk' })).toBeNull()
+    expect(api.riderMedia).toHaveBeenCalledWith('daan')
+  })
+
+  it('bijnaam voorstellen', async () => {
+    const user = userEvent.setup()
+    api.loadRider.mockResolvedValue(daan)
+    at('/rider/daan')
+    await user.click(await screen.findByRole('button', { name: 'Bijnaam voorstellen' }))
+    await user.type(screen.getByPlaceholderText('Bijv. Valkoning'), 'Poederkoning')
+    await user.click(screen.getByRole('button', { name: 'Voorstellen' }))
+    expect(api.suggestNickname).toHaveBeenCalledWith('daan', 'Poederkoning')
+    await waitFor(() => expect(toastStore.get().some((t) => t.title === 'Voorgesteld')).toBe(true))
+  })
+
+  it('offline: de laatst bekende pas, zonder voorstellen', async () => {
+    online(false)
+    api.cachedRider.mockResolvedValue(daan)
+    at('/rider/daan')
+    expect(await screen.findByRole('group', { name: 'Skipas van Daan' })).toBeTruthy()
+    expect(api.loadRider).not.toHaveBeenCalled()
+    expect(screen.queryByRole('button', { name: 'Bijnaam voorstellen' })).toBeNull()
+  })
+
+  it('niet in je crew: uitleg in plaats van een lege pagina', async () => {
+    api.loadRider.mockResolvedValue(null)
+    at('/rider/vreemd')
+    expect(await screen.findByText('Profiel niet gevonden')).toBeTruthy()
+  })
+})

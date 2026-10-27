@@ -1,5 +1,6 @@
 // Trip-recap: wat de hele crew deze trip gedaan heeft, uit de met de crew gedeelde dagen.
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { List, Stat, StatGroup } from './ui'
 import { Icon, Spinner } from '../design/icons'
 import { crewMembers } from '../lib/crew'
@@ -74,7 +75,11 @@ export function TripRecap({ tripId, crewId, trip }: { tripId: string; crewId: st
 
           <List className="mt-3">
             {recap.people.map((p) => (
-              <div key={p.userId} className="flex items-center justify-between gap-3 px-4 py-3">
+              <Link
+                key={p.userId}
+                to={`/rider/${p.userId === me ? 'ik' : p.userId}`}
+                className="flex items-center justify-between gap-3 px-4 py-3 active:bg-surface-2"
+              >
                 <span className="min-w-0">
                   <span className="block truncate text-[15px] font-medium">{name(p)}</span>
                   <span className="block text-[13px] text-muted">
@@ -84,7 +89,7 @@ export function TripRecap({ tripId, crewId, trip }: { tripId: string; crewId: st
                 <span className="num shrink-0 text-right text-[15px]">
                   {p.hours} u · {p.falls} val
                 </span>
-              </div>
+              </Link>
             ))}
           </List>
 
