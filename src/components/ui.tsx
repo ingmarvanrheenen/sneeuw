@@ -47,7 +47,10 @@ export function PageHeader({
   )
   return (
     <>
+      {/* compacte balk: alleen bruikbaar (ook voor VoiceOver) als hij zichtbaar is, anders staat alles dubbel */}
       <div
+        aria-hidden={!compact}
+        inert={!compact}
         className={cx(
           'pt-safe fixed inset-x-0 top-0 z-30 border-b bg-bg/90 backdrop-blur-xl transition-[border-color,opacity] duration-200',
           compact ? 'hairline opacity-100' : 'pointer-events-none border-transparent opacity-0',
