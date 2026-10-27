@@ -54,6 +54,10 @@ export interface Motion {
   keys: Key3[]
   steps: (Step & { cue?: BodyPart | null })[]
   camera: CameraPreset
+  /** hoogte van de harde sneeuw onder de rider (bulten); standaard overal 0 */
+  surface?: (x: number, z: number) => number
+  /** diepte van een laag verse sneeuw boven de harde ondergrond (poeder) */
+  powder?: number
 }
 
 export const KEY3_DEFAULT: Required<Omit<Key3, 't'>> = {

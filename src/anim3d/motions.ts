@@ -7,6 +7,7 @@ import { drive, fromPath, fromSide, fromTop, motion, steps, turns, turnsDuration
 import { FREESTYLE } from './freestyle'
 import { airTrickFrom, kickerMotion } from './kicker'
 import { jibFrom, jibMotion } from './jib'
+import { FREERIDE } from './freeride'
 import type { Key3, Motion } from './types'
 
 const SLOPE = 14
@@ -494,6 +495,8 @@ export function motionFor(trick: Trick): Motion | null {
   const own = MOTIONS[trick.id]
   if (own) return own()
   if (!trick.anim) return null
+  const free = FREERIDE[trick.id]
+  if (free) return free(trick.anim.steps)
   if (trick.anim.view === 'side' && trick.anim.obstacle === 'kicker') return kickerMotion(airTrickFrom(trick.anim), trick.anim.steps)
   if (trick.anim.view === 'side' && (trick.anim.obstacle === 'box' || trick.anim.obstacle === 'rail')) {
     const { kind, sideways } = jibFrom(trick.anim)

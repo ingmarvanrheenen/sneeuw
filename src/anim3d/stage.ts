@@ -23,7 +23,7 @@ import {
   PlaneGeometry,
   Scene,
   Shape,
-  SphereGeometry,
+  CircleGeometry,
   BoxGeometry,
   Vector3,
   WebGLRenderer,
@@ -35,6 +35,7 @@ import { headingVectors, solve, type Body3 } from './solve'
 import { Track, type Pose3 } from './interp'
 import { KNUCKLE_Z, kickerProfile, kickerSurface } from './kicker'
 import { JIB } from './jib'
+import { mogulHeight, treeLayout } from './freeride'
 import { Spray } from './spray'
 import type { CameraPreset, FullKey3, Motion } from './types'
 
@@ -95,7 +96,7 @@ export class Stage {
   private terrainGroup = new Group()
   private motion: Motion | null = null
   private track: Track | null = null
-  private trailPts: { x: number; z: number; w: number }[] = []
+  private trailPts: { x: number; z: number; w: number; y: number }[] = []
   private spray: Spray
   private mountainMats: MeshBasicMaterial[] = []
   private lastT = 0
@@ -340,33 +341,49 @@ export class Stage {
         this.terrainGroup.add(leg)
       }
     } else if (m.terrain === 'bulten') {
-      for (let i = 0; i < 26; i++) {
-        const b = mesh(new SphereGeometry(1, 20, 12), -6 + (i % 5) * 3 + (Math.floor(i / 5) % 2) * 1.5, -0.55, -8 + Math.floor(i / 5) * 4)
-        b.scale.set(1.1, 0.75, 0.9)
-      }
+      // hetzelfde bultenveld als waar het board overheen rijdt (freeride.ts)
+      const g = new PlaneGeometry(16, 64, 96, 384)
+      g.rotateX(-Math.PI / 2)
+      g.translate(0, 0, 14)
+      const pos = g.attributes.position as BufferAttribute
+      for (let i = 0; i < pos.count; i++) pos.setY(i, mogulHeight(pos.getX(i), pos.getZ(i)))
+      g.computeVertexNormals()
+      const field = new Mesh(g, this.terrainMat)
+      field.receiveShadow = true
+      this.terrainGroup.add(field)
     } else if (m.terrain === 'bomen') {
-      const treeMat = new MeshStandardMaterial({ color: new Color('#2f5a3a'), roughness: 0.9 })
-      for (const [x, z] of [
-        [-4, -3],
-        [5, 1],
-        [-5, 6],
-        [6, 9],
-        [0.5, -6],
-        [3.5, 4],
-        [-1.5, 12],
-      ]) {
-        const tree = new Mesh(new ConeGeometry(0.9, 3.2, 10), treeMat)
-        tree.position.set(x, 1.6, z)
-        tree.castShadow = true
-        this.terrainGroup.add(tree)
+      // sparren rond de baan van de rider (freeride.ts), met een tree well rond de stam
+      const needles = new MeshStandardMaterial({ color: new Color('#2f5a3a'), roughness: 0.9 })
+      const bark = new MeshStandardMaterial({ color: new Color('#5a4636'), roughness: 1 })
+      for (const t of treeLayout()) {
+        const trunk = new Mesh(new CylinderGeometry(0.12, 0.16, t.h * 0.35, 8), bark)
+        trunk.position.set(t.x, t.h * 0.17, t.z)
+        trunk.castShadow = true
+        this.terrainGroup.add(trunk)
+        for (const [from, r] of [
+          [0.22, 1.05],
+          [0.45, 0.8],
+          [0.66, 0.55],
+        ] as const) {
+          const tier = new Mesh(new ConeGeometry(r, t.h * 0.42, 9), needles)
+          tier.position.set(t.x, t.h * from + t.h * 0.21, t.z)
+          tier.castShadow = true
+          this.terrainGroup.add(tier)
+        }
+        const well = new Mesh(new CircleGeometry(0.95, 20), this.wallMat)
+        well.rotation.x = -Math.PI / 2
+        well.position.set(t.x, 0.004, t.z)
+        this.terrainGroup.add(well)
       }
     } else if (m.terrain === 'poeder') {
+      // laag verse sneeuw boven de harde ondergrond: het board zakt erin weg
       const fluff = new Mesh(
         new PlaneGeometry(120, 260),
-        new MeshStandardMaterial({ color: this.snowMat.color.clone(), roughness: 1, transparent: true, opacity: 0.88 }),
+        new MeshStandardMaterial({ color: this.snowMat.color.clone(), roughness: 1, transparent: true, opacity: 0.9 }),
       )
       fluff.rotation.x = -Math.PI / 2
-      fluff.position.set(0, 0.11, 40)
+      fluff.position.set(0, m.powder ?? 0.3, 40)
+      fluff.receiveShadow = true
       this.terrainGroup.add(fluff)
     } else if (m.terrain === 'lift') {
       const cable = mesh(new CylinderGeometry(0.015, 0.015, 40, 6), -0.7, 2.6, 0)
@@ -402,6 +419,8 @@ export class Stage {
     }
     // bij een kicker wil je van opzij lip, vlucht en landing in beeld: verder weg
     if (this.motion?.terrain === 'kicker' && preset === 'zij') off.multiplyScalar(1.9)
+    // tussen de bomen: van hoog boven, anders hangen de boomtoppen voor de lens
+    if (this.motion?.terrain === 'bomen' && preset === 'boven') off.multiplyScalar(2.3)
     const target = this.targetPoint(k)
     off.x *= this.world.scale.x
     off.applyQuaternion(this.world.quaternion)
@@ -458,8 +477,33 @@ export class Stage {
     this.sun.target.position.copy(target)
   }
 
+  /** hoogte van de harde sneeuw onder (x, z): 0, of het oppervlak van de beweging (bulten) */
+  private ground(x: number, z: number) {
+    return this.motion?.surface?.(x, z) ?? 0
+  }
+
+  /** het spoor ligt op de harde sneeuw, of als geul bovenin de poeder */
+  private trailHeight(x: number, z: number) {
+    return (this.motion?.powder ?? this.ground(x, z)) + 0.004
+  }
+
   private emitSpray(k: Pose3, body: Body3, vel: Vector3, dt: number) {
-    if (k.y > 0.05 || k.down || k.free > 0.5) return
+    if (k.y - this.ground(k.x, k.z) > 0.2 || k.down || k.free > 0.5) return
+    const depth = this.motion?.powder
+    if (depth) {
+      // poeder: een wolk die bij elke bocht van de edge opstuift
+      const toe = new Vector3(0, 0, 1).applyQuaternion(body.boardQuat)
+      const flat = new Vector3(toe.x, 0, toe.z).normalize()
+      const side = Math.sign(k.edge) || 1
+      const at = body.boardPos.clone().setY(depth)
+      const push = flat
+        .multiplyScalar(-side * 1.3)
+        .add(new Vector3(0, 1.4, 0))
+        .add(vel.clone().multiplyScalar(0.2))
+      this.spray.emit(at, push, 120 + 260 * Math.min(1, Math.abs(k.edge) * 1.5), new Vector3(1, 0, 0).applyQuaternion(body.boardQuat), dt)
+      return
+    }
+    if (k.y - this.ground(k.x, k.z) > 0.05) return
     const toe = new Vector3(0, 0, 1).applyQuaternion(body.boardQuat)
     const nose = new Vector3(1, 0, 0).applyQuaternion(body.boardQuat)
     const flatToe = new Vector3(toe.x, 0, toe.z).normalize()
@@ -503,8 +547,8 @@ export class Stage {
       }
       // breedte: hoe dwars het board staat t.o.v. de rijrichting (slippen) vs. strak (carven)
       const skid = Math.abs(nose.clone().cross(dir).y)
-      const air = k.y > 0.06 || k.down !== 0 || k.free > 0.5
-      this.trailPts.push({ x: k.x, z: k.z, w: air ? 0 : 0.07 + skid * 0.75 })
+      const air = k.y - this.ground(k.x, k.z) > 0.06 || k.down !== 0 || k.free > 0.5
+      this.trailPts.push({ x: k.x, z: k.z, w: air ? 0 : 0.07 + skid * 0.75, y: this.trailHeight(k.x, k.z) })
       prev = k
     }
     const pos = this.trailGeo.attributes.position as BufferAttribute
@@ -517,8 +561,8 @@ export class Stage {
       d.normalize()
       const sx = -d.z * (p.w / 2)
       const sz = d.x * (p.w / 2)
-      pos.setXYZ(i * 2, p.x + sx, 0.004, p.z + sz)
-      pos.setXYZ(i * 2 + 1, p.x - sx, 0.004, p.z - sz)
+      pos.setXYZ(i * 2, p.x + sx, p.y, p.z + sz)
+      pos.setXYZ(i * 2 + 1, p.x - sx, p.y, p.z - sz)
     }
     pos.needsUpdate = true
   }
