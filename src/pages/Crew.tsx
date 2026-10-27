@@ -4,6 +4,7 @@ import { Button, Card, Empty, Field, Page, PageHeader, Section, Segmented, Sheet
 import { Icon, Mood, Spinner } from '../design/icons'
 import { MediaThumb, MediaViewer } from '../components/Media'
 import { authStore } from '../lib/auth'
+import { plural } from '../lib/format'
 import { hasBackend } from '../lib/supabase'
 import {
   REACTIONS,
@@ -346,7 +347,8 @@ export default function Crew() {
                     <div className="min-w-0 flex-1">
                       <div className="truncate font-medium">{m.display_name}</div>
                       <div className="label">
-                        {m.stats.levelName ?? 'Groentje'} · {m.stats.days ?? 0} dagen · {m.stats.tricksLanded ?? 0} tricks
+                        {m.stats.levelName ?? 'Groentje'} · {plural(m.stats.days ?? 0, 'dag', 'dagen')} ·{' '}
+                        {plural(m.stats.tricksLanded ?? 0, 'trick', 'tricks')}
                       </div>
                     </div>
                     <div className="num text-right">

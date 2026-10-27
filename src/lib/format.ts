@@ -28,6 +28,11 @@ export function daysUntil(d: string) {
   return Math.round((parseISO(d).getTime() - today.getTime()) / 86400000)
 }
 
+/** "1 dag", "3 dagen". */
+export function plural(n: number, one: string, many: string) {
+  return `${n} ${n === 1 ? one : many}`
+}
+
 /** Winterseizoen loopt van augustus t/m juli: "25/26". */
 export function seasonOf(d: string) {
   const date = parseISO(d)
