@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Button, Empty, Field, Page, PageHeader, Progress, Sheet, cx, inputCls } from '../components/ui'
 import { Icon } from '../design/icons'
@@ -7,6 +7,9 @@ import { create, useKind } from '../lib/repo'
 import { defaultPacking } from '../content/packing'
 import { daysUntil, fmtShort } from '../lib/format'
 import { todayISO } from '../lib/ids'
+import { authStore } from '../lib/auth'
+import { hasBackend } from '../lib/supabase'
+import { cachedCrewTrips, crewTrips, type CrewTrip } from '../lib/crewTrips'
 
 export default function Trips() {
   const nav = useNavigate()
@@ -16,6 +19,20 @@ export default function Trips() {
   const [form, setForm] = useState({ name: '', resortId: '', resortName: '', startDate: '', endDate: '' })
   const today = todayISO()
   const sorted = [...(trips ?? [])].sort((a, b) => (b.startDate ?? '').localeCompare(a.startDate ?? ''))
+  const { user } = authStore.use()
+  const [shared, setShared] = useState<CrewTrip[]>([])
+  useEffect(() => {
+    if (!hasBackend || !user) return
+    let alive = true
+    void cachedCrewTrips().then((l) => alive && setShared(l))
+    if (navigator.onLine)
+      crewTrips()
+        .then((l) => alive && setShared(l))
+        .catch(() => {})
+    return () => {
+      alive = false
+    }
+  }, [user])
 
   return (
     <Page>
@@ -28,7 +45,7 @@ export default function Trips() {
           </Button>
         }
       />
-      {trips && !sorted.length && (
+      {trips && !sorted.length && !shared.length && (
         <Empty
           icon={<Icon name="suitcase" size={40} className="text-accent-text" />}
           title="Nog geen trip"
@@ -65,6 +82,37 @@ export default function Trips() {
           )
         })}
       </div>
+
+      {shared.length > 0 && (
+        <section className="mt-8">
+          <h2 className="mb-2.5 text-[20px] font-semibold tracking-tight">Van je crew</h2>
+          <div className="card divide-y divide-[var(--line)] overflow-hidden">
+            {shared.map(({ id, trip: t }) => (
+              <button
+                key={id}
+                onClick={() => nav(`/reizen/crew/${id}`)}
+                className="flex w-full items-center gap-3 px-4 py-3.5 text-left active:bg-surface-2"
+              >
+                <Icon name="crew" size={20} className="shrink-0 text-accent-text" />
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate font-semibold">{t.name}</span>
+                  <span className="block text-sm text-muted">
+                    {[t.resortName, t.startDate && `${fmtShort(t.startDate)}${t.endDate ? ` – ${fmtShort(t.endDate)}` : ''}`]
+                      .filter(Boolean)
+                      .join(' · ')}
+                  </span>
+                </span>
+                {t.startDate && t.startDate >= today && (
+                  <span className="text-right">
+                    <span className="display num block text-[28px] text-accent-text">{daysUntil(t.startDate)}</span>
+                    <span className="label">dagen</span>
+                  </span>
+                )}
+              </button>
+            ))}
+          </div>
+        </section>
+      )}
 
       <Sheet open={open} onClose={() => setOpen(false)} title="Nieuwe trip">
         <Field label="Naam">

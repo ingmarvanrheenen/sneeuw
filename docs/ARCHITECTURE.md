@@ -51,6 +51,7 @@ Foto's worden op het toestel verkleind naar max 2048 px (JPEG). Video's gaan doo
 - Een record met `crew_id` is leesbaar voor crewleden (RLS). Media volgt de zichtbaarheid van de dag waar het bij hoort.
 - Storage-policy: je leest je eigen map, plus bestanden die aan een met jouw crew gedeeld media-record hangen.
 - `reactions` voor reacties op posts; `crew_members_with_stats` levert het leaderboard.
+- **Crew-trip**: een trip met `crewId` is leesbaar voor de crew (gewone records-RLS). De **groepslijst** staat in `crew_trip_items` (migratie `20261027000000`): iedereen in de crew mag toevoegen, afvinken en zichzelf claimen ("ik neem 'm mee"); claimen voor een ander kan niet (trigger), verwijderen kan wie het toevoegde of de trip-eigenaar, en `crew_id`/`trip_id` liggen vast (kolomrechten). Toevoegen kan pas als de trip gesynct is (`is_crew_trip()` checkt het record). Online-first met de laatst bekende lijst lokaal in `kv`.
 - Je crewlijst staat ook lokaal (`kv: crews`), zodat je zonder bereik een dag met je crew kunt delen. De feed ververst stil bij terugkomen, weer online en elke minuut.
 
 ## Coach Daddy

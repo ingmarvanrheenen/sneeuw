@@ -1,13 +1,62 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { Button, Page, PageHeader, Progress, Section, Stat, cx, inputCls, StatGroup } from '../components/ui'
+import { Button, List, Page, PageHeader, Progress, Row, Section, Stat, Toggle, cx, inputCls, StatGroup } from '../components/ui'
+import { GroupList } from '../components/GroupList'
+import { authStore } from '../lib/auth'
+import { hasBackend } from '../lib/supabase'
+import { cachedCrews, myCrews, type Crew } from '../lib/crew'
 import { Icon } from '../design/icons'
 import { remove, update, useKind, useRecord } from '../lib/repo'
 import { daysUntil, fmtShort } from '../lib/format'
 import { uid } from '../lib/ids'
 import { sfx } from '../lib/sounds'
 import { celebrate, undoToast } from '../lib/toast'
-import type { PackItem } from '../lib/types'
+import type { PackItem, Trip } from '../lib/types'
+
+/** Trip delen met je crew, plus de gedeelde groepslijst zodra hij gedeeld is. */
+function CrewShare({ trip }: { trip: Trip }) {
+  const { user } = authStore.use()
+  const [crews, setCrews] = useState<Crew[]>([])
+  useEffect(() => {
+    if (!hasBackend || !user) return
+    let alive = true
+    void cachedCrews().then((c) => alive && setCrews(c))
+    if (navigator.onLine)
+      myCrews()
+        .then((c) => alive && setCrews(c))
+        .catch(() => {})
+    return () => {
+      alive = false
+    }
+  }, [user])
+  if (!hasBackend || !user) return null
+  const shared = crews.find((c) => c.id === trip.crewId)
+
+  return (
+    <>
+      <Section title="Met je crew">
+        {crews.length === 0 ? (
+          <List>
+            <Row icon="crew" title="Deel deze trip met je crew" detail="Start of join eerst een crew" to="/crew" />
+          </List>
+        ) : (
+          <List>
+            {crews.map((c) => (
+              <Toggle
+                key={c.id}
+                on={trip.crewId === c.id}
+                onChange={(on) => void update(trip, { crewId: on ? c.id : null })}
+                label={`Delen met ${c.name}`}
+                sub={trip.crewId === c.id ? 'Je crew ziet de trip en vult de groepslijst mee' : 'Dan zie je samen wie wat meeneemt'}
+              />
+            ))}
+          </List>
+        )}
+      </Section>
+      {shared && <GroupList tripId={trip.id} crewId={shared.id} ownerId={trip.userId ?? user.id} ready={!trip.dirty} />}
+    </>
+  )
+}
 
 export default function TripDetail() {
   const { id } = useParams()
@@ -51,6 +100,8 @@ export default function TripDetail() {
         </div>
       )}
 
+      <CrewShare trip={trip} />
+
       {tripGoals.length > 0 && (
         <Section title="Doelen deze trip">
           <div className="card divide-y divide-[var(--line)]">
@@ -65,7 +116,7 @@ export default function TripDetail() {
       )}
 
       <Section
-        title={`Paklijst ${packed}/${trip.packing.length}`}
+        title={`${trip.crewId ? 'Je eigen paklijst' : 'Paklijst'} ${packed}/${trip.packing.length}`}
         action={
           <button onClick={() => setHideDone((h) => !h)} className="-my-2.5 -mr-2 px-2 py-2.5 text-[15px] text-accent-text">
             {hideDone ? 'Toon alles' : 'Verberg ingepakt'}

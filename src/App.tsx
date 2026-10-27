@@ -23,6 +23,7 @@ const Stats = lazy(() => import('./pages/Stats'))
 const Goals = lazy(() => import('./pages/Goals'))
 const Trips = lazy(() => import('./pages/Trips'))
 const TripDetail = lazy(() => import('./pages/TripDetail'))
+const CrewTripDetail = lazy(() => import('./pages/CrewTripDetail'))
 const Weather = lazy(() => import('./pages/Weather'))
 const GearPage = lazy(() => import('./pages/Gear'))
 const Settings = lazy(() => import('./pages/Settings'))
@@ -161,6 +162,7 @@ export default function App() {
               <Route path="/badges" element={<Badges />} />
               <Route path="/doelen" element={<Goals />} />
               <Route path="/reizen" element={<Trips />} />
+              <Route path="/reizen/crew/:id" element={<CrewTripDetail />} />
               <Route path="/reizen/:id" element={<TripDetail />} />
               <Route path="/weer" element={<Weather />} />
               <Route path="/gear" element={<GearPage />} />
