@@ -7,6 +7,9 @@ vi.mock('../lib/supabase', async () => {
   return { supabase: sb.ref.client, hasBackend: true, MEDIA_BUCKET: 'media' }
 })
 
+const push = vi.hoisted(() => ({ notifyCrew: vi.fn() }))
+vi.mock('../lib/push', () => push)
+
 import { db, type BlobRow } from '../lib/db'
 import { setCurrentUserId } from '../lib/auth-state'
 import { create } from '../lib/repo'
@@ -87,6 +90,16 @@ describe('sync en media', () => {
     await syncNow()
     expect(upserted().find((r) => r.id === m.id)?.deleted).toBe(true)
     expect(syncStore.get().status).toBe('idle')
+  })
+
+  it('na een gedeelde dag krijgt de crew een seintje; privé en oude dagen niet', async () => {
+    const { todayISO } = await import('../lib/ids')
+    const shared = (await create('session', { ...EMPTY_DRAFT, date: todayISO(), crewId: 'c1' })) as Session
+    await create('session', { ...EMPTY_DRAFT, date: todayISO(), crewId: null })
+    await create('session', { ...EMPTY_DRAFT, date: '2020-01-01', crewId: 'c1' })
+    push.notifyCrew.mockClear()
+    await syncNow()
+    expect(push.notifyCrew.mock.calls).toEqual([['day', shared.id]])
   })
 
   it('onthoudt per trip met welke crew hij op de server staat', async () => {

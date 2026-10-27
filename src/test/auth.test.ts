@@ -3,12 +3,14 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 const h = vi.hoisted(() => ({
   listener: null as null | ((event: string, session: { user: { id: string } } | null) => Promise<void>),
   scheduleSync: vi.fn(),
+  order: [] as string[],
 }))
 vi.mock('../lib/supabase', () => ({
   hasBackend: true,
   supabase: {
     auth: {
       getSession: async () => ({ data: { session: null } }),
+      signOut: async () => void h.order.push('signOut'),
       onAuthStateChange: (fn: typeof h.listener) => {
         h.listener = fn
         return { data: { subscription: { unsubscribe() {} } } }
@@ -17,8 +19,9 @@ vi.mock('../lib/supabase', () => ({
   },
 }))
 vi.mock('../lib/sync', () => ({ scheduleSync: h.scheduleSync }))
+vi.mock('../lib/push', () => ({ disablePush: async () => void h.order.push('disablePush') }))
 
-import { authStore, initAuth } from '../lib/auth'
+import { authStore, initAuth, signOut } from '../lib/auth'
 import { getCurrentUserId } from '../lib/auth-state'
 import { db } from '../lib/db'
 import { create } from '../lib/repo'
@@ -49,5 +52,13 @@ describe('inloggen', () => {
     expect(r.userId).toBeNull()
     await h.listener!('SIGNED_IN', { user: { id: 'u2' } })
     expect((await db.records.get(r.id))?.userId).toBe('u2')
+  })
+})
+
+describe('uitloggen', () => {
+  it('zet eerst de meldingen op deze telefoon uit (nog ingelogd), dan pas uitloggen', async () => {
+    h.order.length = 0
+    await signOut()
+    expect(h.order).toEqual(['disablePush', 'signOut'])
   })
 })

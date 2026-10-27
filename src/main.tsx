@@ -8,7 +8,7 @@ import { setStatsProvider, startSync } from './lib/sync'
 import { crewStats } from './lib/useProgress'
 import { requestPersistentStorage } from './lib/db'
 import { unlockAudio } from './lib/sounds'
-import { registerServiceWorker } from './lib/pwa'
+import { listenForNotificationClicks, registerServiceWorker } from './lib/pwa'
 
 applyTheme(settingsStore.get().theme)
 unlockAudio()
@@ -16,6 +16,7 @@ void requestPersistentStorage()
 setStatsProvider(crewStats)
 void initAuth().then(startSync)
 registerServiceWorker()
+listenForNotificationClicks()
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

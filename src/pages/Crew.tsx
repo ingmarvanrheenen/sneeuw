@@ -28,6 +28,7 @@ import { fmtDate } from '../lib/format'
 import { toast } from '../lib/toast'
 import type { MediaMeta } from '../lib/types'
 import { errMsg } from '../lib/errors'
+import { PushNudge } from '../components/PushSettings'
 
 function NeedAccount() {
   const nav = useNavigate()
@@ -312,6 +313,7 @@ export default function Crew() {
               </Button>
             </Card>
           )}
+          <PushNudge />
           <Segmented
             value={tab}
             onChange={setTab}

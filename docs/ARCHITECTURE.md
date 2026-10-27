@@ -57,6 +57,25 @@ Foto's worden op het toestel verkleind naar max 2048 px (JPEG). Video's gaan doo
 - **Online-first lijsten** (groepslijst, doelen): een lege cache wordt online genegeerd (spinner tot de server antwoordt), en een refresh die liep terwijl jij iets wijzigde, wordt weggegooid zodat hij je net gezette vinkje niet terugdraait.
 - Je crewlijst staat ook lokaal (`kv: crews`), zodat je zonder bereik een dag met je crew kunt delen. De feed ververst stil bij terugkomen, weer online en elke minuut.
 
+## Push-meldingen
+
+```
+app ── enablePush() ──► toestemming (na een tik) ─► pushManager.subscribe(VAPID-key van GET /push)
+    ── rpc save_push_subscription ──► push_subscriptions (per telefoon, met voorkeuren en tijdzone)
+sync ── na een gedeelde dag ──► POST /push {event:'day', id}  ┐
+CrewGoals ── na afvinken ──► POST /push {event:'goal', id}    ├─► Edge Function `push` (service role)
+pg_cron ── elk uur ──► POST /push {task:'reminder'}           ┘     ├─ handlers.ts: wie krijgt wat (getest)
+                                                                    ├─ push_log: elke melding maar één keer
+                                                                    └─ webpush.ts: RFC 8291/8292 met WebCrypto
+service worker (public/push-sw.js) ── toont de melding, tik opent de juiste pagina
+```
+
+- **Wie krijgt wat** (`supabase/functions/push/handlers.ts`): een gedeelde dag (max 2 dagen oud) naar de rest van de crew; een afgevinkt crew-doel naar wie hem nog moet halen, of als iedereen hem heeft "Crew-doel gehaald" naar de hele crew; om 17:00 lokale tijd tijdens een trip "Log je dag" als je vandaag nog niks logde. De server checkt zelf of het jouw dag of jouw vinkje is.
+- **Versleuteling** zonder library, alleen WebCrypto; getest tegen de testvector uit RFC 8291 (`src/test/webpush.test.ts`).
+- **Abonnementen** alleen via `save_push_subscription()`: endpoint moet van een echte push-dienst zijn, dezelfde telefoon met een ander account gaat over naar dat account, max 10 per account. Uitloggen haalt het abonnement van die telefoon weg. Verlopen abonnementen (404/410) ruimt de function op.
+- **VAPID-keys** staan alleen als Supabase secret (`VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`); de app haalt de publieke key op bij de function.
+- iOS: alleen vanaf het beginscherm (iOS 16.4+), toestemming vragen kan alleen direct na een tik, en elke push moet een melding tonen.
+
 ## Coach Daddy
 
 ```

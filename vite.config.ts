@@ -68,6 +68,8 @@ export default defineConfig(({ mode }) => {
           // Alleen Latijnse fonts precachen; andere subsets laadt de browser alleen als nodig
           globIgnores: ['**/*-{cyrillic,cyrillic-ext,greek,greek-ext,vietnamese}-*.woff2'],
           navigateFallback: 'index.html',
+          // push-meldingen tonen en openen (public/push-sw.js)
+          importScripts: ['push-sw.js'],
           runtimeCaching: [
             {
               urlPattern: ({ url }) => url.hostname === 'api.open-meteo.com',

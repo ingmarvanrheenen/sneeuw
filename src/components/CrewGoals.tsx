@@ -8,6 +8,7 @@ import { getCurrentUserId } from '../lib/auth-state'
 import { sfx } from '../lib/sounds'
 import { celebrate, toast } from '../lib/toast'
 import { errMsg } from '../lib/errors'
+import { notifyCrew } from '../lib/push'
 
 export const GOAL_SUGGESTIONS = ['Iedereen een rode piste', 'Samen de eerste lift', 'Iedereen een carve', 'Een dag zonder vallen']
 
@@ -62,6 +63,7 @@ export function CrewGoals({ tripId, crewId, ownerId, ready = true }: { tripId: s
     )
     try {
       await setGoalDone(g.id, !mine)
+      if (!mine) void notifyCrew('goal', g.id)
       // laatste van de crew die hem haalt: dat mag gevierd worden
       if (!mine && g.done.length + 1 >= crewSize && crewSize > 1) celebrate('goal', 'Crew-doel gehaald', `${g.title}: iedereen`, 'crew')
     } catch (e) {

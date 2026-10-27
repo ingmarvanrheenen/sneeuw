@@ -9,6 +9,8 @@ import { setOnLocalChange } from './repo'
 import type { AnyRecord, MediaMeta, Profile } from './types'
 import { errMsg } from './errors'
 import { toast } from './toast'
+import { notifyCrew } from './push'
+import { todayISO } from './ids'
 
 export interface SyncState {
   status: 'local' | 'idle' | 'syncing' | 'offline' | 'error'
@@ -130,6 +132,10 @@ async function push(userId: string) {
     })
     // onthouden met welke crew een trip op de server staat: de groepslijst werkt pas als de crew hem kan zien
     for (const r of batch) if (r.kind === 'trip') await kvSet(`tripCrew:${r.id}`, r.deleted ? null : (r.crewId ?? null))
+    // net gedeelde dagen: de crew een seintje geven (de server meldt elke dag maar één keer)
+    const recent = todayISO(new Date(Date.now() - 2 * 864e5))
+    for (const r of batch)
+      if (r.kind === 'session' && r.crewId && !r.deleted && r.date >= recent && r.date <= todayISO()) void notifyCrew('day', r.id)
   }
   if (mediaError) throw mediaError
 }

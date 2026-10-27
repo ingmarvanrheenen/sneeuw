@@ -2,7 +2,7 @@
 // Gebruik: const sb = fakeSupabase(); vi.mock('../lib/supabase', () => ({ supabase: sb.client, hasBackend: true }))
 export interface Call {
   table: string
-  op: 'select' | 'insert' | 'update' | 'delete' | 'upsert' | 'upload'
+  op: 'select' | 'insert' | 'update' | 'delete' | 'upsert' | 'upload' | 'rpc'
   payload?: unknown
   filters: [string, string, unknown][]
   single: boolean
@@ -58,8 +58,18 @@ export function fakeSupabase() {
     }),
   }
 
+  // rpc(naam, args) wordt vastgelegd als op 'rpc' met table = functienaam
+  async function rpc(fn: string, args: unknown) {
+    const call: Call = { table: fn, op: 'rpc', payload: args, filters: [], single: false }
+    calls.push(call)
+    const r = respond(call)
+    return { data: r.data ?? null, error: r.error ?? null }
+  }
+
+  const auth = { getSession: async () => ({ data: { session: { access_token: 'tok' } } }) }
+
   return {
-    client: { from, storage } as unknown,
+    client: { from, storage, rpc, auth } as unknown,
     calls,
     respond(fn: Responder) {
       respond = fn

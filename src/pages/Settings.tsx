@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Button, Card, Field, Page, PageHeader, Section, Segmented, cx, inputCls, List, Row, Toggle } from '../components/ui'
 import { Icon, Spinner } from '../design/icons'
+import { PushSettings } from '../components/PushSettings'
 import { authStore, getProfile, saveProfile, signIn, signOut, signUp } from '../lib/auth'
 import { backendInfo, hasBackend } from '../lib/supabase'
 import { syncNow, syncStore } from '../lib/sync'
@@ -188,6 +189,7 @@ function MediaUsage() {
 
 export default function Settings() {
   const settings = settingsStore.use()
+  const { user } = authStore.use()
   const [profile, setProfile] = useState<Profile | null>(null)
   useEffect(() => {
     void getProfile().then(setProfile)
@@ -211,6 +213,12 @@ export default function Settings() {
           {(import.meta.env.DEV || !hasBackend || backendInfo.keyKind === 'secret' || backendInfo.keyKind === 'onbekend') && <Connection />}
         </div>
       </Section>
+
+      {hasBackend && user && (
+        <Section title="Meldingen">
+          <PushSettings />
+        </Section>
+      )}
 
       {profile && (
         <Section title="Profiel">

@@ -27,6 +27,7 @@ Je snowboard-logboek, trick-bijbel en crew in één app. Gebouwd als PWA: instal
 | **Quiz** | Termen, definities, "welke trick zie je" (met animatie) en voorkennis. |
 | **Crew** | Vriendengroep met invite-code: gedeelde feed van dagen, tricks en media, reacties en een XP-leaderboard. |
 | **Coach Daddy** | AI-buddy (Claude) die je logboek, tricks en doelen kent. Tips, oefenplannen, uitleg. |
+| **Meldingen** | Push op je iPhone (vanaf het beginscherm): crew deelt een dag, crew-doel gehaald, en om 17:00 tijdens een trip "Log je dag". Per soort aan/uit. |
 | **Story delen** | Maak van een dag een 1080×1920 story-kaart in de huisstijl en deel hem via het iOS-deelmenu. |
 
 Plus: offline-first met sync, donker/licht thema, zachte geluidjes en confetti, eigen icon-set (nooit emoji), safe areas voor de Dynamic Island.
@@ -67,6 +68,13 @@ supabase functions deploy coach
 **Automatisch deployen via GitHub:** de workflow `.github/workflows/deploy-functions.yml` zet de coach live zodra er op `main` iets in `supabase/functions/` verandert, of handmatig via Actions > Deploy Edge Functions > Run workflow. Eenmalig nodig: maak in Supabase (Account > Access Tokens) een token en zet het in GitHub als repository secret `SUPABASE_ACCESS_TOKEN` (Settings > Secrets and variables > Actions). De Anthropic-key blijft een Supabase secret.
 
 Over de kosten: de coach gebruikt Claude Opus 5.5 met `effort: low` (snel en zuinig voor chat) en prompt caching. Een gemiddeld bericht met je logboek als context kost grofweg 1 à 2 cent, dus €100 aan credits is ruim duizenden berichten. Het daglimiet per gebruiker beschermt je budget als je crew de coach ook gebruikt. Verbruik per persoon per dag staat in de tabel `coach_usage`.
+
+### Push-meldingen aanzetten
+
+1. Draai `supabase/migrations/20261028000000_push.sql` in de SQL Editor.
+2. Run de workflow Actions > Deploy Edge Functions. Die maakt de eerste keer zelf de VAPID-keys aan (als Supabase secret, nooit in de log) en zet de function `push` live.
+3. Draai `supabase/cron/push_reminder.sql` in de SQL Editor voor de "Log je dag"-herinnering (pg_cron, elk uur).
+4. Op je iPhone: app op het beginscherm, dan Instellingen > Meldingen. Met "Stuur een testmelding" check je of het werkt.
 
 ## Deployen
 

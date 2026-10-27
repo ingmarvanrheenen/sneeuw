@@ -1,10 +1,12 @@
 name: Deploy Edge Functions
 
-# Zet de Supabase Edge Functions (Coach Daddy) live.
+# Zet de Supabase Edge Functions (Coach Daddy en push-meldingen) live.
 # - automatisch als er op main iets in supabase/functions verandert (dus na jouw merge)
 # - handmatig via Actions > Deploy Edge Functions > Run workflow
 # Nodig: repository secret SUPABASE_ACCESS_TOKEN (Supabase > Account > Access Tokens).
 # De Anthropic API-key blijft een Supabase secret en komt hier nooit langs.
+# De VAPID-keys voor push maakt deze workflow één keer zelf aan, rechtstreeks als Supabase secret
+# (nooit in de log). Staan ze er al, dan blijven ze staan: nieuwe keys zouden alle meldingen breken.
 
 on:
   push:
@@ -35,3 +37,23 @@ jobs:
           version: 2.120.0
       - name: Deploy coach
         run: supabase functions deploy coach --project-ref "$PROJECT_REF" --use-api
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: VAPID-keys voor push (eenmalig)
+        run: |
+          set -euo pipefail
+          # faalt het opvragen, dan stopt de stap (en maken we zeker geen nieuwe keys)
+          secrets=$(supabase secrets list --project-ref "$PROJECT_REF")
+          if grep -q VAPID_PRIVATE_KEY <<<"$secrets"; then
+            echo "VAPID-keys staan er al"
+          else
+            umask 077
+            node scripts/vapid-keys.mjs > "$RUNNER_TEMP/vapid.env"
+            supabase secrets set --project-ref "$PROJECT_REF" --env-file "$RUNNER_TEMP/vapid.env" > /dev/null
+            rm -f "$RUNNER_TEMP/vapid.env"
+            echo "Nieuwe VAPID-keys gezet"
+          fi
+      - name: Deploy push
+        # zonder JWT-check bij Supabase: de function checkt inloggen zelf, en pg_cron roept hem zonder key aan
+        run: supabase functions deploy push --project-ref "$PROJECT_REF" --use-api --no-verify-jwt

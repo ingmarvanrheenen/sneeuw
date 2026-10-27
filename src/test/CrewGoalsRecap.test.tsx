@@ -12,6 +12,8 @@ const api = vi.hoisted(() => ({
   crewMembers: vi.fn(),
 }))
 vi.mock('../lib/crewTrips', async (orig) => ({ ...(await orig<typeof import('../lib/crewTrips')>()), ...api }))
+const push = vi.hoisted(() => ({ notifyCrew: vi.fn() }))
+vi.mock('../lib/push', () => push)
 vi.mock('../lib/crew', async (orig) => ({ ...(await orig<typeof import('../lib/crew')>()), crewMembers: api.crewMembers }))
 
 import { CrewGoals } from '../components/CrewGoals'
@@ -72,6 +74,18 @@ describe('crew-doelen', () => {
     expect(api.setGoalDone).toHaveBeenCalledWith('g1', true)
     expect(screen.getByText('3/3 gehaald · Daan, Sem')).toBeTruthy()
     await waitFor(() => expect(toastStore.get().some((t) => t.title === 'Crew-doel gehaald')).toBe(true))
+  })
+
+  it('afvinken geeft de crew een seintje, uitvinken niet', async () => {
+    const user = userEvent.setup()
+    render(<CrewGoals tripId="t1" crewId="c1" ownerId="daan" />)
+    await loaded()
+    await user.click(within(row('Samen de eerste lift')).getByRole('checkbox'))
+    await waitFor(() => expect(push.notifyCrew).toHaveBeenCalledWith('goal', 'g2'))
+    push.notifyCrew.mockClear()
+    await user.click(within(row('Samen de eerste lift')).getByRole('checkbox'))
+    await waitFor(() => expect(api.setGoalDone).toHaveBeenCalledWith('g2', false))
+    expect(push.notifyCrew).not.toHaveBeenCalled()
   })
 
   it('niet de laatste: geen feestje', async () => {

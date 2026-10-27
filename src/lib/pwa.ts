@@ -17,6 +17,15 @@ export function registerServiceWorker() {
     })
 }
 
+/** Tik op een push-melding terwijl de app al open staat: de service worker vraagt ons die pagina te openen. */
+export function listenForNotificationClicks() {
+  if (!('serviceWorker' in navigator)) return
+  navigator.serviceWorker.addEventListener('message', (e: MessageEvent) => {
+    const d = e.data as { type?: string; url?: string } | null
+    if (d?.type === 'open' && typeof d.url === 'string' && d.url.startsWith('#/')) location.hash = d.url.slice(1)
+  })
+}
+
 /** iOS heeft geen install-prompt: we leggen het zelf uit. */
 export function isIOS() {
   const ua = navigator.userAgent

@@ -5,6 +5,7 @@ import { setCurrentUserId } from './auth-state'
 import { createStore } from './store'
 import { db, kvGet, kvSet } from './db'
 import type { Profile } from './types'
+import { disablePush } from './push'
 
 export const authStore = createStore<{ user: User | null; ready: boolean }>({ user: null, ready: !supabase })
 
@@ -55,6 +56,8 @@ export async function signIn(email: string, password: string) {
 /** Uitloggen wist de lokale data van dit apparaat (die staat veilig in de cloud). */
 export async function signOut() {
   if (!supabase) return
+  // nog ingelogd: dan mag het abonnement van deze telefoon weg (anders krijg je meldingen van dit account)
+  await disablePush().catch(() => {})
   await supabase.auth.signOut()
   await db.transaction('rw', db.records, db.blobs, db.kv, async () => {
     await db.records.clear()
