@@ -46,6 +46,8 @@ const P = {
   logout: 'M14 4h6v16h-6M10 8l-4 4 4 4M6 12h10',
   user: 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 21c0-4 3.6-7 8-7s8 3 8 7',
   copy: 'M8 8h12v12H8zM4 16V4h12',
+  expand: 'M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5',
+  shrink: 'M9 4v5H4M20 9h-5V4M15 20v-5h5M4 15h5v5',
   external: 'M14 4h6v6M20 4l-9 9M18 14v6H4V6h6',
   link: 'M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1',
   list: 'M4 6h2M10 6h10M4 12h2M10 12h10M4 18h2M10 18h10',

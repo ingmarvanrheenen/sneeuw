@@ -4,7 +4,7 @@
 // Benen en armen worden met two-bone IK opgelost: voeten blijven in de bindingen.
 import { Quaternion, Vector3 } from 'three'
 import type { GrabKind } from '../anim/engine'
-import type { FullKey3 } from './types'
+import type { ArmPose, FullKey3 } from './types'
 
 export const BOARD = { length: 1.55, width: 0.26, thick: 0.02, stance: 0.27, angleF: 15, angleB: -15 }
 const L = BOARD.length
@@ -93,7 +93,7 @@ export function boardQuaternion(heading: number, pitch: number, roll: number): Q
   return yaw.multiply(pq).multiply(rq)
 }
 
-export function solve(k: FullKey3): Body3 {
+export function solve(k: FullKey3 & { arms2?: ArmPose; armsMix?: number }): Body3 {
   const crouch = Math.max(0, Math.min(1, k.crouch))
   const roll = Math.max(-1.7, Math.min(1.7, k.edge)) * MAX_ROLL
   const quat = boardQuaternion(k.heading, k.pitch, roll)
@@ -135,28 +135,25 @@ export function solve(k: FullKey3): Body3 {
   // handen per armhouding (in het assenstelsel van de borst)
   const at = (base: Vector3, a: number, f: number, u: number) =>
     base.clone().add(axis.clone().multiplyScalar(a)).add(fwdDir.clone().multiplyScalar(f)).add(spine.clone().multiplyScalar(u))
-  let handF: Vector3
-  let handB: Vector3
-  switch (k.arms) {
-    case 'los':
-      handF = at(shF, 0.05, 0.1, -0.52)
-      handB = at(shB, -0.05, 0.1, -0.52)
-      break
-    case 'omhoog':
-      handF = at(shF, 0.15, 0.1, 0.42)
-      handB = at(shB, -0.15, 0.1, 0.42)
-      break
-    case 'voor':
-      handF = at(shF, 0.05, 0.45, -0.18)
-      handB = at(shB, -0.05, 0.45, -0.18)
-      break
-    case 'sneeuw':
-      handF = at(shF, 0.1, 0.35, -0.62)
-      handB = at(shB, -0.3, 0.1, -0.3)
-      break
-    default:
-      handF = at(shF, 0.36, 0.14, -0.33)
-      handB = at(shB, -0.34, 0.12, -0.37)
+  const handsFor = (arms: ArmPose): [Vector3, Vector3] => {
+    switch (arms) {
+      case 'los':
+        return [at(shF, 0.05, 0.1, -0.52), at(shB, -0.05, 0.1, -0.52)]
+      case 'omhoog':
+        return [at(shF, 0.15, 0.1, 0.42), at(shB, -0.15, 0.1, 0.42)]
+      case 'voor':
+        return [at(shF, 0.05, 0.45, -0.18), at(shB, -0.05, 0.45, -0.18)]
+      case 'sneeuw':
+        return [at(shF, 0.1, 0.35, -0.62), at(shB, -0.3, 0.1, -0.3)]
+      default:
+        return [at(shF, 0.36, 0.14, -0.33), at(shB, -0.34, 0.12, -0.37)]
+    }
+  }
+  let [handF, handB] = handsFor(k.arms)
+  if (k.arms2 && k.armsMix) {
+    const [f2, b2] = handsFor(k.arms2)
+    handF.lerp(f2, k.armsMix)
+    handB.lerp(b2, k.armsMix)
   }
   if (k.grab && k.g > 0) {
     const gt = GRAB[k.grab]

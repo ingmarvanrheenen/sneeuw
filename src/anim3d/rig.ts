@@ -3,6 +3,8 @@
 import {
   BoxGeometry,
   CapsuleGeometry,
+  CylinderGeometry,
+  TorusGeometry,
   Color,
   ExtrudeGeometry,
   Group,
@@ -102,7 +104,15 @@ export class Rider {
   private torso: Mesh
   private pelvis: Mesh
   private head: Mesh
+  private helmet: Mesh
   private goggle: Mesh
+  private lens: Mesh
+  private strap: Mesh
+  private hood: Mesh
+  private hem: Mesh
+  private gloves: [Mesh, Mesh]
+  private cuffs: [Mesh, Mesh]
+  private shafts: [Mesh, Mesh]
   private bootF: Mesh
   private bootB: Mesh
   private edgeHeel: Mesh
@@ -131,36 +141,68 @@ export class Rider {
     const joint = (r: number, m: MeshStandardMaterial, at: JointKey) => {
       this.joints.push({ mesh: add(new Mesh(new SphereGeometry(r, 18, 14), m)), at })
     }
-    // benen
-    capsule(0.078, 0.45, this.mats.pants, 'hipF', 'kneeF')
-    capsule(0.078, 0.45, this.mats.pants, 'hipB', 'kneeB')
-    capsule(0.062, 0.45, this.mats.pants, 'kneeF', 'ankleF')
-    capsule(0.062, 0.45, this.mats.pants, 'kneeB', 'ankleB')
-    joint(0.07, this.mats.pants, 'kneeF')
-    joint(0.07, this.mats.pants, 'kneeB')
+    // benen: dijen dikker dan schenen, wijde broekspijp over de boot
+    capsule(0.088, 0.45, this.mats.pants, 'hipF', 'kneeF')
+    capsule(0.088, 0.45, this.mats.pants, 'hipB', 'kneeB')
+    capsule(0.07, 0.45, this.mats.pants, 'kneeF', 'ankleF')
+    capsule(0.07, 0.45, this.mats.pants, 'kneeB', 'ankleB')
+    joint(0.078, this.mats.pants, 'kneeF')
+    joint(0.078, this.mats.pants, 'kneeB')
+    const cuff = () => add(new Mesh(new CylinderGeometry(0.078, 0.094, 0.15, 18, 1, true), this.mats.pants))
+    this.cuffs = [cuff(), cuff()]
     // armen
-    capsule(0.056, 0.29, this.mats.jacket, 'shF', 'elbowF')
-    capsule(0.056, 0.29, this.mats.jacket, 'shB', 'elbowB')
-    capsule(0.05, 0.27, this.mats.jacket, 'elbowF', 'handF')
-    capsule(0.05, 0.27, this.mats.jacket, 'elbowB', 'handB')
-    joint(0.062, this.mats.jacket, 'shF')
-    joint(0.062, this.mats.jacket, 'shB')
-    joint(0.052, this.mats.gear, 'handF')
-    joint(0.052, this.mats.gear, 'handB')
-    capsule(0.05, 0.12, this.mats.jacket, 'neck', 'head')
-    // romp, bekken, hoofd
+    capsule(0.058, 0.29, this.mats.jacket, 'shF', 'elbowF')
+    capsule(0.058, 0.29, this.mats.jacket, 'shB', 'elbowB')
+    capsule(0.052, 0.27, this.mats.jacket, 'elbowF', 'handF')
+    capsule(0.052, 0.27, this.mats.jacket, 'elbowB', 'handB')
+    joint(0.066, this.mats.jacket, 'shF')
+    joint(0.066, this.mats.jacket, 'shB')
+    joint(0.056, this.mats.jacket, 'elbowF')
+    joint(0.056, this.mats.jacket, 'elbowB')
+    const glove = () => add(new Mesh(new RoundedBoxGeometry(0.1, 0.13, 0.075, 3, 0.03), this.mats.gear))
+    this.gloves = [glove(), glove()]
+    capsule(0.05, 0.12, this.mats.pants, 'neck', 'head')
+    // romp: jas met zoom over de broek en een capuchon in de nek
     this.torso = add(new Mesh(new CapsuleGeometry(0.15, 0.24, 8, 18), this.mats.jacket))
+    this.hem = add(new Mesh(new CylinderGeometry(0.158, 0.172, 0.12, 22), this.mats.jacket))
+    this.hood = add(new Mesh(new SphereGeometry(0.09, 16, 12), this.mats.jacket))
     this.pelvis = add(new Mesh(new SphereGeometry(0.13, 18, 14), this.mats.pants))
-    this.head = add(new Mesh(new SphereGeometry(0.115, 24, 18), this.mats.gear))
-    this.goggle = add(new Mesh(new RoundedBoxGeometry(0.17, 0.065, 0.06, 3, 0.025), this.mats.accent))
-    this.bootF = add(new Mesh(new RoundedBoxGeometry(0.13, 0.13, 0.31, 3, 0.04), this.mats.gear))
-    this.bootB = add(new Mesh(new RoundedBoxGeometry(0.13, 0.13, 0.31, 3, 0.04), this.mats.gear))
+    // hoofd: balaclava, helm, goggle met strap
+    this.head = add(new Mesh(new SphereGeometry(0.105, 24, 18), this.mats.pants))
+    this.helmet = add(new Mesh(new SphereGeometry(0.124, 28, 18, 0, Math.PI * 2, 0, Math.PI * 0.6), this.mats.gear))
+    this.goggle = add(new Mesh(new RoundedBoxGeometry(0.19, 0.076, 0.05, 3, 0.024), this.mats.pants))
+    this.lens = new Mesh(new RoundedBoxGeometry(0.168, 0.056, 0.02, 3, 0.012), this.mats.accent)
+    this.lens.position.z = 0.02
+    this.goggle.add(this.lens)
+    this.strap = add(new Mesh(new TorusGeometry(0.122, 0.011, 6, 40), this.mats.accent))
+    // boots met schacht en bindingstraps
+    const boot = () => {
+      const m = add(new Mesh(new RoundedBoxGeometry(0.13, 0.13, 0.31, 3, 0.04), this.mats.gear))
+      for (const [z, y, w] of [
+        [-0.01, 0.07, 0.075],
+        [0.1, 0.05, 0.05],
+      ]) {
+        const strap = new Mesh(new RoundedBoxGeometry(0.15, 0.03, w, 2, 0.012), this.mats.accent)
+        strap.position.set(0, y, z)
+        m.add(strap)
+      }
+      return m
+    }
+    this.bootF = boot()
+    this.bootB = boot()
+    const shaft = () => add(new Mesh(new CylinderGeometry(0.068, 0.072, 0.16, 16), this.mats.gear))
+    this.shafts = [shaft(), shaft()]
 
     // board + bindingen + edge-markering
     const board = new Mesh(boardGeometry(), this.mats.board)
     board.castShadow = true
     board.receiveShadow = true
     this.boardGroup.add(board)
+    for (const x of [0.52, -0.52]) {
+      const stripe = new Mesh(new BoxGeometry(0.16, 0.003, BOARD.width * 0.7), this.mats.accent)
+      stripe.position.set(x, BOARD.thick + 0.002, 0)
+      this.boardGroup.add(stripe)
+    }
     for (const [x, deg] of [
       [BOARD.stance, BOARD.angleF],
       [-BOARD.stance, BOARD.angleB],
@@ -232,17 +274,51 @@ export class Rider {
     this.orient(this.pelvis, b.spine, b.j.hipF.clone().sub(b.j.hipB))
     this.pelvis.scale.set(1.25, 0.8, 0.95)
 
+    // jaszoom en capuchon
+    const chestFwd = new Vector3().crossVectors(b.shoulderAxis, b.spine).normalize()
+    this.hem.position.copy(b.j.pelvis).add(b.spine.clone().multiplyScalar(0.1))
+    this.orient(this.hem, b.spine, b.shoulderAxis)
+    this.hem.scale.set(1.12, 1, 0.84)
+    this.hood.position.copy(b.j.neck).add(chestFwd.clone().multiplyScalar(-0.085)).add(b.spine.clone().multiplyScalar(-0.01))
+    this.orient(this.hood, b.spine, b.shoulderAxis)
+    this.hood.scale.set(1.5, 0.75, 0.9)
+
+    // hoofd: helm volgt de kijkrichting
+    const z = b.face.clone()
+    const y = b.headUp
+      .clone()
+      .sub(z.clone().multiplyScalar(b.headUp.dot(z)))
+      .normalize()
+    const x = new Vector3().crossVectors(y, z)
+    tmpM.makeBasis(x, y, z)
     this.head.position.copy(b.j.head)
-    this.goggle.position.copy(b.j.head).add(b.face.clone().multiplyScalar(0.098)).add(b.headUp.clone().multiplyScalar(0.012))
-    {
-      const z = b.face.clone()
-      const y = b.headUp
-        .clone()
-        .sub(z.clone().multiplyScalar(b.headUp.dot(z)))
-        .normalize()
-      const x = new Vector3().crossVectors(y, z)
-      tmpM.makeBasis(x, y, z)
-      this.goggle.quaternion.setFromRotationMatrix(tmpM)
+    this.helmet.position.copy(b.j.head).add(y.clone().multiplyScalar(0.012)).add(z.clone().multiplyScalar(-0.008))
+    this.helmet.quaternion.setFromRotationMatrix(tmpM)
+    this.goggle.position.copy(b.j.head).add(z.clone().multiplyScalar(0.1)).add(y.clone().multiplyScalar(0.018))
+    this.goggle.quaternion.setFromRotationMatrix(tmpM)
+    this.strap.position.copy(b.j.head).add(y.clone().multiplyScalar(0.022))
+    // torus ligt in XY; plat leggen rond het hoofd en iets naar voren laten hellen
+    this.strap.quaternion.setFromRotationMatrix(tmpM)
+    this.strap.rotateX(Math.PI / 2 - 0.12)
+
+    // handschoenen langs de onderarm, wijde broekspijp over de boot
+    for (const [i, el, hand] of [
+      [0, b.j.elbowF, b.j.handF],
+      [1, b.j.elbowB, b.j.handB],
+    ] as const) {
+      const dir = hand.clone().sub(el).normalize()
+      this.gloves[i].position.copy(hand).add(dir.clone().multiplyScalar(0.02))
+      this.orient(this.gloves[i], dir, b.shoulderAxis)
+    }
+    for (const [i, knee, ankle] of [
+      [0, b.j.kneeF, b.j.ankleF],
+      [1, b.j.kneeB, b.j.ankleB],
+    ] as const) {
+      const dir = knee.clone().sub(ankle).normalize()
+      this.cuffs[i].position.copy(ankle).add(dir.clone().multiplyScalar(0.17))
+      this.orient(this.cuffs[i], dir, b.shoulderAxis)
+      this.shafts[i].position.copy(ankle).add(dir.clone().multiplyScalar(0.07))
+      this.orient(this.shafts[i], dir, b.shoulderAxis)
     }
 
     // boots: zool op het board, neus volgens de bindinghoek

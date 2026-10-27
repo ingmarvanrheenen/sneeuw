@@ -2,7 +2,7 @@ import { lazy, Suspense, useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { List, Page, PageHeader, Row, Section, Segmented, cx, inputCls, LevelDots } from '../components/ui'
-import { Icon } from '../design/icons'
+import { Icon, Spinner } from '../design/icons'
 import { MediaAddButton, MediaGrid } from '../components/Media'
 import { TRACKS, TRICK_BY_ID, trickXP, unlocks, ytUrl } from '../content/tricks'
 import { create, getTrickProgress, setTrickStatus, update, useKind } from '../lib/repo'
@@ -88,7 +88,13 @@ export default function TrickDetail() {
       <p className="-mt-1 mb-5 text-[17px] leading-relaxed">{trick.summary}</p>
 
       {trick.anim ? (
-        <Suspense fallback={<div className="card aspect-[4/3]" />}>
+        <Suspense
+          fallback={
+            <div className="card grid aspect-[4/3] place-items-center text-muted">
+              <Spinner size={22} />
+            </div>
+          }
+        >
           <Player3D key={trick.id} trick={trick} />
         </Suspense>
       ) : (

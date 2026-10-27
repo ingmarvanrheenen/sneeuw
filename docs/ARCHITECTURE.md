@@ -73,6 +73,8 @@ Gesprekken worden lokaal bewaard (laatste 30). De context wordt bij de start van
 - `solve.ts`: bouwt het lichaam in board-coördinaten en lost benen en armen op met two-bone IK, zodat de voeten in de bindingen blijven. Kantelen op de edge neemt het lichaam mee; angulatie houdt het bovenlijf rechter dan het board.
 - `builders.ts`: `fromPath()` leidt uit een rijbaan de edge af met echte fysica (de sneeuw moet bochtkracht plus zwaartekracht langs de helling leveren, kanteling = atan(zijwaartse kracht / g·cos θ)), plus schouders die de bocht in leiden en een blik naar de rijrichting. `drive()` rijdt segmenten (richting, snelheid, board-hoek), `turns()` maakt gekoppelde bochten in vijf stijlen van slippen tot eurocarve.
 - `motions.ts`: handgemaakte bewegingen voor basis, liften, bochten en carven, opgebouwd volgens de standaard lesmethode. Andere tricks worden met `fromSide()`/`fromTop()` uit hun 2D-animatie omgezet.
+- `interp.ts`: monotone kubische spline (Fritsch-Carlson) tussen keyframes. Snelheid loopt door over dichte fysica-keys heen zonder te haperen, maar schiet nooit voorbij een stilstand. Armhoudingen gaan vloeiend in elkaar over.
+- `spray.ts`: sneeuwdeeltjes op echte tijd, aangestuurd door hoe hard het board zijwaarts slipt (en door edge × snelheid bij carven).
 - `rig.ts` (rider) en `stage.ts` (helling, corduroy, spoor, obstakels, licht, camera's) met three.js. Kleuren komen uit de CSS-tokens en volgen licht/donker.
 
 ## Tests

@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { normalize, sample } from '../anim/engine'
 import { turns } from '../anim3d/builders'
 import { HANDMADE, motionFor } from '../anim3d/motions'
+import { Track } from '../anim3d/interp'
 import { solve } from '../anim3d/solve'
-import { KEY3_DEFAULT, type FullKey3 } from '../anim3d/types'
+import { KEY3_DEFAULT } from '../anim3d/types'
 import { TRICKS, TRICK_BY_ID } from '../content/tricks'
 
 const finite = (n: number) => Number.isFinite(n)
@@ -21,9 +21,9 @@ describe('3D-bewegingen', () => {
       expect(m.duration, trick.id).toBeGreaterThan(0)
       expect(m.steps.length, trick.id).toBeGreaterThan(0)
       for (const s of m.steps) expect(s.t >= 0 && s.t <= 1, `${trick.id} stap ${s.label}`).toBe(true)
-      const keys = normalize(m.keys, KEY3_DEFAULT) as FullKey3[]
+      const track = new Track(m.keys)
       for (let i = 0; i <= 40; i++) {
-        const b = solve(sample(keys, i / 40) as FullKey3)
+        const b = solve(track.sample(i / 40))
         for (const p of Object.values(b.j)) expect([p.x, p.y, p.z].every(finite), `${trick.id} @${i}`).toBe(true)
         // het board blijft op of boven de sneeuw
         expect(b.boardPos.y, trick.id).toBeGreaterThan(-0.05)
@@ -60,5 +60,27 @@ describe('3D-bewegingen', () => {
       b.j[hip].distanceTo(b.j[knee]) + b.j[knee].distanceTo(b.j[ankle])
     expect(leg('hipF', 'kneeF', 'ankleF')).toBeCloseTo(0.9, 2)
     expect(leg('hipB', 'kneeB', 'ankleB')).toBeCloseTo(0.9, 2)
+  })
+
+  it('interpolatie loopt vloeiend door en schiet niet voorbij een stilstand', () => {
+    const track = new Track([
+      { t: 0, crouch: 0.2, arms: 'uit' },
+      { t: 0.5, crouch: 0.8, arms: 'voor' },
+      { t: 1, crouch: 0.8, arms: 'voor' },
+    ])
+    for (let i = 0; i <= 100; i++) {
+      const c = track.sample(i / 100).crouch
+      expect(c).toBeGreaterThanOrEqual(0.2 - 1e-9)
+      expect(c).toBeLessThanOrEqual(0.8 + 1e-9)
+    }
+    // armen gaan geleidelijk over, niet in één sprong
+    const mid = track.sample(0.25)
+    expect(mid.arms2).toBe('voor')
+    expect(mid.armsMix).toBeGreaterThan(0.2)
+    expect(mid.armsMix).toBeLessThan(0.8)
+    // dichte fysica-keys: geen hapering (snelheid zakt niet in tussen twee keys)
+    const dense = new Track(Array.from({ length: 11 }, (_, i) => ({ t: i / 10, z: i })))
+    const v = (t: number) => (dense.sample(t + 0.001).z - dense.sample(t - 0.001).z) / 0.002
+    expect(v(0.5)).toBeCloseTo(v(0.55), 3)
   })
 })

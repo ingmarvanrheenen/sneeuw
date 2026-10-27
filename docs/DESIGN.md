@@ -72,6 +72,10 @@ De speler is een leermiddel, geen versiering. Op de trick-pagina draait de 3D-sp
 - **Meters**: gewicht (tail ↔ neus), knieën, edge (heel ↔ toe) en schouders, of rotatie bij spins.
 - **Spoor** in de sneeuw: breed als je slipt, een dun lijntje als je carvet.
 - Snelheid ¼, ½ of 1×, goofy spiegelt de hele wereld.
+- **Sneeuwspray** van de edge als je remt of slipt, een fijne pluim bij hard carven. Vers zichtbaar, daarna vervagend in de sneeuw.
+- **Groot scherm** voor op de berg: speler over het hele scherm met stap en bediening onderin. Tik op de scène = pauze/afspelen, de richtknop zet de camera terug.
+- **Omgeving** blijft rustig: bergsilhouetten in de verte en blauwe pistepalen voor gevoel van snelheid. Geen lucht met wolken, geen bomen tenzij de trick erom vraagt.
+- **Mannequin-details**: helm met goggle en strap, handschoenen, capuchon en jaszoom, wijde broekspijpen over de boots, straps op de bindingen. Alles in jas-, broek-, gear- en accentkleur.
 
 ## Toon
 

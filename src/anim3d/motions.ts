@@ -112,8 +112,9 @@ function heelStop(): Motion {
   const { keys, duration } = ride(
     [
       { dur: 1.5, from: 90, v0: 2.5, v1: 4 },
-      { dur: 1.6, from: 90, to: 12, v0: 4, v1: 0.2, board0: 0, board1: -12 },
-      { dur: 0.9, from: 12, v0: 0.2, v1: 0, board0: -12 },
+      { dur: 0.6, from: 90, to: 78, v0: 4, v1: 3.6, board0: 0, board1: -62 },
+      { dur: 1.2, from: 78, to: 62, v0: 3.6, v1: 0.15, board0: -62, board1: -62 },
+      { dur: 0.9, from: 62, v0: 0.15, v1: 0, board0: -62 },
     ],
     { start: { z: -5 } },
     (u) => ({ crouch: u < 0.35 ? 0.3 : 0.6 }),
@@ -258,8 +259,9 @@ function jTurn(): Motion {
   const { keys, duration } = ride(
     [
       { dur: 1.5, from: 90, v0: 2.5, v1: 4.2 },
-      { dur: 1.7, from: 90, to: 165, v0: 4.2, v1: 0.3, board0: 0, board1: 15 },
-      { dur: 0.8, from: 165, v0: 0.3, v1: 0, board0: 15 },
+      { dur: 0.9, from: 90, to: 125, v0: 4.2, v1: 3.4, board0: 0, board1: 30 },
+      { dur: 1.1, from: 125, to: 135, v0: 3.4, v1: 0.2, board0: 30, board1: 45 },
+      { dur: 0.8, from: 135, v0: 0.2, v1: 0, board0: 45 },
     ],
     { start: { z: -5 } },
     (u) => ({ crouch: u < 0.38 ? 0.3 : 0.55 }),
