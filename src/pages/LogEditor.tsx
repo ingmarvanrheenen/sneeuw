@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { Button, Chip, Field, Page, PageHeader, Section, Stepper, cx, inputCls } from '../components/ui'
@@ -13,7 +13,8 @@ import { TRICK_BY_ID } from '../content/tricks'
 import { celebrate, toast } from '../lib/toast'
 import { authStore } from '../lib/auth'
 import { hasBackend } from '../lib/supabase'
-import { myCrews, type Crew } from '../lib/crew'
+import { cachedCrews, myCrews, type Crew } from '../lib/crew'
+import { kvGet, kvSet } from '../lib/db'
 import type { MediaMeta, PisteColor, Session } from '../lib/types'
 
 type Draft = Omit<Session, 'id' | 'userId' | 'createdAt' | 'updatedAt' | 'kind'>
@@ -58,12 +59,30 @@ export default function LogEditor() {
     }
   }, [editId, existing, loaded])
 
+  // crews: eerst de lokale lijst (werkt zonder bereik), daarna verversen als je online bent
   useEffect(() => {
-    if (hasBackend && user && navigator.onLine)
+    if (!hasBackend || !user) return
+    let alive = true
+    const apply = (list: Crew[]) => alive && setCrews(list)
+    void cachedCrews().then(apply)
+    if (navigator.onLine)
       myCrews()
-        .then(setCrews)
+        .then(apply)
         .catch(() => {})
+    return () => {
+      alive = false
+    }
   }, [user])
+
+  // nieuwe dag: standaard delen met de crew die je de vorige keer koos
+  const crewDefaulted = useRef(false)
+  useEffect(() => {
+    if (editId || !crews.length || crewDefaulted.current) return
+    crewDefaulted.current = true
+    void kvGet<string | null>('lastCrewId', null).then((last) => {
+      if (last && crews.some((c) => c.id === last)) setD((x) => ({ ...x, crewId: last }))
+    })
+  }, [crews, editId])
 
   // Actieve trip voorselecteren bij een nieuwe dag
   useEffect(() => {
@@ -95,6 +114,7 @@ export default function LogEditor() {
       const data: Draft = { ...d, mediaIds, practiced: Array.from(new Set([...d.practiced, ...d.landed])) }
       if (existing) await update(existing, data)
       else await create('session', { ...data, id })
+      await kvSet('lastCrewId', d.crewId ?? null)
       // Media volgt de zichtbaarheid van de dag
       for (const m of media ?? []) if ((m.crewId ?? null) !== (d.crewId ?? null)) await update(m, { crewId: d.crewId ?? null })
 

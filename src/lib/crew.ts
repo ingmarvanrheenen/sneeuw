@@ -1,7 +1,8 @@
 // Crew = je vriendengroep. Gedeelde dagen, tricks en media zie je in de feed.
-// Dit werkt alleen online (het is sociaal); je eigen data blijft offline-first.
+// De feed werkt alleen online (het is sociaal). De lijst met je crews wordt lokaal bewaard,
+// zodat je op de berg zonder bereik je dag toch met je crew kunt delen.
 import { supabase } from './supabase'
-import { kvSet } from './db'
+import { kvGet, kvSet } from './db'
 import type { AnyRecord, MediaMeta, Session, TrickProgress } from './types'
 import type { IconName } from '../design/icons'
 
@@ -47,11 +48,21 @@ function need() {
   return supabase
 }
 
+/** Laatst bekende crews, ook zonder bereik. */
+export function cachedCrews(): Promise<Crew[]> {
+  return kvGet<Crew[]>('crews', [])
+}
+
+async function cacheCrews(list: Crew[]) {
+  await kvSet('crews', list)
+  await kvSet('inCrew', list.length > 0)
+}
+
 export async function myCrews(): Promise<Crew[]> {
   const sb = need()
   const { data, error } = await sb.from('crews').select('id, name, invite_code, created_by').order('created_at')
   if (error) throw error
-  await kvSet('inCrew', (data ?? []).length > 0)
+  await cacheCrews(data ?? [])
   return data ?? []
 }
 
@@ -59,7 +70,7 @@ export async function createCrew(name: string): Promise<Crew> {
   const sb = need()
   const { data, error } = await sb.rpc('create_crew', { crew_name: name })
   if (error) throw error
-  await kvSet('inCrew', true)
+  await cacheCrews([...(await cachedCrews()), data as Crew])
   return data as Crew
 }
 
@@ -67,8 +78,9 @@ export async function joinCrew(code: string): Promise<Crew> {
   const sb = need()
   const { data, error } = await sb.rpc('join_crew', { code: code.trim().toUpperCase() })
   if (error) throw error
-  await kvSet('inCrew', true)
-  return data as Crew
+  const crew = data as Crew
+  await cacheCrews([...(await cachedCrews()).filter((c) => c.id !== crew.id), crew])
+  return crew
 }
 
 export async function leaveCrew(crewId: string) {
@@ -80,6 +92,8 @@ export async function leaveCrew(crewId: string) {
     .eq('crew_id', crewId)
     .eq('user_id', u.user?.id ?? '')
   if (error) throw error
+  await cacheCrews((await cachedCrews()).filter((c) => c.id !== crewId))
+  if ((await kvGet<string | null>('lastCrewId', null)) === crewId) await kvSet('lastCrewId', null)
 }
 
 export async function crewMembers(crewId: string): Promise<CrewMember[]> {
