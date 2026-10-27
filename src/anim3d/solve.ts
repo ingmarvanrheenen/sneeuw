@@ -19,7 +19,7 @@ const FORE = 0.27
 const SPINE = 0.47
 export const MAX_ROLL = (42 * Math.PI) / 180
 
-const GRAB: Record<GrabKind, { hand: 'F' | 'B'; x: number; z: number }> = {
+export const GRAB: Record<GrabKind, { hand: 'F' | 'B'; x: number; z: number }> = {
   indy: { hand: 'B', x: -0.03, z: 1 },
   mute: { hand: 'F', x: 0.3, z: 1 },
   melon: { hand: 'F', x: 0.05, z: -1 },
@@ -94,7 +94,10 @@ export function boardQuaternion(heading: number, pitch: number, roll: number): Q
 }
 
 export function solve(k: FullKey3 & { arms2?: ArmPose; armsMix?: number }): Body3 {
-  const crouch = Math.max(0, Math.min(1, k.crouch))
+  // > 1 = tuck in de lucht: knieën naar je borst (grabs)
+  const crouch = Math.max(0, Math.min(1.6, k.crouch))
+  const bend = Math.min(1, crouch)
+  const grabbing = k.grab ? Math.max(0, Math.min(1, k.g)) : 0
   const roll = Math.max(-1.7, Math.min(1.7, k.edge)) * MAX_ROLL
   const quat = boardQuaternion(k.heading, k.pitch, roll)
   // Board draait om de edge die in de sneeuw staat. Bij pitch kan de tip niet onder de sneeuw:
@@ -112,14 +115,15 @@ export function solve(k: FullKey3 & { arms2?: ArmPose; armsMix?: number }): Body
   const ankleB = free < 0.5 ? ankleBound.clone().lerp(lifted, free * 2) : lifted.clone().lerp(ankleFree, (free - 0.5) * 2)
 
   const H = 0.86 - 0.37 * crouch - Math.abs(k.down) * 0.22
-  const pelvis = v(k.lean * 0.12 + 0.07 * free, H, -0.05 - 0.1 * crouch)
+  const pelvis = v(k.lean * 0.12 + 0.07 * free, H, -0.05 - 0.1 * bend)
   const twist = (k.twist * Math.PI) / 180
   const pelvisAxis = rotY(v(1, 0, 0), twist * 0.35)
   let hipF = pelvis.clone().add(pelvisAxis.clone().multiplyScalar(0.09))
   let hipB = pelvis.clone().sub(pelvisAxis.clone().multiplyScalar(0.09))
 
   // op de toe edge blijft de borst omhoog: knieën gaan de bocht in, niet het hoofd
-  const fwd = 0.12 + 0.5 * crouch - 0.45 * Math.max(0, Math.sin(roll))
+  // bij een grab buig je iets mee naar het board (niet bukken: het werk zit in je knieën)
+  const fwd = 0.12 + 0.5 * bend + 0.32 * grabbing - 0.45 * Math.max(0, Math.sin(roll))
   const side = k.lean * 0.15
   let spine = v(Math.sin(side), Math.cos(fwd), Math.sin(fwd)).normalize()
   let neck = pelvis.clone().add(spine.clone().multiplyScalar(SPINE))
@@ -135,7 +139,9 @@ export function solve(k: FullKey3 & { arms2?: ArmPose; armsMix?: number }): Body
   let chest = pelvis.clone().add(spine.clone().multiplyScalar(SPINE * 0.62))
 
   // rechtop blijven terwijl het board onder je kantelt: bovenlijf terugdraaien om het midden tussen de voeten
-  const upright = Math.max(0, Math.min(1, k.upright ?? 0)) * ((-k.pitch * Math.PI) / 180)
+  // pitch eerst terug naar -180..180: na een flip is 330° gewoon -30°
+  const pitchN = ((((k.pitch + 180) % 360) + 360) % 360) - 180
+  const upright = Math.max(0, Math.min(1, k.upright ?? 0)) * ((-pitchN * Math.PI) / 180)
   if (upright) {
     const piv = v(0, ANKLE, 0)
     const Z = v(0, 0, 1)
@@ -169,6 +175,14 @@ export function solve(k: FullKey3 & { arms2?: ArmPose; armsMix?: number }): Body
   if (k.grab && k.g > 0) {
     const gt = GRAB[k.grab]
     const p = v((gt.x * L) / 2, TOP + 0.03, ((gt.z * W) / 2) * 1.05)
+    // de schouder van de grijphand zakt naar de grab toe (bij heelside grabs: achter je been langs)
+    const sh = gt.hand === 'F' ? shF : shB
+    sh.add(
+      p
+        .clone()
+        .sub(sh)
+        .multiplyScalar(0.22 * grabbing),
+    )
     if (gt.hand === 'F') handF = handF.lerp(p, k.g)
     else handB = handB.lerp(p, k.g)
   }

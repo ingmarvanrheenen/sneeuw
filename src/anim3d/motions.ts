@@ -5,6 +5,7 @@
 import type { Trick } from '../content/tricks'
 import { drive, fromPath, fromSide, fromTop, motion, steps, turns, turnsDuration, type Segment } from './builders'
 import { FREESTYLE } from './freestyle'
+import { airTrickFrom, kickerMotion } from './kicker'
 import type { Key3, Motion } from './types'
 
 const SLOPE = 14
@@ -492,6 +493,7 @@ export function motionFor(trick: Trick): Motion | null {
   const own = MOTIONS[trick.id]
   if (own) return own()
   if (!trick.anim) return null
+  if (trick.anim.view === 'side' && trick.anim.obstacle === 'kicker') return kickerMotion(airTrickFrom(trick.anim), trick.anim.steps)
   return trick.anim.view === 'side' ? fromSide(trick.anim) : fromTop(trick.anim)
 }
 

@@ -70,6 +70,12 @@ describe('3D-bewegingen', () => {
     }
   })
 
+  it('upright na een flip: pitch 330° is hetzelfde als -30°', () => {
+    const a = solve({ ...KEY3_DEFAULT, t: 0, y: 1, pitch: -30, upright: 0.5 })
+    const b = solve({ ...KEY3_DEFAULT, t: 0, y: 1, pitch: 330, upright: 0.5 })
+    expect(a.j.head.distanceTo(b.j.head)).toBeLessThan(1e-6)
+  })
+
   it('pop: de tip blijft op de sneeuw en het board gaat zonder sprong de lucht in', () => {
     const tipHeight = (b: ReturnType<typeof solve>) => {
       const half = 0.775
@@ -115,5 +121,23 @@ describe('3D-bewegingen', () => {
     const dense = new Track(Array.from({ length: 11 }, (_, i) => ({ t: i / 10, z: i })))
     const v = (t: number) => (dense.sample(t + 0.001).z - dense.sample(t - 0.001).z) / 0.002
     expect(v(0.5)).toBeCloseTo(v(0.55), 3)
+  })
+})
+
+describe('grabs', () => {
+  it('in een tuck pakt de hand echt het board op de juiste plek', async () => {
+    const { GRAB, BOARD } = await import('../anim3d/solve')
+    // alle grabs die in de trick-bijbel voorkomen
+    const used = new Set(TRICKS.flatMap((t) => (t.anim?.view === 'side' ? t.anim.keys.map((k) => k.grab).filter(Boolean) : [])))
+    expect(used.size).toBeGreaterThanOrEqual(8)
+    for (const grab of [...used] as (keyof typeof GRAB)[]) {
+      const gt = GRAB[grab]
+      const b = solve({ ...KEY3_DEFAULT, t: 0, y: 1, crouch: 1.45, grab, g: 1 })
+      const target = new Vector3((gt.x * BOARD.length) / 2, BOARD.thick / 2 + 0.03, ((gt.z * BOARD.width) / 2) * 1.05)
+        .applyQuaternion(b.boardQuat)
+        .add(b.boardPos)
+      const hand = gt.hand === 'F' ? b.j.handF : b.j.handB
+      expect(hand.distanceTo(target), grab).toBeLessThan(0.06)
+    }
   })
 })

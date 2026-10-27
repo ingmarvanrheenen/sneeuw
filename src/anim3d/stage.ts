@@ -34,6 +34,7 @@ import { Rider, type RigColors } from './rig'
 import { headingVectors, solve, type Body3 } from './solve'
 import { SIDE_SCALE } from './builders'
 import { Track, type Pose3 } from './interp'
+import { KNUCKLE_Z, kickerProfile, kickerSurface } from './kicker'
 import { Spray } from './spray'
 import type { CameraPreset, FullKey3, Motion } from './types'
 
@@ -86,6 +87,8 @@ export class Stage {
   private hemi: HemisphereLight
   private snowMat: MeshStandardMaterial
   private terrainMat: MeshStandardMaterial
+  /** zijkant van obstakels: iets donkerder, zodat je de vorm van de kicker ziet */
+  private wallMat: MeshStandardMaterial
   private lineMat: LineBasicMaterial
   private trailMat: MeshStandardMaterial
   private trailGeo = new BufferGeometry()
@@ -164,6 +167,7 @@ export class Stage {
     trail.frustumCulled = false
     this.world.add(trail)
     this.terrainMat = new MeshStandardMaterial({ color: new Color(colors.terrain), roughness: 0.9 })
+    this.wallMat = new MeshStandardMaterial({ color: new Color(colors.terrain).multiplyScalar(0.95), roughness: 1 })
     this.world.add(this.terrainGroup)
 
     this.rider = new Rider(colors)
@@ -191,6 +195,7 @@ export class Stage {
     this.lineMat.color.set(c.line)
     this.trailMat.color.set(c.trail)
     this.terrainMat.color.set(c.terrain)
+    this.wallMat.color.set(c.terrain).multiplyScalar(0.95)
     this.spray.setColor(c.spray, c.snow)
     this.mountainMats[0]?.color.set(c.far)
     this.mountainMats[1]?.color.set(c.near)
@@ -278,17 +283,30 @@ export class Stage {
         }
     }
     if (m.terrain === 'kicker') {
-      // zijprofiel in (z, y), uitgetrokken over de breedte
+      // hetzelfde profiel als waar de rider overheen rijdt (kicker.ts), uitgetrokken over de breedte
       const s = new Shape()
-      s.moveTo(-0.52 * Z, 0)
-      s.quadraticCurveTo(-0.26 * Z, 0, -0.17 * Z, 0.3 * Y)
-      s.lineTo(0.22 * Z, 0.3 * Y)
-      s.lineTo(0.64 * Z, 0)
-      s.lineTo(-0.52 * Z, 0)
-      const g = new ExtrudeGeometry(s, { depth: 2.6, bevelEnabled: false, curveSegments: 16 })
+      const pts = kickerProfile()
+      s.moveTo(pts[0][0], 0)
+      for (const [z, y] of pts) s.lineTo(z, y)
+      s.lineTo(pts[pts.length - 1][0], 0)
+      s.lineTo(pts[0][0], 0)
+      // 6 m breed: de zijcamera staat er net buiten en ziet het profiel van de jump
+      const g = new ExtrudeGeometry(s, { depth: 6, bevelEnabled: false, curveSegments: 4 })
       g.rotateY(-Math.PI / 2)
-      g.translate(1.3, 0, 0)
-      mesh(g)
+      g.translate(3, 0, 0)
+      // groep 0 = de profielkanten (die ziet de zijcamera), groep 1 = het rijoppervlak
+      const kick = new Mesh(g, [this.wallMat, this.terrainMat])
+      kick.castShadow = kick.receiveShadow = true
+      this.terrainGroup.add(kick)
+      // blauwe verflijnen op lip en knuckle, zoals in elk park
+      const paint = new MeshStandardMaterial({ color: new Color('#2f7fe0'), roughness: 0.8 })
+      for (const z of [-0.04, KNUCKLE_Z]) {
+        const line = new Mesh(new BoxGeometry(2, 0.01, 0.06), paint)
+        const surf = kickerSurface(z)
+        line.position.set(0, surf.y + 0.006, z)
+        line.rotation.x = -(surf.angle * Math.PI) / 180
+        this.terrainGroup.add(line)
+      }
     } else if (m.terrain === 'box') {
       mesh(new BoxGeometry(0.5, 0.2 * Y, 0.8 * Z), 0, 0.1 * Y, 0)
     } else if (m.terrain === 'rail') {
@@ -356,6 +374,8 @@ export class Stage {
       default:
         off = toe.clone().multiplyScalar(4.4).add(up.clone().multiplyScalar(1.1)).add(nose.clone().multiplyScalar(-0.4))
     }
+    // bij een kicker wil je van opzij lip, vlucht en landing in beeld: verder weg
+    if (this.motion?.terrain === 'kicker' && preset === 'zij') off.multiplyScalar(1.9)
     const target = this.targetPoint(k)
     off.x *= this.world.scale.x
     off.applyQuaternion(this.world.quaternion)
