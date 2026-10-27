@@ -18,6 +18,8 @@ const UPPER = 0.29
 const FORE = 0.27
 const SPINE = 0.47
 export const MAX_ROLL = (42 * Math.PI) / 180
+/** hoogte waarop een knie of hand op de sneeuw rust */
+const SNOW_REST = 0.02
 
 export const GRAB: Record<GrabKind, { hand: 'F' | 'B'; x: number; z: number }> = {
   indy: { hand: 'B', x: -0.03, z: 1 },
@@ -123,7 +125,9 @@ export function solve(k: FullKey3 & { arms2?: ArmPose; armsMix?: number }): Body
 
   // op de toe edge blijft de borst omhoog: knieën gaan de bocht in, niet het hoofd
   // bij een grab buig je iets mee naar het board (niet bukken: het werk zit in je knieën)
-  const fwd = 0.12 + 0.5 * bend + 0.32 * grabbing - 0.45 * Math.max(0, Math.sin(roll))
+  // tuck (crouch > 1): borst naar je knieën, zo klein mogelijk (flips, grabs)
+  const tuck = Math.max(0, crouch - 1)
+  const fwd = 0.12 + 0.5 * bend + 0.9 * tuck + 0.32 * grabbing - 0.45 * Math.max(0, Math.sin(roll))
   const side = k.lean * 0.15
   let spine = v(Math.sin(side), Math.cos(fwd), Math.sin(fwd)).normalize()
   let neck = pelvis.clone().add(spine.clone().multiplyScalar(SPINE))
@@ -239,6 +243,12 @@ export function solve(k: FullKey3 & { arms2?: ArmPose; armsMix?: number }): Body
 
   // ── naar het hellingsassenstelsel ──
   const toWorld = (p: Vector3) => p.clone().applyQuaternion(quat).add(boardPos)
+  // knieën, ellebogen en handen rusten óp de sneeuw (zitten, vallen, eurocarve), nooit erin
+  const onSnow = (p: Vector3) => {
+    const w = toWorld(p)
+    if (w.y < SNOW_REST) w.y = SNOW_REST
+    return w
+  }
   const dirWorld = (d: Vector3) => d.clone().applyQuaternion(quat).normalize()
   const bootAngle = (deg: number) => rotY(v(0, 0, 1), (deg * Math.PI) / 180)
 
@@ -250,8 +260,8 @@ export function solve(k: FullKey3 & { arms2?: ArmPose; armsMix?: number }): Body
       pelvis: toWorld(pelvis),
       hipF: toWorld(hipF),
       hipB: toWorld(hipB),
-      kneeF: toWorld(kneeF),
-      kneeB: toWorld(kneeB),
+      kneeF: onSnow(kneeF),
+      kneeB: onSnow(kneeB),
       ankleF: toWorld(ankleF),
       ankleB: toWorld(ankleB),
       chest: toWorld(chest),
@@ -259,10 +269,10 @@ export function solve(k: FullKey3 & { arms2?: ArmPose; armsMix?: number }): Body
       head: toWorld(head),
       shF: toWorld(shF),
       shB: toWorld(shB),
-      elbowF: toWorld(elbowF),
-      elbowB: toWorld(elbowB),
-      handF: toWorld(handF),
-      handB: toWorld(handB),
+      elbowF: onSnow(elbowF),
+      elbowB: onSnow(elbowB),
+      handF: onSnow(handF),
+      handB: onSnow(handB),
     },
     face: dirWorld(face),
     headUp: dirWorld(spine),

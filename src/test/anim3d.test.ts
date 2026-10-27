@@ -141,3 +141,31 @@ describe('grabs', () => {
     }
   })
 })
+
+describe('nergens door de sneeuw', () => {
+  it('bij geen enkele trick (behalve de kicker, die heeft zijn eigen test) zakt iets onder de sneeuw', () => {
+    const bad: string[] = []
+    for (const trick of TRICKS) {
+      const m = motionFor(trick)
+      if (!m || m.terrain === 'kicker') continue
+      const track = new Track(m.keys)
+      let min = Infinity
+      let where = ''
+      for (let i = 0; i <= 200; i++) {
+        const b = solve(track.sample(i / 200))
+        const pts: [string, Vector3][] = [
+          ...Object.entries(b.j),
+          ['neus', new Vector3(0.775, 0, 0).applyQuaternion(b.boardQuat).add(b.boardPos)],
+          ['tail', new Vector3(-0.775, 0, 0).applyQuaternion(b.boardQuat).add(b.boardPos)],
+        ]
+        for (const [name, p] of pts)
+          if (p.y < min) {
+            min = p.y
+            where = `${name} @${(i / 200).toFixed(2)}`
+          }
+      }
+      if (min < -0.03) bad.push(`${trick.id}: ${(min * 100).toFixed(0)} cm (${where})`)
+    }
+    expect(bad).toEqual([])
+  })
+})

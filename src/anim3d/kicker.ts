@@ -80,7 +80,7 @@ export interface Ride {
 }
 
 /** Rit over de kicker: aanloop, transition (snelheid gaat eraf), vlucht, landing, runout. */
-export function simulateRide(lipSpeed = 6, after = 1.5, dt = 1 / 120): Ride {
+export function simulateRide(lipSpeed = 6, after = 1.5, dt = 1 / 120, pop = 0): Ride {
   const A = KICKER.approach
   const v0 = Math.sqrt(lipSpeed * lipSpeed + 2 * G * (LIP_Y - A))
   let z = -14
@@ -102,7 +102,8 @@ export function simulateRide(lipSpeed = 6, after = 1.5, dt = 1 / 120): Ride {
   // vlucht
   y = LIP_Y
   const vz = v * Math.cos(rad(KICKER.lip))
-  let vy = v * Math.sin(rad(KICKER.lip))
+  // pop: extra omhoog door je benen te strekken op de lip
+  let vy = v * Math.sin(rad(KICKER.lip)) + pop
   const speed = v
   for (;;) {
     samples.push({ s, z, y, ground: null })
@@ -161,12 +162,26 @@ const TWEAK: Partial<Record<GrabKind, { edge: number; twist: number }>> = {
   japan: { edge: -0.6, twist: -10 },
 }
 
+const HALF = 0.775
+
+/**
+ * Board als rechte lat op het oppervlak: in een holle bocht rust hij op neus en tail (anders steken
+ * die erdoorheen), op een bolle op zijn midden. Pitch t.o.v. de neus, dus switch (neus heuvelop) klopt ook.
+ */
+export function restOnSurface(z: number, heading: number): { y: number; pitch: number } {
+  const dz = HALF * Math.sin(rad(heading))
+  const yN = kickerSurface(z + dz).y
+  const yT = kickerSurface(z - dz).y
+  return { y: Math.max(kickerSurface(z).y, (yN + yT) / 2), pitch: deg(Math.atan2(yN - yT, 2 * HALF)) }
+}
+
 export function kickerMotion(trick: AirTrick, st: Step[]): Motion {
-  const ride = simulateRide()
-  const { takeoff: tT, land: tL, duration: D } = ride
-  const T = tL - tT
   const spin = trick.spin ?? 0
   const flip = trick.flip ?? 0
+  // een flip heeft hoogte nodig: harder poppen, iets minder snelheid zodat je nog op de landing uitkomt
+  const ride = flip ? simulateRide(5, 1.5, 1 / 120, 1.9) : simulateRide()
+  const { takeoff: tT, land: tL, duration: D } = ride
+  const T = tL - tT
   const r = Math.sign(spin)
   const grab = trick.grab ?? null
   const tweak = grab ? TWEAK[grab] : undefined
@@ -181,8 +196,8 @@ export function kickerMotion(trick: AirTrick, st: Step[]): Motion {
     { s: tT + 0.02, crouch: 0.15, lean: -0.3, heading: 90 },
     // knieën naar je borst: bij een grab een echte tuck (> 1), het board komt naar je hand
     { s: tT + 0.2, crouch: grab ? 0.95 : 0.55, lean: 0 },
-    { s: tT + 0.35, crouch: grab ? 1.45 : flip ? 1.1 : 0.65 },
-    { s: tL - 0.3, crouch: grab ? 1.4 : flip ? 1.05 : 0.62 },
+    { s: tT + 0.35, crouch: grab ? 1.45 : flip ? 1.35 : 0.65 },
+    { s: tL - 0.3, crouch: grab ? 1.4 : flip ? 1.3 : 0.62 },
     // board onder je, benen lang om de landing te pakken
     { s: tL - 0.12, crouch: 0.5 },
     { s: tL, crouch: 0.45 },
@@ -200,6 +215,14 @@ export function kickerMotion(trick: AirTrick, st: Step[]): Motion {
     )
   }
 
+  // kanteling van het board in de wereld (langs de helling) bij de afzet en de landing.
+  // In de lucht interpoleren we die kanteling; de pitch volgt uit waar de neus op dat moment heen wijst.
+  const lastGround = ride.samples.filter((p) => p.s < tT).at(-1)!
+  const tiltTake = restOnSurface(lastGround.z, 90).pitch
+  const landZ = ride.samples.find((p) => p.s >= tL)!.z
+  const tiltLand = restOnSurface(landZ, 90).pitch
+  const pitchFor = (tilt: number, heading: number) => deg(Math.atan(Math.tan(rad(tilt)) * Math.sin(rad(heading))))
+
   const keys: Key3[] = []
   const fps = 40
   const n = Math.round(D * fps)
@@ -211,8 +234,13 @@ export function kickerMotion(trick: AirTrick, st: Step[]): Motion {
     const air = p.ground === null
     const u = air ? Math.min(1, Math.max(0, (s - tT) / T)) : 0
     const e = u * u * (3 - 2 * u)
-    // in de lucht van de lip-hoek naar de hoek van de landing (+ flip)
-    const pitch = air ? KICKER.lip + (-KICKER.land + flip - KICKER.lip) * e : (p.ground ?? 0) + (s > tL ? flip : 0)
+    // flip: pas draaien als je los bent, ondersteboven als je voorbij de knuckle boven de landing hangt,
+    // rond vóór de landing zodat je hem kunt spotten
+    const fu = Math.min(1, Math.max(0, (u - 0.15) / 0.65))
+    const rot = flip * fu * fu * (3 - 2 * fu)
+    const heading = channel(poses, 'heading', s, 90)
+    const rest = air ? null : restOnSurface(p.z, heading)
+    const pitch = rest ? rest.pitch + (s > tL ? flip : 0) : pitchFor(tiltTake + (tiltLand - tiltTake) * e, heading) + rot
     // grab: na de pop pakken, vóór de landing loslaten
     const gIn = Math.min(1, Math.max(0, (s - tT - 0.12) / 0.18))
     const gOut = Math.min(1, Math.max(0, (tL - 0.18 - s) / 0.14))
@@ -221,8 +249,8 @@ export function kickerMotion(trick: AirTrick, st: Step[]): Motion {
       t: i / n,
       x: 0,
       z: p.z,
-      y: p.y,
-      heading: channel(poses, 'heading', s, 90),
+      y: rest ? rest.y : p.y,
+      heading,
       edge: tweak ? tweak.edge * g : 0,
       pitch,
       crouch: channel(poses, 'crouch', s, 0.35),

@@ -100,3 +100,34 @@ describe('kicker-tricks', () => {
     expect(pop.t * ride.duration).toBeLessThan(ride.takeoff + 0.1)
   })
 })
+
+describe('nergens door de schans', () => {
+  it('geen lichaamsdeel en geen board-uiteinde onder het oppervlak, bij elke kicker-trick', async () => {
+    const { solve } = await import('../anim3d/solve')
+    const { Vector3 } = await import('three')
+    const worst: string[] = []
+    for (const t of kickerTricks) {
+      const m = motionFor(t)!
+      const tr = new Track(m.keys)
+      let min = Infinity
+      let where = ''
+      for (let i = 0; i <= 300; i++) {
+        const b = solve(tr.sample(i / 300))
+        const pts: [string, InstanceType<typeof Vector3>][] = [
+          ...Object.entries(b.j),
+          ['neus', new Vector3(0.775, 0, 0).applyQuaternion(b.boardQuat).add(b.boardPos)],
+          ['tail', new Vector3(-0.775, 0, 0).applyQuaternion(b.boardQuat).add(b.boardPos)],
+        ]
+        for (const [name, p] of pts) {
+          const gap = p.y - kickerSurface(p.z).y
+          if (gap < min) {
+            min = gap
+            where = `${name} @${(i / 300).toFixed(2)}`
+          }
+        }
+      }
+      if (min < -0.03) worst.push(`${t.id}: ${(min * 100).toFixed(0)} cm (${where})`)
+    }
+    expect(worst).toEqual([])
+  })
+})
