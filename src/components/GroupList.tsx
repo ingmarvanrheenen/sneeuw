@@ -15,15 +15,19 @@ export function GroupList({ tripId, crewId, ownerId, ready = true }: { tripId: s
   const [members, setMembers] = useState<CrewMember[]>([])
   const [text, setText] = useState('')
   const [online, setOnline] = useState(navigator.onLine)
+  const [refreshing, setRefreshing] = useState(false)
 
   const load = useCallback(async () => {
     if (!navigator.onLine || !ready) return
+    setRefreshing(true)
     try {
       const [list, mem] = await Promise.all([listItems(tripId), crewMembers(crewId)])
       setItems(list)
       setMembers(mem)
     } catch (e) {
       toast({ title: 'Groepslijst laden lukte niet', body: errMsg(e), tone: 'error', icon: 'alert' })
+    } finally {
+      setRefreshing(false)
     }
   }, [tripId, crewId, ready])
 
@@ -83,7 +87,14 @@ export function GroupList({ tripId, crewId, ownerId, ready = true }: { tripId: s
     <section className="mt-8">
       <div className="mb-1 flex items-baseline justify-between gap-3">
         <h2 className="text-[20px] font-semibold tracking-tight">Groepsspullen</h2>
-        {list.length > 0 && <span className="text-[15px] text-muted">{open ? `${open} nog niemand` : 'alles verdeeld'}</span>}
+        <span className="flex items-center gap-2 text-[15px] text-muted">
+          {refreshing && items !== null && (
+            <span role="status" aria-label="Bijwerken">
+              <Spinner size={14} />
+            </span>
+          )}
+          {list.length > 0 && (open ? `${open} nog niemand` : 'alles verdeeld')}
+        </span>
       </div>
       <p className="mb-3 text-[15px] text-muted">Wat je met de crew maar één keer nodig hebt. Tik op "Ik" als jij het meeneemt.</p>
 

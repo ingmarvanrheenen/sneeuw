@@ -130,6 +130,18 @@ describe('groepslijst', () => {
     expect((within(row('Speaker')).getByRole('checkbox') as HTMLButtonElement).disabled).toBe(true)
   })
 
+  it('laat zien dat hij bijwerkt terwijl de laatst bekende lijst al in beeld staat', async () => {
+    let resolve!: (v: unknown) => void
+    api.cachedItems.mockResolvedValue([item({ id: 'a', label: 'Speaker' })])
+    api.listItems.mockReturnValue(new Promise((r) => (resolve = r)))
+    render(<GroupList tripId="t1" crewId="c1" ownerId="daan" />)
+    expect(await screen.findByText('Speaker')).toBeTruthy()
+    expect(screen.getByRole('status', { name: 'Bijwerken' })).toBeTruthy()
+    resolve([item({ id: 'a', label: 'Speaker', claimed_by: 'daan' })])
+    expect(await screen.findByText('Daan neemt hem mee')).toBeTruthy()
+    expect(screen.queryByRole('status', { name: 'Bijwerken' })).toBeNull()
+  })
+
   it('trip nog niet gesynct: uitleg in plaats van een lege lijst die niet werkt', async () => {
     render(<GroupList tripId="t1" crewId="c1" ownerId={ME} ready={false} />)
     expect(await screen.findByText(/Even syncen/)).toBeTruthy()
