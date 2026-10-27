@@ -3,7 +3,10 @@
 import { kvGet, kvSet } from './db'
 import { getAccessToken, getProfile } from './auth'
 import { loadProgressInput, computeProgress } from './useProgress'
-import { TRICK_BY_ID } from '../content/tricks'
+import { TRICKS, TRICK_BY_ID } from '../content/tricks'
+import { PISTES, SNOW, WEATHER } from '../content/logOptions'
+import { MOOD_LABELS } from '../design/icons'
+import type { DayReview, Session } from './types'
 import { sessionsSorted } from './repo'
 import { todayISO, uid } from './ids'
 
@@ -90,7 +93,7 @@ export async function buildContext(): Promise<string> {
 
 export class CoachError extends Error {}
 
-export async function streamCoach(conv: Conversation, onText: (chunk: string) => void, signal?: AbortSignal): Promise<string> {
+async function coachRequest(body: unknown, signal?: AbortSignal): Promise<Response> {
   const url = import.meta.env.VITE_SUPABASE_URL as string | undefined
   const anon = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined
   const token = await getAccessToken()
@@ -100,10 +103,10 @@ export async function streamCoach(conv: Conversation, onText: (chunk: string) =>
   const res = await fetch(`${url}/functions/v1/coach`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${token}`, apikey: anon, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ messages: conv.messages, context: conv.context }),
+    body: JSON.stringify(body),
     signal,
   })
-  if (!res.ok || !res.body) {
+  if (!res.ok) {
     let msg = `Coach gaf een fout (${res.status})`
     try {
       msg = (await res.json()).error ?? msg
@@ -112,6 +115,46 @@ export async function streamCoach(conv: Conversation, onText: (chunk: string) =>
     }
     throw new CoachError(msg)
   }
+  return res
+}
+
+/** Een gelogde dag als leesbare tekst voor de coach. */
+export function dayText(s: Session): string {
+  const name = (id: string) => TRICK_BY_ID.get(id)?.name ?? id
+  const label = <T extends { id: string; label: string }>(list: T[], id?: string) => list.find((x) => x.id === id)?.label
+  const practicedOnly = s.practiced.filter((t) => !s.landed.includes(t))
+  return [
+    `Datum: ${s.date}`,
+    `Waar: ${s.resortName || 'onbekend'}`,
+    `Uren op de plank: ${s.hours}`,
+    `Gevallen: ${s.falls}x`,
+    `Gevoel: ${MOOD_LABELS[s.mood - 1] ?? s.mood} (${s.mood}/5)`,
+    `Pistes: ${s.pistes.map((p) => label(PISTES, p) ?? p).join(', ') || '-'}`,
+    `Sneeuw: ${label(SNOW, s.snow) ?? '-'}, weer: ${label(WEATHER, s.weather) ?? '-'}`,
+    `Geland: ${s.landed.map(name).join(', ') || '-'}`,
+    `Geoefend: ${practicedOnly.map(name).join(', ') || '-'}`,
+    `Pijntjes: ${s.pains.join(', ') || '-'}${s.painNote ? ` (${s.painNote})` : ''}`,
+    s.highlight ? `Beste moment: ${s.highlight}` : '',
+    s.notes ? `Notities: ${s.notes.slice(0, 600)}` : '',
+  ]
+    .filter(Boolean)
+    .join('\n')
+}
+
+/** Vraag Coach Daddy om een review van een dag. Telt als één coach-bericht. */
+export async function reviewDay(s: Session): Promise<DayReview> {
+  const [context, input] = await Promise.all([buildContext(), loadProgressInput()])
+  const done = new Set(input.tricks.filter((t) => t.status === 'geland' || t.status === 'beheerst').map((t) => t.trickId))
+  const trickIds = TRICKS.map((t) => t.id).filter((id) => !done.has(id))
+  const res = await coachRequest({ mode: 'review', context, day: dayText(s), trickIds })
+  const r = (await res.json()) as Omit<DayReview, 'createdAt'>
+  if (!r?.focus) throw new CoachError('Coach gaf geen bruikbare review terug.')
+  return { ...r, trickId: r.trickId && TRICK_BY_ID.has(r.trickId) ? r.trickId : null, createdAt: Date.now() }
+}
+
+export async function streamCoach(conv: Conversation, onText: (chunk: string) => void, signal?: AbortSignal): Promise<string> {
+  const res = await coachRequest({ messages: conv.messages, context: conv.context }, signal)
+  if (!res.body) throw new CoachError('Coach gaf geen antwoord.')
   const reader = res.body.getReader()
   const dec = new TextDecoder()
   let full = ''

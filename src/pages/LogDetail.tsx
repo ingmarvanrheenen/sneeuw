@@ -4,6 +4,7 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { Button, Card, Page, PageHeader, Section, Stat, Sheet, StatGroup } from '../components/ui'
 import { Icon, Mood, MOOD_LABELS } from '../design/icons'
 import { MediaGrid } from '../components/Media'
+import { DayReview } from '../components/DayReview'
 import { remove, useRecord } from '../lib/repo'
 import { db } from '../lib/db'
 import { fmtDate } from '../lib/format'
@@ -153,6 +154,8 @@ export default function LogDetail() {
           <Card className="whitespace-pre-wrap text-sm leading-relaxed">{s.notes}</Card>
         </Section>
       )}
+
+      <DayReview session={s} />
 
       <div className="mt-6 grid grid-cols-2 gap-2">
         <Button

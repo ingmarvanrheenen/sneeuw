@@ -67,6 +67,8 @@ app ── buildContext() ──► samenvatting van je data (stance, level, tri
 
 Gesprekken worden lokaal bewaard (laatste 30). De context wordt bij de start van een gesprek vastgezet, zodat de prompt-cache over het hele gesprek werkt.
 
+**Dagreview** (`mode: 'review'`): op verzoek vanuit het dagdetail. De app stuurt de rider-context, de dag als tekst (`dayText()`) en de trick-ids die je nog niet geland hebt. De functie vraagt één antwoord met structured outputs (`output_config.format`, JSON-schema): `goed`, `focus`, `oefening`, `trickId` (alleen uit de meegestuurde lijst, als `enum`) en `veiligheid`. De review wordt bij de dag bewaard (`session.review`) en synct mee. De voorgestelde trick zet je met één tik als doel. Een review telt als één coach-bericht voor de daglimiet.
+
 ## Animaties (`src/anim`)
 
 - Een animatie is een lijst keyframes (`t` van 0 tot 1) plus stappen die synchroon meelopen.

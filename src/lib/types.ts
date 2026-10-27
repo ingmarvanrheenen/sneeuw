@@ -37,6 +37,18 @@ export interface Session extends BaseRecord {
   highlight?: string
   notes?: string
   mediaIds: string[]
+  /** review van Coach Daddy, op verzoek gemaakt en bij de dag bewaard */
+  review?: DayReview
+}
+
+export interface DayReview {
+  goed: string
+  focus: string
+  oefening: string
+  /** voorgestelde volgende trick uit de bijbel */
+  trickId: string | null
+  veiligheid: string | null
+  createdAt: number
 }
 
 export type TrickStatus = 'wil' | 'bezig' | 'geland' | 'beheerst'
