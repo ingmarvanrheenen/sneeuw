@@ -14,6 +14,7 @@ import {
   joinCrew,
   leaveCrew,
   myCrews,
+  cachedCrews,
   reactionsFor,
   toPosts,
   toggleReaction,
@@ -156,13 +157,18 @@ export default function Crew() {
       setCrews(list)
       setActive((a) => a ?? list[0]?.id ?? null)
     } catch (e) {
-      setCrews([])
-      toast({ title: 'Crew laden mislukt', body: errMsg(e), tone: 'error', icon: 'alert' })
+      // geen bereik: laatst bekende crews tonen in plaats van "nog geen crew"
+      const list = await cachedCrews()
+      setCrews(list)
+      setActive((a) => a ?? list[0]?.id ?? null)
+      if (navigator.onLine) toast({ title: 'Crew laden mislukt', body: errMsg(e), tone: 'error', icon: 'alert' })
     }
   }, [])
 
-  const loadFeed = useCallback(async (crewId: string) => {
-    setLoading(true)
+  /** `quiet`: verversen op de achtergrond, zonder spinner of foutmelding */
+  const loadFeed = useCallback(async (crewId: string, quiet = false) => {
+    if (quiet && !navigator.onLine) return
+    if (!quiet) setLoading(true)
     try {
       const [items, mem] = await Promise.all([crewFeed(crewId), crewMembers(crewId)])
       const p = toPosts(items)
@@ -170,7 +176,7 @@ export default function Crew() {
       setMembers(mem)
       setReactions(await reactionsFor(p.map((x) => x.id)))
     } catch (e) {
-      toast({ title: 'Offline?', body: errMsg(e), tone: 'error', icon: 'cloudOff' })
+      if (!quiet) toast({ title: 'Offline?', body: errMsg(e), tone: 'error', icon: 'cloudOff' })
     } finally {
       setLoading(false)
     }
@@ -181,6 +187,19 @@ export default function Crew() {
   }, [user, loadCrews])
   useEffect(() => {
     if (active) void loadFeed(active)
+  }, [active, loadFeed])
+  // feed blijft vers: bij terugkomen in de app, weer bereik, en elke minuut zolang je kijkt
+  useEffect(() => {
+    if (!active) return
+    const refresh = () => document.visibilityState === 'visible' && void loadFeed(active, true)
+    document.addEventListener('visibilitychange', refresh)
+    window.addEventListener('online', refresh)
+    const timer = setInterval(refresh, 60_000)
+    return () => {
+      document.removeEventListener('visibilitychange', refresh)
+      window.removeEventListener('online', refresh)
+      clearInterval(timer)
+    }
   }, [active, loadFeed])
 
   if (!hasBackend || !user)
