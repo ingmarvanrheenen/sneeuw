@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { useParams } from 'react-router-dom'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { Button, Chip, Empty, Field, List, Page, PageHeader, Row, Section, Sheet, Stat, StatGroup, inputCls } from '../components/ui'
-import { RiderAvatar, SkiPass, StickerBook, resortName } from '../components/RiderParts'
+import { RiderAvatar, SkiPass, StickerBoard, StickerLegend, StickerTracks, resortName } from '../components/RiderParts'
 import { MediaGrid } from '../components/Media'
 import { ResortPicker } from '../components/Pickers'
 import { Icon, Spinner } from '../design/icons'
@@ -111,9 +111,13 @@ function RiderView({
       <Section title="Stickerboek">
         <p className="mb-3 text-[15px] text-muted">
           <span className="num">{book.landed}</span> van <span className="num">{book.total}</span> verdiend.{' '}
-          {isMe ? 'Land een trick en hij komt erbij.' : 'Lege plekken zijn nog te verdienen.'}
+          {isMe ? 'Land een trick en hij komt erop.' : 'Tik op een track voor wat nog te verdienen is.'}
         </p>
-        <StickerBook landed={landed} />
+        <StickerBoard landed={landed} />
+        <StickerLegend />
+        <div className="mt-4">
+          <StickerTracks landed={landed} />
+        </div>
       </Section>
 
       {badges.length > 0 && (

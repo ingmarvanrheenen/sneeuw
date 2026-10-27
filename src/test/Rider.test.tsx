@@ -16,7 +16,7 @@ vi.mock('../lib/riders', async (orig) => ({ ...(await orig<typeof import('../lib
 vi.mock('../lib/sync', async (orig) => ({ ...(await orig<typeof import('../lib/sync')>()), scheduleSync: vi.fn() }))
 
 import Rider from '../pages/Rider'
-import { SkiPass, StickerBook } from '../components/RiderParts'
+import { SkiPass, StickerBoard, StickerTracks } from '../components/RiderParts'
 import { authStore, getProfile, saveProfile } from '../lib/auth'
 import { setCurrentUserId } from '../lib/auth-state'
 import { db } from '../lib/db'
@@ -87,14 +87,34 @@ describe('skipas en stickerboek', () => {
     expect(screen.queryByRole('progressbar')).toBeNull()
   })
 
-  it('stickerboek: verdiende stickers en lege plekken, allemaal naar de trick', () => {
+  it('board: je stickers erop, de rest als "+N"', () => {
+    const many = TRICKS.slice(0, 20).map((t) => t.id)
+    render(<StickerBoard landed={many} />)
+    const board = screen.getByRole('img', { name: /Je board met stickers/ })
+    expect(board.getAttribute('aria-label')).toMatch(/en nog 13$/)
+    expect(within(board).getByText('+13')).toBeTruthy()
+  })
+
+  it('leeg board: uitleg', () => {
+    render(<StickerBoard landed={[]} />)
+    expect(screen.getByRole('img', { name: 'Leeg board, nog geen stickers' })).toBeTruthy()
+    expect(screen.getByText(/Land je eerste trick/)).toBeTruthy()
+  })
+
+  it('tracks: één regel per track met de volgende sticker; tik toont alles, ook de lege plekken', async () => {
+    const user = userEvent.setup()
     render(
       <MemoryRouter>
-        <StickerBook landed={['ollie']} />
+        <StickerTracks landed={['ollie']} />
       </MemoryRouter>,
     )
-    expect(screen.getByRole('link', { name: 'Ollie' }).getAttribute('href')).toBe('/tricks/ollie')
-    expect(screen.getAllByRole('link', { name: /nog te verdienen$/ })).toHaveLength(TRICKS.length - 1)
+    const flat = TRICKS.filter((t) => t.track === 'flat')
+    const row = screen.getByRole('button', { name: new RegExp(`^Flatland.*1/${flat.length}`) })
+    expect(row.textContent).toMatch(/Volgende: /)
+    await user.click(row)
+    const sheet = screen.getByRole('dialog', { name: 'Flatland' })
+    expect(within(sheet).getByRole('link', { name: 'Ollie' }).getAttribute('href')).toBe('/tricks/ollie')
+    expect(within(sheet).getAllByRole('link', { name: /nog te verdienen$/ })).toHaveLength(flat.length - 1)
   })
 })
 
@@ -119,7 +139,7 @@ describe('je eigen skipas', () => {
     expect(screen.getByText('6 u')).toBeTruthy()
     // één dag: enkelvoud
     expect(screen.getByText('Dag')).toBeTruthy()
-    expect(screen.getByRole('link', { name: 'Ollie' })).toBeTruthy()
+    expect(screen.getByRole('img', { name: 'Je board met stickers: Ollie' })).toBeTruthy()
     expect(api.nicknameInbox).not.toHaveBeenCalled()
   })
 
@@ -180,7 +200,7 @@ describe('skipas van een crewgenoot', () => {
     expect(within(pass).getByText('Ischgl')).toBeTruthy()
     expect(screen.getByText('31 keer gevallen')).toBeTruthy()
     expect(screen.getByRole('heading', { level: 1, name: 'Skipas' })).toBeTruthy()
-    expect(screen.getByText('Lege plekken zijn nog te verdienen.', { exact: false })).toBeTruthy()
+    expect(screen.getByRole('img', { name: /Je board met stickers: (Shifty, Ollie|Ollie, Shifty)$/ })).toBeTruthy()
     expect(screen.queryByRole('button', { name: 'Bewerk' })).toBeNull()
     expect(api.riderMedia).toHaveBeenCalledWith('daan')
   })

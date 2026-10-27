@@ -1,5 +1,16 @@
 import { describe, expect, it } from 'vitest'
-import { barcode, passNumber, riderStats, seasonFor, stickerBook, trickPiste } from '../lib/rider'
+import {
+  BOARD_SLOTS,
+  barcode,
+  boardStickers,
+  nextSticker,
+  passNumber,
+  riderStats,
+  seasonFor,
+  stickerBook,
+  stickerSlot,
+  trickPiste,
+} from '../lib/rider'
 import { computeProgress } from '../lib/useProgress'
 import { TRICKS } from '../content/tricks'
 import { EMPTY_DRAFT } from '../lib/sessions'
@@ -79,6 +90,41 @@ describe('stickerboek', () => {
     const flat = book.tracks.flatMap((t) => t.stickers)
     expect(flat.find((s) => s.trick.id === 'ollie')?.landed).toBe(true)
     expect(flat.filter((s) => s.landed)).toHaveLength(2)
+  })
+
+  it('board: moeilijkste eerst; vol = laatste plek wordt "+N"', () => {
+    const ids = TRICKS.map((t) => t.id)
+    const few = boardStickers(['ollie', ids[0]])
+    expect(few.more).toBe(0)
+    expect(few.shown[0].level).toBeGreaterThanOrEqual(few.shown[1].level)
+    const full = boardStickers(ids.slice(0, BOARD_SLOTS.length))
+    expect(full).toMatchObject({ more: 0 })
+    expect(full.shown).toHaveLength(BOARD_SLOTS.length)
+    const over = boardStickers(ids)
+    expect(over.shown).toHaveLength(BOARD_SLOTS.length - 1)
+    expect(over.more).toBe(ids.length - (BOARD_SLOTS.length - 1))
+    expect(over.shown.every((t, i, a) => i === 0 || a[i - 1].level >= t.level)).toBe(true)
+  })
+
+  it('stickers zitten vast per trick, binnen het board, licht scheef', () => {
+    expect(stickerSlot(2, 'ollie')).toEqual(stickerSlot(2, 'ollie'))
+    for (let i = 0; i < BOARD_SLOTS.length; i++)
+      for (const id of ['ollie', 'shifty', '+']) {
+        const s = stickerSlot(i, id)
+        expect(s.x).toBeGreaterThan(14)
+        expect(s.x).toBeLessThan(87)
+        expect(s.y).toBeGreaterThan(18)
+        expect(s.y).toBeLessThan(82)
+        expect(Math.abs(s.rotate)).toBeLessThanOrEqual(10)
+      }
+  })
+
+  it('volgende sticker: de makkelijkste die je nog niet hebt; alles binnen = geen', () => {
+    const [basis] = stickerBook([]).tracks
+    const next = nextSticker(basis)!
+    expect(next.level).toBe(Math.min(...basis.stickers.map((s) => s.trick.level)))
+    const full = stickerBook(basis.stickers.map((s) => s.trick.id)).tracks[0]
+    expect(nextSticker(full)).toBeUndefined()
   })
 
   it('moeilijkheid als pistekleur', () => {

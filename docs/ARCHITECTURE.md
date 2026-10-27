@@ -62,7 +62,7 @@ Foto's worden op het toestel verkleind naar max 2048 px (JPEG). Video's gaan doo
 - Route `/rider/:id` (`ik` = jezelf, werkt ook zonder account). Je eigen pas rekent alles live uit je logboek (`useProgress` → `riderStats()` in `src/lib/rider.ts`); die van een crewgenoot komt uit `profiles` (laatst bekende in `kv: rider:<id>` voor offline).
 - **Wat je crew ziet**: `profiles.data` (naam, stance, foto, motto, thuisresort, signature trick, bijnaam) en `profiles.stats` = `riderStats()`: XP, level, eerlijke stats, gelande trick-ids, badge-ids. Dat gaat mee met de bestaande profiel-sync; afgeleid, dus nooit uit de pas met je logboek.
 - **Foto**: vierkant uitgesneden, 192 px jpeg als data-URL in je profiel (max ±60 KB; database-check op de profielgrootte). Geen Storage nodig, werkt offline en je crew ziet hem meteen.
-- **Stickerboek**: alle tricks per track (`stickerBook()`), randkleur = moeilijkheid als pistekleur; lege plekken zijn nog te verdienen.
+- **Stickerboek**: je board met de moeilijkste gelande tricks als stickers (`boardStickers()`, vaste plekken per trick via `stickerSlot()`, de rest als "+N"), kleur = moeilijkheid als pistekleur. Daaronder per track één regel met de volgende sticker; tik voor alle stickers van die track, ook de lege plekken.
 - **Bijnamen** (`nicknames`, migratie `20261029000000`): een crewgenoot stelt voor (max 3 open per persoon, niet dezelfde twee keer), alleen jij zet de status op ja/nee; bij ja komt hij in je profiel. 20 scenario's in `test:db`.
 - Feed, leaderboard en trip-recap linken naar de skipas; de feed toont profielfoto's.
 

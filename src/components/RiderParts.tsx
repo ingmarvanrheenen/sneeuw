@@ -1,8 +1,20 @@
 // Bouwstenen van het rider-profiel: avatar, skipas en stickerboek.
+import { useState, type CSSProperties } from 'react'
 import { Link } from 'react-router-dom'
-import { Progress, cx } from './ui'
+import { List, Progress, Row, Sheet, cx } from './ui'
 import { PISTES } from '../content/logOptions'
-import { barcode, passNumber, seasonFor, stickerBook, trickPiste } from '../lib/rider'
+import {
+  barcode,
+  boardStickers,
+  nextSticker,
+  passNumber,
+  seasonFor,
+  stickerBook,
+  stickerSlot,
+  trickPiste,
+  type StickerTrack,
+} from '../lib/rider'
+import type { Trick } from '../content/tricks'
 import { fmtDate } from '../lib/format'
 import { RESORT_BY_ID } from '../content/resorts'
 import type { Profile } from '../lib/types'
@@ -110,46 +122,136 @@ function PassField({ label, value }: { label: string; value: string }) {
   )
 }
 
-const pisteColor = (id: string) => (id === 'zwart' ? 'var(--text)' : PISTES.find((p) => p.id === id)?.color)
+const pisteColor = (id: string) => PISTES.find((p) => p.id === id)?.color
 
-/** Gelande tricks als stickers (randkleur = moeilijkheid), lege plekken voor wat je nog moet verdienen. */
-export function StickerBook({ landed }: { landed: string[] }) {
-  const book = stickerBook(landed)
+function Sticker({ trick, rotate = 0, className, style }: { trick: Trick; rotate?: number; className?: string; style?: CSSProperties }) {
   return (
-    <div>
-      {book.tracks.map((t) => (
-        <div key={t.track} className="mt-4 first:mt-0">
-          <div className="mb-2 flex items-baseline justify-between">
-            <span className="text-[15px] font-medium">{t.name}</span>
-            <span className="num text-[13px] text-muted">
-              {t.landed}/{t.stickers.length}
+    <span
+      className={cx(
+        'inline-block max-w-[92px] truncate rounded-full border-2 border-white px-2.5 py-1 text-[12px] font-bold text-white shadow-md',
+        className,
+      )}
+      style={{ background: pisteColor(trickPiste(trick.level)), rotate: `${rotate}deg`, ...style }}
+    >
+      {trick.name}
+    </span>
+  )
+}
+
+/** Je board met je gelande tricks als stickers erop, de moeilijkste eerst. */
+export function StickerBoard({ landed }: { landed: string[] }) {
+  const { shown, more } = boardStickers(landed)
+  const names = shown.map((t) => t.name).join(', ')
+  return (
+    <div
+      role="img"
+      aria-label={shown.length ? `Je board met stickers: ${names}${more ? ` en nog ${more}` : ''}` : 'Leeg board, nog geen stickers'}
+      className="relative h-[176px] overflow-hidden rounded-full border-2 hairline bg-surface"
+      style={{ backgroundImage: 'repeating-linear-gradient(115deg, transparent 0 22px, var(--surface-2) 22px 30px)' }}
+    >
+      {/* inserts van de bindingen */}
+      {[30, 70].map((x) => (
+        <span
+          key={x}
+          aria-hidden
+          className="absolute top-1/2 grid -translate-x-1/2 -translate-y-1/2 grid-cols-2 gap-x-3 gap-y-2.5"
+          style={{ left: `${x}%` }}
+        >
+          {Array.from({ length: 8 }, (_, i) => (
+            <span key={i} className="size-1.5 rounded-full bg-line" />
+          ))}
+        </span>
+      ))}
+      {shown.map((t, i) => {
+        const at = stickerSlot(i, t.id)
+        return (
+          <Sticker
+            key={t.id}
+            trick={t}
+            rotate={at.rotate}
+            className="absolute -translate-x-1/2 -translate-y-1/2"
+            style={{ left: `${at.x}%`, top: `${at.y}%` }}
+          />
+        )
+      })}
+      {more > 0 &&
+        (() => {
+          const at = stickerSlot(shown.length, '+')
+          return (
+            <span
+              className="num absolute -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white bg-text px-2.5 py-1 text-[12px] font-bold text-bg shadow-md"
+              style={{ left: `${at.x}%`, top: `${at.y}%`, rotate: `${at.rotate}deg` }}
+            >
+              +{more}
             </span>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {t.stickers.map(({ trick, landed: got }, i) =>
+          )
+        })()}
+      {!shown.length && (
+        <span className="absolute inset-0 grid place-items-center px-10 text-center text-[15px] text-muted">
+          Land je eerste trick en hij komt hier als sticker op
+        </span>
+      )}
+    </div>
+  )
+}
+
+/** Per track één regel; tik voor alle stickers van die track, ook de lege plekken. */
+export function StickerTracks({ landed }: { landed: string[] }) {
+  const book = stickerBook(landed)
+  const [open, setOpen] = useState<StickerTrack | null>(null)
+  return (
+    <>
+      <List>
+        {book.tracks.map((t) => {
+          const next = nextSticker(t)
+          return (
+            <Row
+              key={t.track}
+              title={t.name}
+              detail={next ? `Volgende: ${next.name}` : 'Compleet'}
+              value={`${t.landed}/${t.stickers.length}`}
+              onClick={() => setOpen(t)}
+            />
+          )
+        })}
+      </List>
+      <Sheet open={!!open} onClose={() => setOpen(null)} title={open?.name ?? ''}>
+        {open && (
+          <div className="flex flex-wrap gap-2 pb-6 pt-1">
+            {open.stickers.map(({ trick, landed: got }) =>
               got ? (
-                <Link
-                  key={trick.id}
-                  to={`/tricks/${trick.id}`}
-                  className="rounded-full border-2 bg-surface px-3 py-1.5 text-[13px] font-semibold shadow-sm"
-                  style={{ borderColor: pisteColor(trickPiste(trick.level)), rotate: `${((i * 37) % 7) - 3}deg` }}
-                >
-                  {trick.name}
+                <Link key={trick.id} to={`/tricks/${trick.id}`} aria-label={trick.name}>
+                  <Sticker trick={trick} className="max-w-none text-[13px]" />
                 </Link>
               ) : (
                 <Link
                   key={trick.id}
                   to={`/tricks/${trick.id}`}
                   aria-label={`${trick.name}, nog te verdienen`}
-                  className="rounded-full border border-dashed hairline px-3 py-1.5 text-[13px] text-muted"
+                  className="rounded-full border-2 border-dashed hairline px-2.5 py-1 text-[13px] text-muted"
                 >
                   {trick.name}
                 </Link>
               ),
             )}
           </div>
-        </div>
+        )}
+      </Sheet>
+    </>
+  )
+}
+
+/** Kleur = moeilijkheid, net als de pistes. */
+export function StickerLegend() {
+  return (
+    <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] text-muted">
+      {(['groen', 'blauw', 'rood', 'zwart'] as const).map((p) => (
+        <span key={p} className="inline-flex items-center gap-1.5">
+          <span className="size-2.5 rounded-full border hairline" style={{ background: pisteColor(p) }} />
+          {PISTES.find((x) => x.id === p)?.label}
+        </span>
       ))}
+      <span>= moeilijkheid</span>
     </div>
   )
 }

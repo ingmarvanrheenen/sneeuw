@@ -100,3 +100,39 @@ export function stickerBook(landed: string[]): { tracks: StickerTrack[]; landed:
 export function trickPiste(level: Trick['level']): 'groen' | 'blauw' | 'rood' | 'zwart' {
   return level <= 1 ? 'groen' : level === 2 ? 'blauw' : level === 3 ? 'rood' : 'zwart'
 }
+
+/** Stickers op je board: de moeilijkste eerst. Past er niet alles op, dan de laatste plek voor "+N". */
+export function boardStickers(landed: string[], slots = BOARD_SLOTS.length): { shown: Trick[]; more: number } {
+  const set = new Set(landed)
+  const all = TRICKS.filter((t) => set.has(t.id)).sort((a, b) => b.level - a.level || TRICKS.indexOf(a) - TRICKS.indexOf(b))
+  return all.length <= slots ? { shown: all, more: 0 } : { shown: all.slice(0, slots - 1), more: all.length - (slots - 1) }
+}
+
+/** Middelpunten (in % van het board): 3-2-3, ver genoeg uit elkaar dat stickers niet overlappen, weg van nose en tail. */
+export const BOARD_SLOTS: [number, number][] = [
+  [20, 26],
+  [50, 24],
+  [80, 27],
+  [35, 51],
+  [65, 50],
+  [20, 76],
+  [50, 77],
+  [80, 75],
+]
+
+/** Plek en scheefheid van sticker i: vast per trick, dus je board ziet er elke keer hetzelfde uit. */
+export function stickerSlot(i: number, id: string): { x: number; y: number; rotate: number } {
+  let h = 2166136261
+  for (const c of id) h = Math.imul(h ^ c.charCodeAt(0), 16777619)
+  const r = (n: number) => ((h >>> n) & 0xff) / 255
+  const [x, y] = BOARD_SLOTS[i % BOARD_SLOTS.length]
+  return { x: x + (r(0) - 0.5) * 4, y: y + (r(8) - 0.5) * 6, rotate: Math.round((r(16) - 0.5) * 20) }
+}
+
+/** De makkelijkste trick in deze track die je nog niet hebt: de volgende sticker om te verdienen. */
+export function nextSticker(track: StickerTrack): Trick | undefined {
+  return track.stickers
+    .filter((s) => !s.landed)
+    .map((s) => s.trick)
+    .sort((a, b) => a.level - b.level)[0]
+}
