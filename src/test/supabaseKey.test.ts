@@ -37,3 +37,11 @@ describe('foutmeldingen', () => {
     expect(errMsg({})).not.toBe('[object Object]')
   })
 })
+
+describe('auth-foutmeldingen', () => {
+  it('vertaalt Supabase auth-codes', async () => {
+    const { errMsg } = await import('../lib/errors')
+    expect(errMsg({ code: 'over_email_send_rate_limit', message: 'email rate limit exceeded' })).toMatch(/over een uur/)
+    expect(errMsg({ code: 'invalid_credentials', message: 'Invalid login credentials' })).toBe('E-mail of wachtwoord klopt niet.')
+  })
+})
