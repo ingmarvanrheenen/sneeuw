@@ -112,6 +112,7 @@ export function MediaAddButton({
 }) {
   const ref = useRef<HTMLInputElement>(null)
   const [busy, setBusy] = useState(false)
+  const [prog, setProg] = useState<{ index: number; total: number; progress: number } | null>(null)
   return (
     <>
       <input
@@ -125,23 +126,40 @@ export function MediaAddButton({
           if (!files?.length) return
           setBusy(true)
           try {
-            const { added, skipped } = await addMediaFiles(files, link)
+            const { added, skipped } = await addMediaFiles(files, link, (p) => setProg(p))
             skipped.forEach((s) => toast({ title: 'Niet toegevoegd', body: s, tone: 'error' }))
             if (added.length) onAdded?.(added)
           } finally {
             setBusy(false)
+            setProg(null)
             e.target.value = ''
           }
         }}
       />
       <button
         type="button"
+        disabled={busy}
         onClick={() => ref.current?.click()}
-        className="flex h-11 w-full items-center justify-center gap-2 rounded-2xl border border-dashed hairline text-sm text-muted active:bg-surface-2"
+        className="relative flex h-11 w-full items-center justify-center gap-2 overflow-hidden rounded-2xl border border-dashed hairline text-sm text-muted active:bg-surface-2"
       >
-        <Icon name="camera" size={18} />
-        {busy ? 'Verwerken…' : label}
+        {busy && prog && (
+          <span
+            className="absolute inset-y-0 left-0 bg-accent-soft transition-[width] duration-300"
+            style={{ width: `${Math.round(((prog.index + prog.progress) / prog.total) * 100)}%` }}
+          />
+        )}
+        <span className="relative flex items-center gap-2">
+          <Icon name="camera" size={18} />
+          {!busy
+            ? label
+            : prog && prog.progress > 0
+              ? `Video verkleinen ${Math.round(prog.progress * 100)}%${prog.total > 1 ? ` (${prog.index + 1}/${prog.total})` : ''}`
+              : 'Verwerken…'}
+        </span>
       </button>
+      {busy && prog && prog.progress > 0 && (
+        <p className="mt-1.5 text-center text-[13px] text-muted">Maakt je clip kleiner voor de upload. Laat de app even open.</p>
+      )}
     </>
   )
 }

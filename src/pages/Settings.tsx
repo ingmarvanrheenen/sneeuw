@@ -9,7 +9,9 @@ import { settingsStore, updateSettings } from '../lib/settings'
 import { db } from '../lib/db'
 import { toast } from '../lib/toast'
 import { isIOS, isStandalone } from '../lib/pwa'
-import type { Profile } from '../lib/types'
+import type { MediaMeta, Profile } from '../lib/types'
+import { useLiveQuery } from 'dexie-react-hooks'
+import { plural } from '../lib/format'
 import { errMsg } from '../lib/errors'
 
 function Account() {
@@ -162,6 +164,28 @@ function Connection() {
   )
 }
 
+function fmtBytes(n: number) {
+  return n >= 1024 ** 3 ? `${(n / 1024 ** 3).toFixed(1)} GB` : `${Math.max(0, Math.round(n / 1024 ** 2))} MB`
+}
+
+/** Hoeveel je foto's en video's innemen. Oudere items zonder grootte meten we via de lokale blob. */
+function MediaUsage() {
+  const usage = useLiveQuery(async () => {
+    const media = (await db.records.where('kind').equals('media').toArray()).filter((r) => !r.deleted) as MediaMeta[]
+    let bytes = 0
+    for (const m of media) bytes += m.size ?? (await db.blobs.get(m.id))?.blob.size ?? 0
+    return { photos: media.filter((m) => m.type === 'image').length, videos: media.filter((m) => m.type === 'video').length, bytes }
+  })
+  if (!usage) return null
+  return (
+    <Row
+      icon="image"
+      title={`Je media: ${fmtBytes(usage.bytes)}`}
+      detail={`${plural(usage.photos, 'foto', "foto's")} · ${plural(usage.videos, 'video', "video's")}${hasBackend ? ' · gratis opslag is 1 GB voor de hele app' : ''}`}
+    />
+  )
+}
+
 export default function Settings() {
   const settings = settingsStore.use()
   const [profile, setProfile] = useState<Profile | null>(null)
@@ -249,6 +273,7 @@ export default function Settings() {
 
       <Section title="Data">
         <List>
+          <MediaUsage />
           <Row icon="download" title="Exporteer je data" detail="Alles als JSON-bestand, voor een back-up" onClick={exportData} />
         </List>
       </Section>

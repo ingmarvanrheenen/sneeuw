@@ -4,7 +4,25 @@ import { create } from './repo'
 import type { MediaMeta } from './types'
 import { uid } from './ids'
 
+/** max grootte die we opslaan en uploaden */
 export const MAX_VIDEO_MB = 50
+/** originelen tot deze grootte proberen we eerst te verkleinen */
+export const MAX_VIDEO_INPUT_MB = 600
+const MB = 1024 * 1024
+
+export type MediaProgress = (info: { name: string; index: number; total: number; progress: number }) => void
+
+/** Video verkleinen als dat iets oplevert; anders het origineel. */
+async function prepareVideo(file: File, onProgress?: (p: number) => void): Promise<{ blob: Blob; mime: string } | null> {
+  const original = { blob: file as Blob, mime: file.type || 'video/quicktime' }
+  const { compressVideo } = await import('./videoCompress')
+  const out = await compressVideo(file, onProgress)
+  const smaller = out && out.blob.size < file.size * 0.9
+  // geluid kwijt? alleen accepteren als het origineel anders te groot is
+  const useCompressed = smaller && (out.hasAudio || file.size > MAX_VIDEO_MB * MB)
+  const pick = useCompressed ? { blob: out.blob, mime: out.mime } : original
+  return pick.blob.size > MAX_VIDEO_MB * MB ? null : pick
+}
 
 function loadImage(src: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
@@ -45,8 +63,8 @@ async function processImage(file: File) {
 
 async function videoThumb(file: File): Promise<{ thumb?: string; width?: number; height?: number }> {
   const url = URL.createObjectURL(file)
+  const v = document.createElement('video')
   try {
-    const v = document.createElement('video')
     v.muted = true
     v.playsInline = true
     v.preload = 'metadata'
@@ -67,6 +85,9 @@ async function videoThumb(file: File): Promise<{ thumb?: string; width?: number;
   } catch {
     return {}
   } finally {
+    // eerst de video loskoppelen, anders blijft hij de ingetrokken URL proberen te laden
+    v.removeAttribute('src')
+    v.load()
     URL.revokeObjectURL(url)
   }
 }
@@ -74,21 +95,38 @@ async function videoThumb(file: File): Promise<{ thumb?: string; width?: number;
 export async function addMediaFiles(
   files: FileList | File[],
   link: { sessionId?: string; trickId?: string; crewId?: string | null },
+  onProgress?: MediaProgress,
 ): Promise<{ added: MediaMeta[]; skipped: string[] }> {
   const added: MediaMeta[] = []
   const skipped: string[] = []
-  for (const file of Array.from(files)) {
+  const list = Array.from(files)
+  for (const [index, file] of list.entries()) {
     const isVideo = file.type.startsWith('video/') || /\.(mov|mp4|m4v|webm)$/i.test(file.name)
-    if (isVideo && file.size > MAX_VIDEO_MB * 1024 * 1024) {
-      skipped.push(`${file.name} is groter dan ${MAX_VIDEO_MB} MB`)
+    const report = (progress: number) => onProgress?.({ name: file.name, index, total: list.length, progress })
+    report(0)
+    if (isVideo && file.size > MAX_VIDEO_INPUT_MB * MB) {
+      skipped.push(`${file.name} is te groot (max ${MAX_VIDEO_INPUT_MB} MB). Knip hem eerst in.`)
       continue
     }
     const id = uid()
     if (isVideo) {
       const meta = await videoThumb(file)
-      await db.blobs.put({ id, blob: file })
+      const video = await prepareVideo(file, report)
+      if (!video) {
+        skipped.push(`${file.name} is ook na verkleinen groter dan ${MAX_VIDEO_MB} MB. Knip hem korter.`)
+        continue
+      }
+      await db.blobs.put({ id, blob: video.blob })
       added.push(
-        await create('media', { id, type: 'video', mime: file.type || 'video/quicktime', ...meta, ...link, crewId: link.crewId ?? null }),
+        await create('media', {
+          id,
+          type: 'video',
+          mime: video.mime,
+          size: video.blob.size,
+          ...meta,
+          ...link,
+          crewId: link.crewId ?? null,
+        }),
       )
     } else {
       const img = await processImage(file)
@@ -98,6 +136,7 @@ export async function addMediaFiles(
           id,
           type: 'image',
           mime: img.mime,
+          size: img.blob.size,
           thumb: img.thumb,
           width: img.width,
           height: img.height,

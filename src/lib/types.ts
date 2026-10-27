@@ -101,6 +101,8 @@ export interface MediaMeta extends BaseRecord {
   thumb?: string // kleine dataURL voor snelle lijsten
   width?: number
   height?: number
+  /** bytes van wat er opgeslagen/geüpload wordt (na verkleinen) */
+  size?: number
   caption?: string
 }
 

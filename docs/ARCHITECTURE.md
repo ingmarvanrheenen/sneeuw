@@ -41,6 +41,10 @@ De sync draait bij het opstarten, bij online komen, bij terugkeren naar de app, 
 
 Bij inloggen worden lokale records zonder eigenaar "geclaimd". Uitloggen wist de lokale database (de data staat in de cloud).
 
+### Media
+
+Foto's worden op het toestel verkleind naar max 2048 px (JPEG). Video's gaan door `src/lib/videoCompress.ts` (Mediabunny + WebCodecs): 720p H.264, max 30 fps, AAC-geluid ongewijzigd mee. Een clip van 25 MB wordt zo ~2 MB. Kan de browser niet encoderen, of levert het niks op, dan blijft het origineel. Opgeslagen en geüpload wordt max 50 MB per clip; originelen tot 600 MB worden eerst verkleind. De module laadt pas bij de eerste video en staat in de offline-cache.
+
 ## Crew
 
 - `crews` + `crew_members`; aanmaken en joinen via de RPC's `create_crew` / `join_crew` (6-tekens invite-code).
