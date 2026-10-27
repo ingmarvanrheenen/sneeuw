@@ -12,6 +12,14 @@ const MB = 1024 * 1024
 
 export type MediaProgress = (info: { name: string; index: number; total: number; progress: number }) => void
 
+/**
+ * Bestand volledig inlezen. Safari op iOS bewaart een File in IndexedDB soms als verwijzing die later
+ * leeg blijkt; met de echte bytes erin gaat dat niet mis.
+ */
+async function materialize(blob: Blob, type: string): Promise<Blob> {
+  return new Blob([await blob.arrayBuffer()], { type })
+}
+
 /** Video verkleinen als dat iets oplevert; anders het origineel. */
 async function prepareVideo(file: File, onProgress?: (p: number) => void): Promise<{ blob: Blob; mime: string } | null> {
   const original = { blob: file as Blob, mime: file.type || 'video/quicktime' }
@@ -116,13 +124,18 @@ export async function addMediaFiles(
         skipped.push(`${file.name} is ook na verkleinen groter dan ${MAX_VIDEO_MB} MB. Knip hem korter.`)
         continue
       }
-      await db.blobs.put({ id, blob: video.blob })
+      const blob = await materialize(video.blob, video.mime)
+      if (!blob.size) {
+        skipped.push(`${file.name} kon niet worden ingelezen. Probeer hem opnieuw toe te voegen.`)
+        continue
+      }
+      await db.blobs.put({ id, blob })
       added.push(
         await create('media', {
           id,
           type: 'video',
           mime: video.mime,
-          size: video.blob.size,
+          size: blob.size,
           ...meta,
           ...link,
           crewId: link.crewId ?? null,
@@ -130,13 +143,18 @@ export async function addMediaFiles(
       )
     } else {
       const img = await processImage(file)
-      await db.blobs.put({ id, blob: img.blob })
+      const blob = await materialize(img.blob, img.mime)
+      if (!blob.size) {
+        skipped.push(`${file.name} kon niet worden ingelezen. Probeer hem opnieuw toe te voegen.`)
+        continue
+      }
+      await db.blobs.put({ id, blob })
       added.push(
         await create('media', {
           id,
           type: 'image',
           mime: img.mime,
-          size: img.blob.size,
+          size: blob.size,
           thumb: img.thumb,
           width: img.width,
           height: img.height,

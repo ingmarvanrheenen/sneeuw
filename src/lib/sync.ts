@@ -8,6 +8,7 @@ import { createStore } from './store'
 import { setOnLocalChange } from './repo'
 import type { AnyRecord, MediaMeta, Profile } from './types'
 import { errMsg } from './errors'
+import { toast } from './toast'
 
 export interface SyncState {
   status: 'local' | 'idle' | 'syncing' | 'offline' | 'error'
@@ -50,10 +51,14 @@ function extFor(mime: string) {
   return 'jpg'
 }
 
+/** Lege bestanden zijn niet te redden: opruimen in plaats van de hele sync te blokkeren. */
+class EmptyMedia extends Error {}
+
 async function uploadMedia(m: MediaMeta, userId: string): Promise<MediaMeta> {
   if (!supabase || m.path) return m
   const row = await db.blobs.get(m.id)
   if (!row) return m
+  if (!row.blob.size) throw new EmptyMedia(m.id)
   const path = `${userId}/${m.id}.${extFor(m.mime)}`
   const { error } = await supabase.storage.from(MEDIA_BUCKET).upload(path, row.blob, { contentType: m.mime, upsert: true })
   if (error) throw error
@@ -76,13 +81,32 @@ function toRow(r: AnyRecord, userId: string) {
   }
 }
 
+let emptyMediaRemoved = 0
+
 async function push(userId: string) {
   if (!supabase) return
+  let mediaError: unknown = null
   const dirty = (await db.records.where('dirty').equals(1).toArray()).filter((r) => r.userId === userId)
   for (let i = 0; i < dirty.length; i += 50) {
     const batch: AnyRecord[] = []
     for (let r of dirty.slice(i, i + 50)) {
-      if (r.kind === 'media' && !r.deleted) r = await uploadMedia(r, userId)
+      if (r.kind === 'media' && !r.deleted) {
+        try {
+          r = await uploadMedia(r, userId)
+        } catch (e) {
+          if (e instanceof EmptyMedia) {
+            // leeg bestand: weghalen (zacht), zodat de rest gewoon synct
+            await db.blobs.delete(r.id)
+            r = { ...r, deleted: true, updatedAt: Date.now() }
+            await db.records.put(r)
+            emptyMediaRemoved++
+          } else {
+            // deze upload later opnieuw; de andere records gaan wel door
+            mediaError ??= e
+            continue
+          }
+        }
+      }
       batch.push(r)
     }
     const { error } = await supabase.from('records').upsert(batch.map((r) => toRow(r, userId)))
@@ -95,6 +119,7 @@ async function push(userId: string) {
       }
     })
   }
+  if (mediaError) throw mediaError
 }
 
 async function pull(userId: string) {
@@ -181,6 +206,14 @@ export async function syncNow(): Promise<void> {
     await pullProfile(userId)
     await pushProfile(userId)
     syncStore.set({ status: 'idle', pending: await countPending(), lastSync: Date.now() })
+    if (emptyMediaRemoved) {
+      toast({
+        title: emptyMediaRemoved === 1 ? 'Eén clip was leeg' : `${emptyMediaRemoved} clips waren leeg`,
+        body: 'Die is weggehaald zodat de rest kon syncen. Voeg hem opnieuw toe.',
+        icon: 'alert',
+      })
+      emptyMediaRemoved = 0
+    }
   } catch (e) {
     const msg = errMsg(e)
     syncStore.set({ status: 'error', pending: await countPending(), error: msg, lastSync: syncStore.get().lastSync })

@@ -31,6 +31,7 @@ export async function compressVideo(file: Blob, onProgress?: (p: number) => void
     const input = new Input({ source: new BlobSource(file), formats: ALL_FORMATS })
     const output = new Output({ format: new Mp4OutputFormat({ fastStart: 'in-memory' }), target: new BufferTarget() })
     const audioTracks = (await input.getAudioTracks()).length
+    const inDuration = await input.computeDuration().catch(() => 0)
 
     const conversion = await Conversion.init({
       input,
@@ -53,6 +54,11 @@ export async function compressVideo(file: Blob, onProgress?: (p: number) => void
     const buffer = (output.target as BufferTarget).buffer
     if (!buffer) return null
     const blob = new Blob([buffer], { type: 'video/mp4' })
+    // controle: echt een video met (bijna) de hele duur? Anders liever het origineel
+    const check = new Input({ source: new BlobSource(blob), formats: ALL_FORMATS })
+    const outVideo = (await check.getVideoTracks()).length
+    const outDuration = await check.computeDuration().catch(() => 0)
+    if (blob.size < 1024 || !outVideo || (inDuration > 0 && outDuration < inDuration * 0.8)) return null
     const keptAudio = conversion.utilizedTracks.some((t) => t.isAudioTrack())
     return { blob, mime: 'video/mp4', hasAudio: audioTracks === 0 || keptAudio }
   } catch {
