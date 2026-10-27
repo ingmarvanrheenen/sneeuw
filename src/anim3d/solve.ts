@@ -97,9 +97,11 @@ export function solve(k: FullKey3 & { arms2?: ArmPose; armsMix?: number }): Body
   const crouch = Math.max(0, Math.min(1, k.crouch))
   const roll = Math.max(-1.7, Math.min(1.7, k.edge)) * MAX_ROLL
   const quat = boardQuaternion(k.heading, k.pitch, roll)
-  // Board draait om de edge die in de sneeuw staat, en om de tip bij een press.
-  const lift = (W / 2) * Math.abs(Math.sin(roll)) + (k.y < 0.08 ? L * 0.45 * Math.abs(Math.sin((k.pitch * Math.PI) / 180)) : 0)
-  const boardPos = v(k.x, k.y + TOP + lift, k.z)
+  // Board draait om de edge die in de sneeuw staat. Bij pitch kan de tip niet onder de sneeuw:
+  // het midden zit minstens zo hoog als de tip dat toelaat (press, pop), daarboven telt de sprong.
+  const edgeLift = (W / 2) * Math.abs(Math.sin(roll))
+  const tipLift = (L / 2) * Math.abs(Math.sin((k.pitch * Math.PI) / 180))
+  const boardPos = v(k.x, Math.max(k.y, tipLift) + TOP + edgeLift, k.z)
 
   // ── lichaam in board-coördinaten ──
   const ankleF = v(S, ANKLE, 0)
@@ -131,6 +133,15 @@ export function solve(k: FullKey3 & { arms2?: ArmPose; armsMix?: number }): Body
   let head = neck.clone().add(spine.clone().multiplyScalar(0.19))
   let face = rotY(v(0, 0, 1), twist + (k.look * Math.PI) / 180)
   let chest = pelvis.clone().add(spine.clone().multiplyScalar(SPINE * 0.62))
+
+  // rechtop blijven terwijl het board onder je kantelt: bovenlijf terugdraaien om het midden tussen de voeten
+  const upright = Math.max(0, Math.min(1, k.upright ?? 0)) * ((-k.pitch * Math.PI) / 180)
+  if (upright) {
+    const piv = v(0, ANKLE, 0)
+    const Z = v(0, 0, 1)
+    for (const p of [pelvis, hipF, hipB, neck, shF, shB, head, chest]) p.sub(piv).applyAxisAngle(Z, upright).add(piv)
+    for (const d of [spine, face, axis, fwdDir]) d.applyAxisAngle(Z, upright)
+  }
 
   // handen per armhouding (in het assenstelsel van de borst)
   const at = (base: Vector3, a: number, f: number, u: number) =>

@@ -35,6 +35,11 @@ export interface Key3 {
   free?: number
   /** losse voet: -1 achter je board (afzetten) .. 1 naast je voorste voet */
   stride?: number
+  /**
+   * 0 = het lichaam kantelt mee met de pitch van het board, 1 = bovenlijf blijft rechtop terwijl het board
+   * onder je kantelt (ollie-pop, press). De benen volgen, de voeten blijven in de bindingen.
+   */
+  upright?: number
 }
 
 export type Terrain = 'piste' | 'vlak' | 'kicker' | 'box' | 'rail' | 'bulten' | 'bomen' | 'poeder' | 'lift'
@@ -68,6 +73,7 @@ export const KEY3_DEFAULT: Required<Omit<Key3, 't'>> = {
   down: 0,
   free: 0,
   stride: 0,
+  upright: 0,
 }
 
 export type FullKey3 = Required<Key3>

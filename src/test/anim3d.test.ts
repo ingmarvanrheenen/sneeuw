@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { Vector3 } from 'three'
 import { turns } from '../anim3d/builders'
 import { HANDMADE, motionFor } from '../anim3d/motions'
 import { Track } from '../anim3d/interp'
@@ -52,6 +53,38 @@ describe('3D-bewegingen', () => {
     expect(slipMax).toBeGreaterThan(0)
     expect(carveMax).toBeGreaterThan(slipMax)
     expect(carveMin).toBeLessThan(slipMin)
+  })
+
+  it('upright: bij een press of pop kantelt het board, het bovenlijf blijft rechtop en de voeten in de bindingen', () => {
+    // kanteling van de rug in de lengterichting van het board (neus = +z bij heading 90)
+    const tilt = (b: ReturnType<typeof solve>) => (Math.atan2(b.spine.z, b.spine.y) * 180) / Math.PI
+    const level = solve({ ...KEY3_DEFAULT, t: 0 })
+    const stiff = solve({ ...KEY3_DEFAULT, t: 0, pitch: 18 })
+    const upright = solve({ ...KEY3_DEFAULT, t: 0, pitch: 18, upright: 1 })
+    // zonder upright hangt de rider mee met het board, met upright staat hij zoals op een vlak board
+    expect(Math.abs(tilt(stiff) - tilt(level))).toBeGreaterThan(10)
+    expect(Math.abs(tilt(upright) - tilt(level))).toBeLessThan(2)
+    for (const b of [stiff, upright]) {
+      expect(b.j.hipF.distanceTo(b.j.kneeF) + b.j.kneeF.distanceTo(b.j.ankleF)).toBeCloseTo(0.9, 2)
+      expect(b.j.hipB.distanceTo(b.j.kneeB) + b.j.kneeB.distanceTo(b.j.ankleB)).toBeCloseTo(0.9, 2)
+    }
+  })
+
+  it('pop: de tip blijft op de sneeuw en het board gaat zonder sprong de lucht in', () => {
+    const tipHeight = (b: ReturnType<typeof solve>) => {
+      const half = 0.775
+      const nose = new Vector3(half, 0, 0).applyQuaternion(b.boardQuat).add(b.boardPos)
+      const tail = new Vector3(-half, 0, 0).applyQuaternion(b.boardQuat).add(b.boardPos)
+      return Math.min(nose.y, tail.y)
+    }
+    let prev: number | null = null
+    for (let y = 0; y <= 0.4; y += 0.01) {
+      const b = solve({ ...KEY3_DEFAULT, t: 0, y, pitch: 16 })
+      // laagste punt van het board nooit (merkbaar) in de sneeuw
+      expect(tipHeight(b)).toBeGreaterThan(-0.02)
+      if (prev !== null) expect(Math.abs(b.boardPos.y - prev)).toBeLessThan(0.02)
+      prev = b.boardPos.y
+    }
   })
 
   it('voeten blijven in de bindingen', () => {

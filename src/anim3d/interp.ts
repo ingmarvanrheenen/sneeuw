@@ -6,7 +6,24 @@ import type { ArmPose, FullKey3, Key3 } from './types'
 import { KEY3_DEFAULT } from './types'
 
 type NumKey = Exclude<keyof FullKey3, 'arms' | 'grab'>
-const NUM: NumKey[] = ['t', 'x', 'z', 'y', 'heading', 'edge', 'pitch', 'crouch', 'lean', 'twist', 'look', 'g', 'down', 'free', 'stride']
+const NUM: NumKey[] = [
+  't',
+  'x',
+  'z',
+  'y',
+  'heading',
+  'edge',
+  'pitch',
+  'crouch',
+  'lean',
+  'twist',
+  'look',
+  'g',
+  'down',
+  'free',
+  'stride',
+  'upright',
+]
 
 /** Een gesamplede pose: als FullKey3, plus een zachte overgang tussen twee armhoudingen. */
 export type Pose3 = FullKey3 & { arms2: ArmPose; armsMix: number }

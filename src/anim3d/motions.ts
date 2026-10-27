@@ -1,9 +1,10 @@
-// Handgemaakte 3D-bewegingen voor basis, liften, bochten en carven.
+// Handgemaakte 3D-bewegingen voor basis, liften, bochten en carven (flat-tricks: freestyle.ts).
 // Gebaseerd op de standaard opbouw uit snowboardles (stance → glijden → remmen → sideslip →
 // falling leaf → traverse → garlands → J-turn → gekoppelde bochten → carven).
 // Alle andere tricks worden automatisch omgezet vanuit hun 2D-animatie.
 import type { Trick } from '../content/tricks'
 import { drive, fromPath, fromSide, fromTop, motion, steps, turns, turnsDuration, type Segment } from './builders'
+import { FREESTYLE } from './freestyle'
 import type { Key3, Motion } from './types'
 
 const SLOPE = 14
@@ -400,6 +401,7 @@ function lift(kind: 'band' | 'sleep' | 'stoel'): Motion {
 }
 
 const MOTIONS: Record<string, () => Motion> = {
+  ...FREESTYLE,
   stance,
   'strap-in': strapIn,
   skaten: skate,
