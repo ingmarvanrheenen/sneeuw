@@ -1,47 +1,32 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useEffect, useMemo, useState } from 'react'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { Button, Chip, Field, Page, PageHeader, Section, Stepper, cx, inputCls } from '../components/ui'
 import { Icon, Mood, MOOD_LABELS } from '../design/icons'
 import { ResortPicker, TrickPicker } from '../components/Pickers'
 import { MediaAddButton, MediaGrid } from '../components/Media'
-import { create, getTrickProgress, remove, setTrickStatus, update, useKind, useRecord } from '../lib/repo'
+import { remove, useKind, useRecord } from '../lib/repo'
 import { db } from '../lib/db'
-import { uid, todayISO } from '../lib/ids'
+import { uid } from '../lib/ids'
 import { PAINS, PISTES, SNOW, WEATHER } from '../content/logOptions'
 import { TRICK_BY_ID } from '../content/tricks'
-import { celebrate, toast } from '../lib/toast'
 import { authStore } from '../lib/auth'
 import { hasBackend } from '../lib/supabase'
 import { cachedCrews, myCrews, type Crew } from '../lib/crew'
-import { kvGet, kvSet } from '../lib/db'
-import type { MediaMeta, PisteColor, Session } from '../lib/types'
+import { EMPTY_DRAFT, saveSession, smartDraft, type SessionDraft } from '../lib/sessions'
+import type { MediaMeta, PisteColor } from '../lib/types'
 
-type Draft = Omit<Session, 'id' | 'userId' | 'createdAt' | 'updatedAt' | 'kind'>
-
-const EMPTY: Draft = {
-  date: todayISO(),
-  resortName: '',
-  pistes: [],
-  hours: 4,
-  falls: 0,
-  mood: 4,
-  practiced: [],
-  landed: [],
-  pains: [],
-  buddies: [],
-  mediaIds: [],
-  crewId: null,
-}
+type Draft = SessionDraft
 
 export default function LogEditor() {
   const { id: editId } = useParams()
   const nav = useNavigate()
+  const location = useLocation()
   const existing = useRecord('session', editId)
   const trips = useKind('trip')
   const [id] = useState(() => editId ?? uid())
-  const [d, setD] = useState<Draft>(EMPTY)
-  const [loaded, setLoaded] = useState(!editId)
+  const [d, setD] = useState<Draft>(EMPTY_DRAFT)
+  const [loaded, setLoaded] = useState(false)
   const [resortOpen, setResortOpen] = useState(false)
   const [pickPracticed, setPickPracticed] = useState(false)
   const [pickLanded, setPickLanded] = useState(false)
@@ -54,10 +39,24 @@ export default function LogEditor() {
     if (editId && existing && !loaded) {
       const { id: _i, userId: _u, createdAt: _c, updatedAt: _up, kind: _k, ...rest } = existing
       void [_i, _u, _c, _up, _k]
-      setD({ ...EMPTY, ...rest })
+      setD({ ...EMPTY_DRAFT, ...rest })
       setLoaded(true)
     }
   }, [editId, existing, loaded])
+
+  // nieuwe dag: verder met wat je in het snelle scherm al had, anders slim voorinvullen
+  useEffect(() => {
+    if (editId) return
+    const fromQuick = (location.state as { draft?: Draft } | null)?.draft
+    if (fromQuick) {
+      setD(fromQuick)
+      setLoaded(true)
+    } else
+      void smartDraft().then((x) => {
+        setD(x)
+        setLoaded(true)
+      })
+  }, [editId, location.state])
 
   // crews: eerst de lokale lijst (werkt zonder bereik), daarna verversen als je online bent
   useEffect(() => {
@@ -73,16 +72,6 @@ export default function LogEditor() {
       alive = false
     }
   }, [user])
-
-  // nieuwe dag: standaard delen met de crew die je de vorige keer koos
-  const crewDefaulted = useRef(false)
-  useEffect(() => {
-    if (editId || !crews.length || crewDefaulted.current) return
-    crewDefaulted.current = true
-    void kvGet<string | null>('lastCrewId', null).then((last) => {
-      if (last && crews.some((c) => c.id === last)) setD((x) => ({ ...x, crewId: last }))
-    })
-  }, [crews, editId])
 
   // Actieve trip voorselecteren bij een nieuwe dag
   useEffect(() => {
@@ -110,28 +99,7 @@ export default function LogEditor() {
     if (saving) return
     setSaving(true)
     try {
-      const mediaIds = (media ?? []).map((m) => m.id)
-      const data: Draft = { ...d, mediaIds, practiced: Array.from(new Set([...d.practiced, ...d.landed])) }
-      if (existing) await update(existing, data)
-      else await create('session', { ...data, id })
-      await kvSet('lastCrewId', d.crewId ?? null)
-      // Media volgt de zichtbaarheid van de dag
-      for (const m of media ?? []) if ((m.crewId ?? null) !== (d.crewId ?? null)) await update(m, { crewId: d.crewId ?? null })
-
-      // Tricks bijwerken + vieren
-      for (const tid of d.landed) {
-        const prev = await getTrickProgress(tid)
-        const first = !prev?.firstLandedAt
-        await setTrickStatus(tid, prev?.status === 'beheerst' ? 'beheerst' : 'geland', { sessionId: id, crewId: d.crewId ?? null })
-        if (first) celebrate('landed', `Geland: ${TRICK_BY_ID.get(tid)?.name ?? tid}`, 'Staat nu in je kluis', 'stomp')
-      }
-      for (const tid of d.practiced) {
-        if (landedSet.has(tid)) continue
-        const prev = await getTrickProgress(tid)
-        if (!prev || prev.status === 'wil') await setTrickStatus(tid, 'bezig')
-      }
-      if (!d.landed.length)
-        toast({ title: 'Dag opgeslagen', body: `${d.resortName || 'Je dag'} staat in je logboek`, icon: 'check', tone: 'success' })
+      await saveSession({ id, draft: d, existing, media: media ?? [] })
       nav(`/log/${id}`, { replace: true })
     } finally {
       setSaving(false)
@@ -143,7 +111,7 @@ export default function LogEditor() {
     nav(-1)
   }
 
-  if (editId && !loaded)
+  if (!loaded)
     return (
       <Page>
         <PageHeader title="Laden…" back />

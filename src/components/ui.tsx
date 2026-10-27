@@ -257,6 +257,29 @@ export function Chip({
 }
 
 /** iOS segmented control. */
+/** Aan/uit-rij in iOS-stijl, voor in een `List`. */
+export function Toggle({ on, onChange, label, sub }: { on: boolean; onChange: (v: boolean) => void; label: string; sub?: string }) {
+  return (
+    <button
+      onClick={() => {
+        onChange(!on)
+        sfx.toggle()
+      }}
+      className="flex w-full items-center justify-between gap-4 px-4 py-3.5 text-left"
+      role="switch"
+      aria-checked={on}
+    >
+      <span>
+        <span className="block text-sm font-medium">{label}</span>
+        {sub && <span className="block text-xs text-muted">{sub}</span>}
+      </span>
+      <span className={cx('relative h-7 w-12 shrink-0 rounded-full transition', on ? 'bg-accent' : 'bg-surface-2')}>
+        <span className={cx('absolute top-1 size-5 rounded-full transition-all', on ? 'left-6 bg-accent-ink' : 'left-1 bg-muted')} />
+      </span>
+    </button>
+  )
+}
+
 export function Segmented<T extends string>({
   value,
   options,
@@ -375,7 +398,19 @@ export function Empty({ icon, title, body, action }: { icon: ReactNode; title: s
   )
 }
 
-export function Sheet({ open, onClose, title, children }: { open: boolean; onClose: () => void; title: string; children: ReactNode }) {
+export function Sheet({
+  open,
+  onClose,
+  title,
+  children,
+  closeLabel = 'Klaar',
+}: {
+  open: boolean
+  onClose: () => void
+  title: string
+  children: ReactNode
+  closeLabel?: string
+}) {
   useEffect(() => {
     if (!open) return
     const prev = document.body.style.overflow
@@ -401,7 +436,7 @@ export function Sheet({ open, onClose, title, children }: { open: boolean; onClo
           <span />
           <h3 className="text-[17px] font-semibold">{title}</h3>
           <button onClick={onClose} className="justify-self-end text-[17px] font-semibold text-accent-text">
-            Klaar
+            {closeLabel}
           </button>
         </div>
         {children}

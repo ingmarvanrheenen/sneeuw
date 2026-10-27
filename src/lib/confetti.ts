@@ -1,6 +1,6 @@
 // Korte confetti-burst. Klein en snel, niet overweldigend.
 export function confetti(intensity = 1) {
-  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+  if (!window.matchMedia || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
   const canvas = document.createElement('canvas')
   const dpr = Math.min(window.devicePixelRatio || 1, 2)
   canvas.width = window.innerWidth * dpr

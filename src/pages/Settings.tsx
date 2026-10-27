@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Button, Card, Field, Page, PageHeader, Section, Segmented, cx, inputCls, List, Row } from '../components/ui'
+import { Button, Card, Field, Page, PageHeader, Section, Segmented, cx, inputCls, List, Row, Toggle } from '../components/ui'
 import { Icon, Spinner } from '../design/icons'
 import { authStore, getProfile, saveProfile, signIn, signOut, signUp } from '../lib/auth'
 import { backendInfo, hasBackend } from '../lib/supabase'
@@ -8,32 +8,9 @@ import { syncNow, syncStore } from '../lib/sync'
 import { settingsStore, updateSettings } from '../lib/settings'
 import { db } from '../lib/db'
 import { toast } from '../lib/toast'
-import { sfx } from '../lib/sounds'
 import { isIOS, isStandalone } from '../lib/pwa'
 import type { Profile } from '../lib/types'
 import { errMsg } from '../lib/errors'
-
-function Toggle({ on, onChange, label, sub }: { on: boolean; onChange: (v: boolean) => void; label: string; sub?: string }) {
-  return (
-    <button
-      onClick={() => {
-        onChange(!on)
-        sfx.toggle()
-      }}
-      className="flex w-full items-center justify-between gap-4 px-4 py-3.5 text-left"
-      role="switch"
-      aria-checked={on}
-    >
-      <span>
-        <span className="block text-sm font-medium">{label}</span>
-        {sub && <span className="block text-xs text-muted">{sub}</span>}
-      </span>
-      <span className={cx('relative h-7 w-12 shrink-0 rounded-full transition', on ? 'bg-accent' : 'bg-surface-2')}>
-        <span className={cx('absolute top-1 size-5 rounded-full transition-all', on ? 'left-6 bg-accent-ink' : 'left-1 bg-muted')} />
-      </span>
-    </button>
-  )
-}
 
 function Account() {
   const { user } = authStore.use()

@@ -26,6 +26,8 @@ Elk record heeft `id` (uuid), `userId`, `createdAt`, `updatedAt`, `deleted` (sof
 
 Profiel, instellingen, quiz-scores en gecachet weer staan in de `kv`-tabel. Thema/geluid staan in `localStorage` zodat ze vóór de eerste render beschikbaar zijn.
 
+Een dag opslaan gaat altijd via `saveSession()` in `src/lib/sessions.ts`, zowel vanuit het snelle loggen op Home (`QuickLog`) als vanuit het volledige log-scherm. `smartDraft()` vult een nieuwe dag voor: plek van je lopende trip of van je vorige dag (max. 21 dagen terug), je gebruikelijke uren en de crew waarmee je de vorige keer deelde.
+
 XP, levels, badges en stats worden **afgeleid** uit de records (`src/lib/progress.ts`), nooit opgeslagen. Ze kunnen dus niet uit sync raken.
 
 ## Sync (`src/lib/sync.ts`)
@@ -45,6 +47,7 @@ Bij inloggen worden lokale records zonder eigenaar "geclaimd". Uitloggen wist de
 - Een record met `crew_id` is leesbaar voor crewleden (RLS). Media volgt de zichtbaarheid van de dag waar het bij hoort.
 - Storage-policy: je leest je eigen map, plus bestanden die aan een met jouw crew gedeeld media-record hangen.
 - `reactions` voor reacties op posts; `crew_members_with_stats` levert het leaderboard.
+- Je crewlijst staat ook lokaal (`kv: crews`), zodat je zonder bereik een dag met je crew kunt delen. De feed ververst stil bij terugkomen, weer online en elke minuut.
 
 ## Coach Daddy
 

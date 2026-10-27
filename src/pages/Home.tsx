@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { Icon, Mood } from '../design/icons'
 import { Button, List, Page, PageHeader, Progress, Row, Section, SectionLink, LevelDots } from '../components/ui'
 import { SyncBadge } from '../components/SyncBadge'
+import { QuickLog } from '../components/QuickLog'
 import { useProgress } from '../lib/useProgress'
 import { sessionsSorted, useKind } from '../lib/repo'
 import { getProfile } from '../lib/auth'
@@ -54,6 +55,7 @@ export default function Home() {
   const trips = useKind('trip')
   const trickRows = useKind('trick')
   const [name, setName] = useState('')
+  const [quick, setQuick] = useState(false)
   useEffect(() => {
     void getProfile().then((p) => setName(p.displayName))
   }, [])
@@ -65,6 +67,7 @@ export default function Home() {
   const packed = nextTrip ? nextTrip.packing.filter((p) => p.checked).length : 0
   const openGoals = (goals ?? []).filter((g) => !g.done).slice(0, 3)
   const recent = sessionsSorted(sessions ?? []).slice(0, 3)
+  const loggedToday = (sessions ?? []).find((s) => s.date === today)
 
   const landedIds = new Set((trickRows ?? []).filter((t) => t.status === 'geland' || t.status === 'beheerst').map((t) => t.trickId))
   // Eerst wat net ontgrendeld is door iets wat je al kunt, dan de rest op niveau
@@ -96,9 +99,22 @@ export default function Home() {
         </button>
       )}
 
-      <Button size="lg" className="mt-6 w-full" icon={<Icon name="plus" size={20} stroke={2.2} />} onClick={() => nav('/log/nieuw')}>
-        Log je dag
-      </Button>
+      {loggedToday ? (
+        <Button
+          size="lg"
+          variant="outline"
+          className="mt-6 w-full"
+          icon={<Icon name="edit" size={20} />}
+          onClick={() => nav(`/log/${loggedToday.id}/bewerk`)}
+        >
+          Vandaag aanvullen
+        </Button>
+      ) : (
+        <Button size="lg" className="mt-6 w-full" icon={<Icon name="plus" size={20} stroke={2.2} />} onClick={() => setQuick(true)}>
+          Log je dag
+        </Button>
+      )}
+      <QuickLog open={quick} onClose={() => setQuick(false)} />
 
       <List className="mt-3">
         <Row icon="chat" title="Coach Daddy" detail="Vraag om tips of een oefenplan" to="/coach" />
