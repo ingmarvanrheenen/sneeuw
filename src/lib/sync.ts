@@ -58,9 +58,19 @@ async function uploadMedia(m: MediaMeta, userId: string): Promise<MediaMeta> {
   if (!supabase || m.path) return m
   const row = await db.blobs.get(m.id)
   if (!row) return m
-  if (!row.blob.size) throw new EmptyMedia(m.id)
+  // Echt uitlezen: Safari kan een opgeslagen bestand een grootte geven terwijl er geen bytes meer achter zitten.
+  let bytes: ArrayBuffer
+  try {
+    bytes = await row.blob.arrayBuffer()
+  } catch {
+    throw new EmptyMedia(m.id)
+  }
+  if (!bytes.byteLength) throw new EmptyMedia(m.id)
   const path = `${userId}/${m.id}.${extFor(m.mime)}`
-  const { error } = await supabase.storage.from(MEDIA_BUCKET).upload(path, row.blob, { contentType: m.mime, upsert: true })
+  const { error } = await supabase.storage
+    .from(MEDIA_BUCKET)
+    .upload(path, new Blob([bytes], { type: m.mime }), { contentType: m.mime, upsert: true })
+  if (error && /no content provided/i.test(error.message)) throw new EmptyMedia(m.id)
   if (error) throw error
   const next = { ...m, path, uploaded: true }
   await db.records.put(next)
