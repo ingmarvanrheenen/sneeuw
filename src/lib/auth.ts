@@ -1,3 +1,4 @@
+import { scheduleSync } from './sync'
 import type { User } from '@supabase/supabase-js'
 import { supabase } from './supabase'
 import { setCurrentUserId } from './auth-state'
@@ -31,6 +32,9 @@ export async function initAuth() {
     setCurrentUserId(u?.id ?? null)
     if (u && u.id !== prev?.id) await claimLocalRecords(u.id)
     authStore.set({ user: u, ready: true })
+    // net ingelogd: meteen je data ophalen en wat lokaal klaarstaat wegschrijven
+    // (via een timer, zodat de sync niet binnen deze auth-callback draait)
+    if (u && u.id !== prev?.id) scheduleSync(100)
   })
 }
 
