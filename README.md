@@ -64,6 +64,8 @@ supabase secrets set COACH_DAILY_LIMIT=60      # optioneel, berichten per persoo
 supabase functions deploy coach
 ```
 
+**Automatisch deployen via GitHub:** de workflow `.github/workflows/deploy-functions.yml` zet de coach live zodra er op `main` iets in `supabase/functions/` verandert, of handmatig via Actions > Deploy Edge Functions > Run workflow. Eenmalig nodig: maak in Supabase (Account > Access Tokens) een token en zet het in GitHub als repository secret `SUPABASE_ACCESS_TOKEN` (Settings > Secrets and variables > Actions). De Anthropic-key blijft een Supabase secret.
+
 Over de kosten: de coach gebruikt Claude Opus 5.5 met `effort: low` (snel en zuinig voor chat) en prompt caching. Een gemiddeld bericht met je logboek als context kost grofweg 1 à 2 cent, dus €100 aan credits is ruim duizenden berichten. Het daglimiet per gebruiker beschermt je budget als je crew de coach ook gebruikt. Verbruik per persoon per dag staat in de tabel `coach_usage`.
 
 ## Deployen

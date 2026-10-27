@@ -1,0 +1,37 @@
+name: Deploy Edge Functions
+
+# Zet de Supabase Edge Functions (Coach Daddy) live.
+# - automatisch als er op main iets in supabase/functions verandert (dus na jouw merge)
+# - handmatig via Actions > Deploy Edge Functions > Run workflow
+# Nodig: repository secret SUPABASE_ACCESS_TOKEN (Supabase > Account > Access Tokens).
+# De Anthropic API-key blijft een Supabase secret en komt hier nooit langs.
+
+on:
+  push:
+    branches: [main]
+    paths: ['supabase/functions/**']
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-functions
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      PROJECT_REF: vaikzodfgmgwwqevyxww
+    steps:
+      - uses: actions/checkout@v4
+      - name: Token aanwezig?
+        run: |
+          if [ -z "$SUPABASE_ACCESS_TOKEN" ]; then
+            echo "::error::Repository secret SUPABASE_ACCESS_TOKEN ontbreekt (Settings > Secrets and variables > Actions)."
+            exit 1
+          fi
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.120.0
+      - name: Deploy coach
+        run: supabase functions deploy coach --project-ref "$PROJECT_REF" --use-api
