@@ -1,8 +1,9 @@
-// Handgemaakte flat-tricks: ollie, nollie, shifty, 180s en presses.
+// Handgemaakte flat-tricks: ollie, nollie, shifty, 180s, 360, presses, butters en revert.
 // Pose-to-pose per kanaal (elk lichaamsdeel heeft zijn eigen timing), de sprong zelf is een echte
 // ballistische boog: uit de luchttijd volgt de pophoogte. Bovenlijf blijft rechtop terwijl het board
 // onder je kantelt (`upright`), zoals bij een echte pop of press.
 import { motion, steps } from './builders'
+import { BOARD } from './solve'
 import type { Key3, Motion } from './types'
 
 const G = 9.81
@@ -40,17 +41,36 @@ export function airHeight(s: number, pop: number, airtime: number, slope = SLOPE
 export const popHeight = (airtime: number, slope = SLOPE) => (G * Math.cos((slope * Math.PI) / 180) * airtime * airtime) / 8
 
 /** Zet poses en een sprong om in keys op een vast raster, zodat elk kanaal zijn eigen timing houdt. */
-export function perform(duration: number, poses: Pose[], air?: { pop: number; airtime: number }, fps = 30): Key3[] {
+export function perform(
+  duration: number,
+  poses: Pose[],
+  air?: { pop: number; airtime: number },
+  opts: { pivot?: { tip: 'nose' | 'tail'; from: number }; speed?: number } = {},
+  fps = 30,
+): Key3[] {
   const keys: Key3[] = []
   const n = Math.round(duration * fps)
+  const v = opts.speed ?? SPEED
+  const half = BOARD.length / 2
   for (let i = 0; i <= n; i++) {
     const s = (i / n) * duration
+    const heading = channel(poses, 'heading', s, 90)
+    let x = 0
+    let z = -v * (duration / 2) + v * s
+    // butter: het board draait om de tip die op de sneeuw drukt, niet om zijn midden
+    if (opts.pivot && s >= opts.pivot.from) {
+      const sign = opts.pivot.tip === 'nose' ? 1 : -1
+      const h = (heading * Math.PI) / 180
+      // de tip rijdt rechtdoor; het midden zit een halve boardlengte achter (of voor) de tip
+      x = -sign * half * Math.cos(h)
+      z += sign * half - sign * half * Math.sin(h)
+    }
     keys.push({
       t: i / n,
-      x: 0,
-      z: -SPEED * (duration / 2) + SPEED * s,
+      x,
+      z,
       y: air ? airHeight(s, air.pop, air.airtime) : 0,
-      heading: channel(poses, 'heading', s, 90),
+      heading,
       edge: 0,
       pitch: channel(poses, 'pitch', s, 0),
       crouch: channel(poses, 'crouch', s, 0.3),
@@ -147,37 +167,102 @@ function shifty(): Motion {
   )
 }
 
-/** Flat 180: opwinden, ollie, schouders leiden en het board volgt; je landt switch. */
-function spin180(frontside: boolean): Motion {
+/** Flat spin (180 of 360): opwinden, ollie, schouders leiden en het board volgt. */
+function flatSpin(deg: number): Motion {
+  const r = Math.sign(deg)
+  const turns = Math.abs(deg) / 180
+  const landSwitch = turns % 2 === 1
   const d = 3.2
-  const r = frontside ? 1 : -1
-  const air = { pop: 1.1, airtime: 0.6 }
+  const airtime = turns > 1 ? 0.68 : 0.6
+  const land = 1.1 + airtime
+  const air = { pop: 1.1, airtime }
   const poses: Pose[] = [
-    ...popPoses(1).filter((p) => p.s < 1.6),
-    { s: 1.68, crouch: 0.45, pitch: 0, lean: 0 },
-    { s: 1.82, crouch: 0.74 },
-    { s: 2.3, crouch: 0.36 },
-    { s: 3.2, crouch: 0.3 },
+    ...popPoses(1).filter((p) => p.s < 1.5),
+    { s: land - 0.12, crouch: 0.6, pitch: 0 },
+    { s: land, crouch: 0.45, pitch: 0, lean: 0 },
+    { s: land + 0.14, crouch: 0.74 },
+    { s: land + 0.62, crouch: 0.36 },
+    { s: d, crouch: 0.3 },
     // schouders: eerst tegen de draai in opwinden, dan los en vóór het board uit.
     // (wereldrichting board = -heading, schouders = -heading + twist: voorlopen = twist tegen r in)
     { s: 0.55, twist: 0, heading: 90, look: 80 },
-    { s: 0.9, twist: 28 * r },
-    { s: 1.04, twist: 32 * r, heading: 90 },
-    { s: 1.2, twist: -34 * r, heading: 90 + 45 * r },
-    { s: 1.4, twist: -30 * r, heading: 90 + 125 * r, look: 30 },
-    { s: 1.58, twist: -6 * r, heading: 90 + 178 * r, look: -70 },
-    { s: 1.7, twist: 0, heading: 90 + 180 * r, look: -80 },
+    { s: 0.9, twist: (turns > 1 ? 40 : 28) * r },
+    { s: 1.04, twist: (turns > 1 ? 44 : 32) * r, heading: 90 },
+    { s: 1.2, twist: -34 * r, heading: 90 + 0.25 * deg },
+    { s: 1.1 + airtime * 0.55, twist: -30 * r, heading: 90 + 0.7 * deg, look: landSwitch ? 30 : 20 },
+    { s: land - 0.1, twist: -6 * r, heading: 90 + deg - 2 * r, look: landSwitch ? -70 : 70 },
+    { s: land + 0.02, twist: 0, heading: 90 + deg, look: landSwitch ? -80 : 80 },
   ]
   return motion(
     perform(d, poses, air),
     d,
     at(d, [
       [0, 'Aanrijden, knieën los', 'knees'],
-      [0.85, 'Wind je schouders op, tegen de draai in', 'shoulders'],
+      [0.85, turns > 1 ? 'Wind je schouders ver op, tegen de draai in' : 'Wind je schouders op, tegen de draai in', 'shoulders'],
       [1.1, 'Ollie en laat je schouders los: zij leiden, het board volgt', 'shoulders'],
-      [1.35, 'Hoofd draait mee, zoek je landing over je schouder', 'head'],
-      [1.66, 'Land plat en switch, door de knieën', 'knees'],
-      [2.2, 'Rij switch weg, kijk over je andere schouder', 'head'],
+      [1.3, turns > 1 ? 'Blijf draaien: hoofd eerst, zoek je landing' : 'Hoofd draait mee, zoek je landing over je schouder', 'head'],
+      [land, landSwitch ? 'Land plat en switch, door de knieën' : 'Land plat, door de knieën', 'knees'],
+      [land + 0.5, landSwitch ? 'Rij switch weg, kijk over je andere schouder' : 'Rij weg, blik vooruit', 'head'],
+    ]),
+    { terrain: 'piste', slope: SLOPE, camera: 'zij' },
+  )
+}
+
+/** Butter: in een press draai je het board rond de tip die op de sneeuw blijft. */
+function butter(nose: boolean, deg: number): Motion {
+  const d = 4
+  const s = nose ? 1 : -1
+  const r = Math.sign(deg)
+  const landSwitch = (Math.abs(deg) / 180) % 2 === 1
+  const from = 1.25
+  const spin = Math.abs(deg) > 180 ? 1.5 : 1.0
+  const poses: Pose[] = [
+    { s: 0, crouch: 0.3, lean: 0, pitch: 0, upright: 1, heading: 90, twist: 0, look: 80 },
+    { s: 0.6, crouch: 0.35, twist: 0 },
+    // schouders licht opwinden, gewicht naar de tip
+    { s: 0.95, crouch: 0.42, lean: 0.85 * s, twist: 18 * r },
+    { s: from, crouch: 0.4, lean: 1 * s, pitch: -9 * s, heading: 90, twist: 22 * r },
+    // schouders leiden, het board draait op de tip mee
+    { s: from + 0.25, twist: -25 * r, heading: 90 + 0.15 * deg },
+    { s: from + spin * 0.6, twist: -28 * r, heading: 90 + 0.7 * deg, look: landSwitch ? 20 : 40 },
+    { s: from + spin, twist: -4 * r, heading: 90 + deg, pitch: -9 * s, look: landSwitch ? -80 : 80 },
+    // board plat en wegrijden
+    { s: from + spin + 0.3, pitch: 0, lean: 0, crouch: 0.38, twist: 0 },
+    { s: d, crouch: 0.3 },
+  ]
+  return motion(
+    perform(d, poses, undefined, { pivot: { tip: nose ? 'nose' : 'tail', from }, speed: 2.6 }),
+    d,
+    at(d, [
+      [0, 'Rustig aanrijden, niet te hard', 'board'],
+      [0.85, 'Schouders licht opwinden, gewicht naar de ' + (nose ? 'neus' : 'tail'), nose ? 'front-foot' : 'back-foot'],
+      [from, nose ? 'Druk op de neus, de tail komt los' : 'Druk op de tail, de neus komt los', nose ? 'nose' : 'tail'],
+      [from + 0.25, `Schouders leiden, het board draait ${Math.abs(deg)}° op de ${nose ? 'neus' : 'tail'} mee`, 'shoulders'],
+      [from + spin + 0.15, landSwitch ? 'Board plat en switch wegrijden' : 'Board plat en wegrijden', 'board'],
+    ]),
+    { terrain: 'piste', slope: SLOPE, camera: 'zij' },
+  )
+}
+
+/** Revert: het board draait plat over de sneeuw 180° rond, je rijdt switch verder. */
+function revert(): Motion {
+  const d = 3.2
+  const poses: Pose[] = [
+    { s: 0, crouch: 0.32, heading: 90, twist: 0, look: 80, upright: 0.9 },
+    { s: 0.9, crouch: 0.36, twist: 0, heading: 90 },
+    { s: 1.2, crouch: 0.4, twist: -30, heading: 100 },
+    { s: 1.55, twist: -25, heading: 200, look: 10 },
+    { s: 1.85, twist: 0, heading: 270, look: -80, crouch: 0.38 },
+    { s: d, crouch: 0.32 },
+  ]
+  return motion(
+    perform(d, poses, undefined, { speed: 3.2 }),
+    d,
+    at(d, [
+      [0, 'Rij plat, geen edge', 'board'],
+      [1.0, 'Draai je schouders en heupen', 'shoulders'],
+      [1.3, 'Het board draait mee over de sneeuw: blijf plat', 'board'],
+      [1.9, 'Rij switch weg, kijk over je andere schouder', 'head'],
     ]),
     { terrain: 'piste', slope: SLOPE, camera: 'zij' },
   )
@@ -228,8 +313,13 @@ export const FREESTYLE: Record<string, () => Motion> = {
   ollie: () => ollie(false),
   nollie: () => ollie(true),
   shifty,
-  'fs-180': () => spin180(true),
-  'bs-180': () => spin180(false),
+  'fs-180': () => flatSpin(180),
+  'bs-180': () => flatSpin(-180),
+  'fs-360': () => flatSpin(360),
+  'nose-butter': () => butter(true, 180),
+  'tail-butter': () => butter(false, 180),
+  'butter-360': () => butter(true, 360),
+  revert,
   'nose-press': () => press(true),
   'tail-press': () => press(false),
 }

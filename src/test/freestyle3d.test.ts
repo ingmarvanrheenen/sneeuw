@@ -111,6 +111,49 @@ describe('flat-tricks in 3D', () => {
     }
   })
 
+  it('butter: draait rond de tip die op de sneeuw drukt, niet rond het midden', () => {
+    for (const [id, tip, deg] of [
+      ['nose-butter', 1, 180],
+      ['tail-butter', -1, 180],
+      ['butter-360', 1, 360],
+    ] as const) {
+      const b = m(id)
+      const tr = new Track(b.keys)
+      const tips: Vector3[] = []
+      for (let i = 0; i <= 40; i++) {
+        const s = 1.3 + (i / 40) * (deg > 180 ? 1.4 : 0.9)
+        const body = solve(tr.sample(s / b.duration))
+        tips.push(new Vector3(tip * 0.775, 0, 0).applyQuaternion(body.boardQuat).add(body.boardPos))
+      }
+      // de tip blijft op een rechte lijn (x ≈ 0) en op de sneeuw, terwijl het board ronddraait
+      for (const p of tips) {
+        expect(Math.abs(p.x), id).toBeLessThan(0.08)
+        expect(p.y, id).toBeLessThan(0.05)
+      }
+      const last = b.keys[b.keys.length - 1]
+      expect(last.heading, id).toBeCloseTo(90 + deg, 0)
+      expect(Math.sign(last.look!), id).toBe(deg === 180 ? -1 : 1)
+    }
+  })
+
+  it('revert: plat over de sneeuw rond, geen sprong, switch verder', () => {
+    const rv = m('revert')
+    expect(rv.keys.every((k) => (k.y ?? 0) === 0)).toBe(true)
+    const last = rv.keys[rv.keys.length - 1]
+    expect(last.heading).toBeCloseTo(270, 0)
+    expect(last.look).toBeLessThan(0)
+  })
+
+  it('flat 360: meer opwinden, langer in de lucht, regular landen', () => {
+    const s360 = m('fs-360')
+    const s180 = m('fs-180')
+    expect(at(s360, 1.04).twist).toBeGreaterThan(at(s180, 1.04).twist)
+    expect(Math.max(...s360.keys.map((k) => k.y ?? 0))).toBeGreaterThan(Math.max(...s180.keys.map((k) => k.y ?? 0)))
+    const last = s360.keys[s360.keys.length - 1]
+    expect(last.heading).toBeCloseTo(450, 0)
+    expect(last.look).toBeGreaterThan(0)
+  })
+
   it('alle flat-tricks: stappen op volgorde en binnen de tijdlijn, met een cue', () => {
     for (const [id, make] of Object.entries(FREESTYLE)) {
       const st = make().steps
