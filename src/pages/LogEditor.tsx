@@ -133,7 +133,6 @@ export default function LogEditor() {
   return (
     <Page className="pb-36">
       <PageHeader
-        kicker={existing ? 'Dag bewerken' : 'Nieuwe dag'}
         title={d.resortName || 'Log je dag'}
         right={
           <button onClick={cancel} className="label h-9 px-2">

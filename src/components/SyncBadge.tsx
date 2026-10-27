@@ -25,7 +25,7 @@ export function SyncBadge() {
     text = `${s.pending} wacht`
   }
   return (
-    <Link to="/instellingen" className="label flex h-8 items-center gap-1.5 rounded-full border hairline bg-surface px-2.5 !text-[10px]">
+    <Link to="/instellingen" className="flex h-8 items-center gap-1.5 rounded-full bg-surface px-3 text-[13px] text-muted">
       {icon}
       {text}
     </Link>

@@ -185,7 +185,7 @@ export default function Crew() {
   if (!hasBackend || !user)
     return (
       <Page>
-        <PageHeader kicker="03 / Crew" title="Crew" />
+        <PageHeader title="Crew" />
         <NeedAccount />
       </Page>
     )
@@ -208,7 +208,6 @@ export default function Crew() {
   return (
     <Page>
       <PageHeader
-        kicker="03 / Crew"
         title={crew?.name ?? 'Crew'}
         right={
           <>

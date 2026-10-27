@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { Icon, Mood } from '../design/icons'
-import { Button, Card, Page, PageHeader, Progress, Section, LevelDots } from '../components/ui'
+import { Button, List, Page, PageHeader, Progress, Row, Section, SectionLink, LevelDots } from '../components/ui'
 import { SyncBadge } from '../components/SyncBadge'
 import { useProgress } from '../lib/useProgress'
 import { sessionsSorted, useKind } from '../lib/repo'
@@ -22,10 +22,10 @@ function InstallHint() {
   }, [])
   if (!show) return null
   return (
-    <Card className="relative mb-4 border-accent">
+    <div className="relative mb-6 rounded-[14px] bg-accent-soft p-4 pr-10">
       <button
         aria-label="Verbergen"
-        className="absolute right-3 top-3 text-muted"
+        className="absolute right-2 top-2 grid size-9 place-items-center text-muted"
         onClick={() => {
           try {
             localStorage.setItem('sd-install-dismissed', '1')
@@ -35,14 +35,14 @@ function InstallHint() {
           setShow(false)
         }}
       >
-        <Icon name="close" size={16} />
+        <Icon name="close" size={14} />
       </button>
-      <div className="label text-accent-text">Installeer de app</div>
-      <p className="mt-1 pr-6 text-sm">
-        Tik in Safari op <Icon name="share" size={14} className="inline -mt-0.5" /> <b>Deel</b> → <b>Zet op beginscherm</b>. Dan werkt hij
-        als echte app, ook offline op de berg.
+      <div className="text-[15px] font-semibold">Zet hem op je beginscherm</div>
+      <p className="mt-1 text-[15px] text-muted">
+        Tik in Safari op <Icon name="share" size={15} className="-mt-0.5 inline" /> Deel en dan Zet op beginscherm. Dan werkt hij als echte
+        app, ook offline op de berg.
       </p>
-    </Card>
+    </div>
   )
 }
 
@@ -78,124 +78,83 @@ export default function Home() {
 
   return (
     <Page>
-      <PageHeader kicker={fmtDate(today, true)} title={`${greet}${name ? `, ${name}` : ''}`} right={<SyncBadge />} />
+      <PageHeader subtitle={fmtDate(today, true)} title={`${greet}${name ? `, ${name}` : ''}`} right={<SyncBadge />} />
       <InstallHint />
 
       {lvl && (
-        <Card onClick={() => nav('/badges')} className="relative overflow-hidden">
-          <div className="flex items-start justify-between">
-            <div>
-              <div className="label">Level {String(lvl.level).padStart(2, '0')}</div>
-              <div className="mt-0.5 text-2xl font-semibold tracking-tight">{lvl.name}</div>
-            </div>
-            <div className="text-right">
-              <div className="num text-3xl font-semibold text-accent-text">{lvl.xp}</div>
-              <div className="label">XP</div>
-            </div>
+        <button onClick={() => nav('/badges')} className="block w-full text-left active:opacity-70">
+          <div className="flex items-baseline justify-between gap-3">
+            <span className="display text-[26px]">{lvl.name}</span>
+            <span className="num text-[15px] text-muted">
+              Level {lvl.level} · {lvl.xp} XP
+            </span>
           </div>
-          <Progress value={lvl.progress} className="mt-4" />
-          <div className="mt-2 flex justify-between text-xs text-muted">
-            <span>{lvl.next ? `Nog ${lvl.needed - lvl.current} XP tot ${lvl.next}` : 'Max level. Respect.'}</span>
-            <span>{progress.badges.length} badges</span>
+          <Progress value={lvl.progress} className="mt-3" />
+          <div className="mt-2 text-[13px] text-muted">
+            {lvl.next ? `Nog ${lvl.needed - lvl.current} XP tot ${lvl.next}` : 'Max level. Respect.'} · {progress.badges.length} badges
           </div>
-        </Card>
+        </button>
       )}
 
-      <div className="mt-3 grid grid-cols-[1fr_auto] gap-2">
-        <Button size="lg" icon={<Icon name="plus" size={20} />} onClick={() => nav('/log/nieuw')}>
-          Log je dag
-        </Button>
-        <Button size="lg" variant="ghost" icon={<Icon name="chat" size={20} />} onClick={() => nav('/coach')} aria-label="Coach Daddy">
-          Coach
-        </Button>
-      </div>
+      <Button size="lg" className="mt-6 w-full" icon={<Icon name="plus" size={20} stroke={2.2} />} onClick={() => nav('/log/nieuw')}>
+        Log je dag
+      </Button>
 
-      {nextTrip && (
-        <Card onClick={() => nav(`/reizen/${nextTrip.id}`)} className="mt-3">
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="label">Volgende trip</div>
-              <div className="mt-0.5 font-semibold">{nextTrip.name}</div>
-              <div className="text-xs text-muted">{nextTrip.resortName}</div>
-            </div>
-            <div className="text-right">
-              <div className="num text-3xl font-semibold">{Math.max(0, daysUntil(nextTrip.startDate!))}</div>
-              <div className="label">dagen</div>
-            </div>
-          </div>
-          {nextTrip.packing.length > 0 && (
-            <>
-              <Progress value={packed / nextTrip.packing.length} className="mt-3" />
-              <div className="mt-1 text-xs text-muted">
-                Paklijst {packed}/{nextTrip.packing.length}
-              </div>
-            </>
-          )}
-        </Card>
-      )}
-
-      <Section
-        title="Doelen"
-        action={
-          <Link to="/doelen" className="label flex items-center gap-1 !text-accent-text">
-            alle <Icon name="arrow" size={12} />
-          </Link>
-        }
-      >
-        {openGoals.length ? (
-          <div className="space-y-2">
-            {openGoals.map((g) => (
-              <Card key={g.id} onClick={() => nav(g.trickId ? `/tricks/${g.trickId}` : '/doelen')} className="flex items-center gap-3 py-3">
-                <Icon name="target" size={18} className="text-accent-text" />
-                <span className="flex-1 text-sm">{g.title}</span>
-                {g.trickId && <LevelDots level={TRICK_BY_ID.get(g.trickId)?.level ?? 1} />}
-              </Card>
-            ))}
-          </div>
-        ) : (
-          <Card onClick={() => nav('/doelen')} className="text-sm text-muted">
-            Nog geen doelen. Wat wil je deze trip leren? →
-          </Card>
+      <List className="mt-3">
+        <Row icon="chat" title="Coach Daddy" detail="Vraag om tips of een oefenplan" to="/coach" />
+        {nextTrip && (
+          <Row
+            icon="suitcase"
+            title={nextTrip.name}
+            detail={`${nextTrip.resortName ?? ''}${nextTrip.packing.length ? ` · paklijst ${packed}/${nextTrip.packing.length}` : ''}`}
+            value={`over ${Math.max(0, daysUntil(nextTrip.startDate!))} d`}
+            to={`/reizen/${nextTrip.id}`}
+          />
         )}
+      </List>
+
+      <Section title="Doelen" action={<SectionLink to="/doelen">Alle</SectionLink>}>
+        <List>
+          {openGoals.length ? (
+            openGoals.map((g) => (
+              <Row
+                key={g.id}
+                icon="target"
+                title={g.title}
+                to={g.trickId ? `/tricks/${g.trickId}` : '/doelen'}
+                value={g.trickId ? <LevelDots level={TRICK_BY_ID.get(g.trickId)?.level ?? 1} /> : undefined}
+              />
+            ))
+          ) : (
+            <Row icon="target" title="Stel een doel" detail="Wat wil je deze trip leren?" to="/doelen" />
+          )}
+        </List>
       </Section>
 
-      <Section title="Volgende stap">
-        <div className="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4">
+      <Section title="Volgende stap" action={<SectionLink to="/tricks">Bijbel</SectionLink>}>
+        <List>
           {nextUp.map((t) => (
-            <Link key={t.id} to={`/tricks/${t.id}`} className="card w-40 shrink-0 p-3">
-              <LevelDots level={t.level} />
-              <div className="mt-2 text-sm font-semibold leading-tight">{t.name}</div>
-              <div className="mt-1 line-clamp-2 text-xs text-muted">{t.summary}</div>
-            </Link>
+            <Row key={t.id} title={t.name} detail={t.summary} value={<LevelDots level={t.level} />} to={`/tricks/${t.id}`} />
           ))}
-        </div>
+        </List>
       </Section>
 
-      <Section
-        title="Laatste dagen"
-        action={
-          <Link to="/log" className="label flex items-center gap-1 !text-accent-text">
-            logboek <Icon name="arrow" size={12} />
-          </Link>
-        }
-      >
+      <Section title="Laatste dagen" action={<SectionLink to="/log">Logboek</SectionLink>}>
         {recent.length ? (
-          <div className="space-y-2">
+          <List>
             {recent.map((s) => (
-              <Card key={s.id} onClick={() => nav(`/log/${s.id}`)} className="flex items-center gap-3 py-3">
-                <Mood value={s.mood} className="text-accent-text" />
-                <div className="min-w-0 flex-1">
-                  <div className="truncate text-sm font-medium">{s.resortName || 'Onbekend'}</div>
-                  <div className="label">{fmtDate(s.date)}</div>
-                </div>
-                <div className="num text-right text-xs text-muted">
-                  {s.hours}u · {s.falls}× gevallen
-                </div>
-              </Card>
+              <Row
+                key={s.id}
+                icon={<Mood value={s.mood} size={24} className="shrink-0 text-accent-text" />}
+                title={s.resortName || 'Onbekend'}
+                detail={fmtDate(s.date)}
+                value={`${s.hours}u · ${s.falls} val`}
+                to={`/log/${s.id}`}
+              />
             ))}
-          </div>
+          </List>
         ) : (
-          <Card className="text-sm text-muted">Nog niks gelogd. Na je eerste dag staat hier je geschiedenis.</Card>
+          <p className="text-[15px] text-muted">Nog niks gelogd. Na je eerste dag staat hier je geschiedenis.</p>
         )}
       </Section>
     </Page>

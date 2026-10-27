@@ -110,7 +110,7 @@ export default function Quiz() {
   if (done)
     return (
       <Page>
-        <PageHeader kicker="Quiz" title="Klaar" back="/tricks" />
+        <PageHeader title="Klaar" back="/tricks" />
         <Card className="flex flex-col items-center py-10 text-center">
           <Icon name={score >= 8 ? 'trophy' : score >= 5 ? 'stomp' : 'impact'} size={48} className="text-accent-text" />
           <div className="num mt-4 text-5xl font-semibold">
@@ -142,7 +142,7 @@ export default function Quiz() {
   return (
     <Page>
       <PageHeader
-        kicker={`Vraag ${i + 1} van ${questions.length}`}
+        subtitle={`Vraag ${i + 1} van ${questions.length}`}
         title="Quiz"
         back="/tricks"
         right={<span className="num text-accent-text">{score}</span>}

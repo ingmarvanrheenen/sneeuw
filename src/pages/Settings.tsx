@@ -203,7 +203,7 @@ export default function Settings() {
 
   return (
     <Page>
-      <PageHeader kicker="Instellingen" title="Instellingen" back />
+      <PageHeader title="Instellingen" back />
       <Section title="Account" className="mt-0">
         <Account />
         <div className="mt-2">

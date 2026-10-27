@@ -147,7 +147,7 @@ export default function Coach() {
     <div className="flex min-h-dvh flex-col">
       <Page className="flex-1 pb-40">
         <PageHeader
-          kicker="AI-buddy"
+          subtitle="Kent je logboek, tricks en doelen"
           title="Coach Daddy"
           back
           right={
@@ -197,9 +197,13 @@ export default function Coach() {
               </div>
             </div>
             <div className="label mb-2 mt-6">Probeer</div>
-            <div className="space-y-2">
+            <div className="card divide-y divide-[var(--line)] overflow-hidden">
               {STARTERS.map((s) => (
-                <button key={s} onClick={() => send(s)} className="card flex w-full items-center justify-between p-3.5 text-left text-sm">
+                <button
+                  key={s}
+                  onClick={() => send(s)}
+                  className="flex w-full items-center justify-between px-4 py-3.5 text-left active:bg-surface-2 text-sm"
+                >
                   {s}
                   <Icon name="arrow" size={16} className="text-muted" />
                 </button>

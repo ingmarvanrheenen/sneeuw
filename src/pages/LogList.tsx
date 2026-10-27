@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Button, Card, Empty, Page, PageHeader, Stat } from '../components/ui'
+import { Button, Empty, Page, PageHeader, Stat, StatGroup } from '../components/ui'
 import { Icon, Mood } from '../design/icons'
 import { sessionsSorted, useKind } from '../lib/repo'
 import { parseISO, seasonOf } from '../lib/format'
@@ -25,7 +25,6 @@ export default function LogList() {
   return (
     <Page>
       <PageHeader
-        kicker="01 / Logboek"
         title="Logboek"
         right={
           <Button size="sm" icon={<Icon name="plus" size={16} />} onClick={() => nav('/log/nieuw')}>
@@ -46,20 +45,24 @@ export default function LogList() {
         const falls = list.reduce((a, s) => a + s.falls, 0)
         return (
           <section key={season} className="mb-8">
-            <div className="label mb-2">Seizoen {season}</div>
-            <div className="mb-3 grid grid-cols-3 gap-2">
+            <h2 className="mb-2.5 text-[20px] font-semibold">Seizoen {season}</h2>
+            <StatGroup className="mb-3">
               <Stat label="Dagen" value={new Set(list.map((s) => s.date)).size} />
               <Stat label="Uren" value={hours} />
               <Stat label="Valpartijen" value={falls} />
-            </div>
-            <div className="space-y-2">
+            </StatGroup>
+            <div className="card divide-y divide-[var(--line)] overflow-hidden">
               {list.map((s) => {
                 const date = parseISO(s.date)
                 return (
-                  <Card key={s.id} onClick={() => nav(`/log/${s.id}`)} className="flex items-center gap-3 py-3">
+                  <button
+                    key={s.id}
+                    onClick={() => nav(`/log/${s.id}`)}
+                    className="flex w-full items-center gap-3 px-4 py-3 text-left active:bg-surface-2"
+                  >
                     <div className="w-11 shrink-0 text-center">
-                      <div className="num text-xl font-semibold leading-none">{date.getDate()}</div>
-                      <div className="label mt-0.5">{MONTHS[date.getMonth()]}</div>
+                      <div className="display num text-[24px]">{date.getDate()}</div>
+                      <div className="text-[12px] text-muted">{MONTHS[date.getMonth()]}</div>
                     </div>
                     <div className="h-9 w-px bg-line" />
                     <div className="min-w-0 flex-1">
@@ -79,7 +82,7 @@ export default function LogList() {
                     </div>
                     {s.mediaIds.length > 0 && <Icon name="image" size={16} className="text-muted" />}
                     <Mood value={s.mood} className="text-accent-text" />
-                  </Card>
+                  </button>
                 )
               })}
             </div>

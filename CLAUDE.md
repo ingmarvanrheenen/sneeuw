@@ -16,6 +16,7 @@ Draai vóór elke commit `npm run lint && npm test && npm run build`.
 
 - **Nooit emoji** in UI, content of toasts. Iconen komen uit `src/design/icons.tsx` (24-grid, stroke 1.8, square caps, miter joins). Nieuw icoon nodig? Daar toevoegen. `src/test/design.test.ts` bewaakt dit.
 - Kleuren alleen via tokens (`bg-surface`, `text-muted`, `text-accent-text`, ...), nooit hardcoded, behalve de pistekleuren.
+- Volg docs/DESIGN.md (Impeccable craft-floor): geen kickers/eyebrows boven titels (gebruik `subtitle`), geen sectienummers, geen mono-font, lijsten als `List`/`Row` in plaats van losse kaarten. UI in systeemfont, Archivo (`.display`) alleen voor titels en grote getallen.
 - Alle UI-tekst in het Nederlands, chill en direct, met Engelse snowboardtermen waar dat normaal is.
 - Data altijd via `src/lib/repo.ts` (`create`/`update`/`remove`/`setTrickStatus`), zodat de dirty-vlag en sync kloppen. Nooit hard deleten.
 - XP/levels/badges worden afgeleid in `src/lib/progress.ts`, niet opgeslagen.

@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
-import { Button, Card, Chip, Page, PageHeader, Segmented, cx, inputCls, LevelDots } from '../components/ui'
+import { Button, Chip, List, Page, PageHeader, Row, Segmented, cx, inputCls, LevelDots } from '../components/ui'
 import { Icon } from '../design/icons'
 import { TRACKS, TRICKS, TRICK_BY_ID, type Track } from '../content/tricks'
 import { TERMS, TERM_CATS, type TermCat } from '../content/terms'
@@ -37,49 +37,39 @@ function SkillTree() {
           </Chip>
         ))}
       </div>
-      <div className="mb-3 mt-4 flex items-end justify-between">
-        <div>
-          <div className="text-lg font-semibold">{meta.name}</div>
-          <div className="text-sm text-muted">{meta.blurb}</div>
-        </div>
-        <div className="num text-sm text-muted">
-          <span className="text-accent-text">{done}</span>/{items.length}
-        </div>
+      <div className="mb-4 mt-5 flex items-baseline justify-between gap-3">
+        <p className="text-[15px] text-muted">{meta.blurb}</p>
+        <span className="num shrink-0 text-[15px] text-muted">
+          <span className="font-semibold text-accent-text">{done}</span> van {items.length} geland
+        </span>
       </div>
-      <ol className="relative">
-        {items.map((t, i) => {
-          const st = status.get(t.id)
-          const external = t.prereqs.filter((p) => TRICK_BY_ID.get(p)?.track !== track)
-          return (
-            <li key={t.id} className="relative pl-7">
-              {i < items.length - 1 && <span className="absolute bottom-0 left-[6px] top-6 w-0.5 bg-line" />}
-              <span className="absolute left-0 top-[22px]">
-                <StatusDot status={st} />
-              </span>
-              <Link to={`/tricks/${t.id}`} className="card mb-2 block p-3.5 active:scale-[0.99]">
-                <div className="flex items-center justify-between gap-2">
-                  <span className="font-medium">{t.name}</span>
-                  <LevelDots level={t.level} />
-                </div>
-                <div className="mt-1 line-clamp-2 text-sm text-muted">{t.summary}</div>
-                <div className="mt-2 flex flex-wrap gap-1.5">
-                  {st && <span className="label rounded-full bg-accent-soft px-2 py-0.5 !text-accent-text">{STATUS_LABEL[st]}</span>}
-                  {external.map((p) => (
-                    <span key={p} className="label rounded-full border hairline px-2 py-0.5">
-                      na {TRICK_BY_ID.get(p)?.name}
-                    </span>
-                  ))}
-                  {t.anim && (
-                    <span className="label flex items-center gap-1 px-1 py-0.5">
-                      <Icon name="play" size={10} /> animatie
-                    </span>
-                  )}
-                </div>
-              </Link>
-            </li>
-          )
-        })}
-      </ol>
+      {[1, 2, 3, 4, 5].map((lvl) => {
+        const group = items.filter((t) => t.level === lvl)
+        if (!group.length) return null
+        return (
+          <section key={lvl} className="mb-6">
+            <h3 className="mb-2 flex items-center gap-2 pl-1 text-[13px] font-semibold text-muted">
+              Niveau {lvl} <LevelDots level={lvl} />
+            </h3>
+            <List>
+              {group.map((t) => {
+                const st = status.get(t.id)
+                const external = t.prereqs.filter((p) => TRICK_BY_ID.get(p)?.track !== track)
+                return (
+                  <Row
+                    key={t.id}
+                    to={`/tricks/${t.id}`}
+                    icon={<StatusDot status={st} />}
+                    title={t.name}
+                    detail={external.length ? `na ${external.map((p) => TRICK_BY_ID.get(p)?.name).join(', ')}` : t.summary}
+                    value={st ? STATUS_LABEL[st] : undefined}
+                  />
+                )
+              })}
+            </List>
+          </section>
+        )
+      })}
     </>
   )
 }
@@ -161,7 +151,6 @@ export default function Tricks() {
   return (
     <Page>
       <PageHeader
-        kicker="02 / Trick-bijbel"
         title="Bijbel"
         right={
           <Button size="sm" variant="ghost" icon={<Icon name="quiz" size={16} />} onClick={() => nav('/quiz')}>
@@ -178,14 +167,9 @@ export default function Tricks() {
         ]}
       />
       <div className="mt-4">{tab === 'tree' ? <SkillTree /> : <Dictionary />}</div>
-      <Card onClick={() => nav('/kluis')} className="mt-6 flex items-center gap-3">
-        <Icon name="vault" size={26} className="text-accent-text" />
-        <div className="flex-1">
-          <div className="font-medium">Je kluis</div>
-          <div className="text-sm text-muted">Alle gelande tricks met je video's</div>
-        </div>
-        <Icon name="chevron" size={18} className="text-muted" />
-      </Card>
+      <List className="mt-2">
+        <Row icon="vault" title="Je kluis" detail="Alle gelande tricks met je clips" to="/kluis" />
+      </List>
     </Page>
   )
 }

@@ -29,7 +29,7 @@ export default function Goals() {
   }
 
   const row = (g: Goal) => (
-    <Card key={g.id} className="flex items-center gap-3 py-3">
+    <div key={g.id} className="flex items-center gap-3 px-4 py-3">
       <button
         aria-label={g.done ? 'Markeer als open' : 'Markeer als gehaald'}
         onClick={() => toggle(g)}
@@ -54,12 +54,12 @@ export default function Goals() {
       <button aria-label="Verwijderen" onClick={() => remove(g)} className="text-muted">
         <Icon name="trash" size={16} />
       </button>
-    </Card>
+    </div>
   )
 
   return (
     <Page>
-      <PageHeader kicker="Doelen" title="Doelen" back />
+      <PageHeader title="Doelen" back />
       <Card>
         <input
           value={title}
@@ -96,7 +96,7 @@ export default function Goals() {
 
       <Section title={`Open ${open.length}`}>
         {open.length ? (
-          <div className="space-y-2">{open.map(row)}</div>
+          <div className="card divide-y divide-[var(--line)] overflow-hidden">{open.map(row)}</div>
         ) : (
           <Empty
             icon={<Icon name="target" size={36} className="text-muted" />}
@@ -107,7 +107,7 @@ export default function Goals() {
       </Section>
       {done.length > 0 && (
         <Section title={`Gehaald ${done.length}`}>
-          <div className="space-y-2">{done.map(row)}</div>
+          <div className="card divide-y divide-[var(--line)] overflow-hidden">{done.map(row)}</div>
         </Section>
       )}
 

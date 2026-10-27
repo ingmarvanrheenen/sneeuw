@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { Button, Card, Page, PageHeader, Progress, Section, Stat, cx, inputCls } from '../components/ui'
+import { Button, Page, PageHeader, Progress, Section, Stat, cx, inputCls, StatGroup } from '../components/ui'
 import { Icon } from '../design/icons'
 import { remove, update, useKind, useRecord } from '../lib/repo'
 import { daysUntil, fmtShort } from '../lib/format'
@@ -38,12 +38,12 @@ export default function TripDetail() {
 
   return (
     <Page>
-      <PageHeader kicker={trip.resortName ?? 'Trip'} title={trip.name} back="/reizen" />
-      <div className="grid grid-cols-3 gap-2">
+      <PageHeader subtitle={trip.resortName ?? 'Trip'} title={trip.name} back="/reizen" />
+      <StatGroup>
         <Stat label="Over" value={trip.startDate ? Math.max(0, daysUntil(trip.startDate)) : '–'} sub="dagen" />
         <Stat label="Gelogd" value={tripSessions.length} sub="dagen" />
         <Stat label="Ingepakt" value={`${trip.packing.length ? Math.round((packed / trip.packing.length) * 100) : 0}%`} />
-      </div>
+      </StatGroup>
       {trip.startDate && (
         <div className="label mt-2">
           {fmtShort(trip.startDate)}
@@ -53,12 +53,12 @@ export default function TripDetail() {
 
       {tripGoals.length > 0 && (
         <Section title="Doelen deze trip">
-          <div className="space-y-2">
+          <div className="card divide-y divide-[var(--line)]">
             {tripGoals.map((g) => (
-              <Card key={g.id} className="flex items-center gap-3 py-3">
+              <div key={g.id} className="flex items-center gap-3 px-4 py-3">
                 <Icon name={g.done ? 'stomp' : 'target'} size={18} className={g.done ? 'text-accent-text' : 'text-muted'} />
                 <span className={cx('text-sm', g.done && 'text-muted line-through')}>{g.title}</span>
-              </Card>
+              </div>
             ))}
           </div>
         </Section>
@@ -127,9 +127,9 @@ export default function TripDetail() {
 
       {tripSessions.length > 0 && (
         <Section title="Dagen">
-          <div className="space-y-2">
+          <div className="card divide-y divide-[var(--line)] overflow-hidden">
             {tripSessions.map((s) => (
-              <Link key={s.id} to={`/log/${s.id}`} className="card flex justify-between p-3 text-sm">
+              <Link key={s.id} to={`/log/${s.id}`} className="flex justify-between px-4 py-3 text-[15px] active:bg-surface-2">
                 <span>{fmtShort(s.date)}</span>
                 <span className="num text-muted">
                   {s.hours}u · {s.falls} val

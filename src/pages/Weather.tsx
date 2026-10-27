@@ -113,7 +113,6 @@ export default function Weather() {
   return (
     <Page>
       <PageHeader
-        kicker="Weer & sneeuw"
         title="Sneeuwradar"
         back
         right={

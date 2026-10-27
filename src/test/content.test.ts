@@ -50,8 +50,11 @@ describe('trick-bijbel', () => {
       const keys = normalize(t.anim.keys, SIDE_DEFAULT) as FullSideKey[]
       for (let s = 0; s <= 1; s += 0.05) {
         const p = pose(sample(keys, s))
-        for (const seg of p.segs) expect([...seg.a, ...seg.b].every(Number.isFinite), `${t.id}@${s}`).toBe(true)
-        expect(p.board.pts.flat().every(Number.isFinite)).toBe(true)
+        for (const sh of p.shapes) {
+          const nums = sh.type === 'line' ? [...sh.a, ...sh.b] : sh.type === 'circle' ? sh.c : sh.pts.flat()
+          expect(nums.every(Number.isFinite), `${t.id}@${s}`).toBe(true)
+        }
+        expect(Object.values(p.points).flat().every(Number.isFinite)).toBe(true)
       }
     }
   })
@@ -70,5 +73,16 @@ describe('animatie-engine', () => {
     expect(sample(keys, 0.5).x).toBeCloseTo(0.5)
     expect(sample(keys, -1).x).toBe(0)
     expect(sample(keys, 2).x).toBe(1)
+  })
+})
+
+describe('coaching-cues', () => {
+  it('geeft de meeste stappen een lichaamsdeel', async () => {
+    const { cueFor } = await import('../anim/engine')
+    const all = TRICKS.flatMap((t) => t.anim?.steps ?? [])
+    const withCue = all.filter((s) => cueFor(s))
+    expect(withCue.length / all.length).toBeGreaterThan(0.6)
+    expect(cueFor({ t: 0, label: 'Knieën naar je borst' })).toBe('knees')
+    expect(cueFor({ t: 0, label: 'Kijk over je voorste schouder', cue: 'head' })).toBe('head')
   })
 })

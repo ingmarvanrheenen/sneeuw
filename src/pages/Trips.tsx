@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Button, Card, Empty, Field, Page, PageHeader, Progress, Sheet, cx, inputCls } from '../components/ui'
+import { Button, Empty, Field, Page, PageHeader, Progress, Sheet, cx, inputCls } from '../components/ui'
 import { Icon } from '../design/icons'
 import { ResortPicker } from '../components/Pickers'
 import { create, useKind } from '../lib/repo'
@@ -20,7 +20,6 @@ export default function Trips() {
   return (
     <Page>
       <PageHeader
-        kicker="Trips"
         title="Trips & paklijst"
         back
         right={
@@ -37,12 +36,12 @@ export default function Trips() {
           action={<Button onClick={() => setOpen(true)}>Trip toevoegen</Button>}
         />
       )}
-      <div className="space-y-2">
+      <div className="card divide-y divide-[var(--line)] overflow-hidden">
         {sorted.map((t) => {
           const packed = t.packing.filter((p) => p.checked).length
           const upcoming = t.startDate && t.startDate >= today
           return (
-            <Card key={t.id} onClick={() => nav(`/reizen/${t.id}`)}>
+            <button key={t.id} onClick={() => nav(`/reizen/${t.id}`)} className="block w-full px-4 py-3.5 text-left active:bg-surface-2">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <div className="truncate font-semibold">{t.name}</div>
@@ -56,13 +55,13 @@ export default function Trips() {
                 </div>
                 {upcoming && (
                   <div className="text-right">
-                    <div className="num text-2xl font-semibold text-accent-text">{daysUntil(t.startDate!)}</div>
+                    <div className="display num text-[28px] text-accent-text">{daysUntil(t.startDate!)}</div>
                     <div className="label">dagen</div>
                   </div>
                 )}
               </div>
               {t.packing.length > 0 && <Progress value={packed / t.packing.length} className="mt-3" />}
-            </Card>
+            </button>
           )
         })}
       </div>

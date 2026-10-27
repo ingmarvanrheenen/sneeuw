@@ -58,9 +58,66 @@ export interface TopAnim {
   steps: Step[]
 }
 
+/** Lichaamsdeel of boarddeel waar een stap om draait; de speler markeert het in beeld. */
+export type BodyPart =
+  | 'head'
+  | 'shoulders'
+  | 'hands'
+  | 'front-hand'
+  | 'back-hand'
+  | 'hips'
+  | 'knees'
+  | 'front-foot'
+  | 'back-foot'
+  | 'nose'
+  | 'tail'
+  | 'board'
+  | 'heel-edge'
+  | 'toe-edge'
+
 export interface Step {
   t: number
   label: string
+  /** Optioneel expliciet; anders afgeleid uit de tekst met `cueFor`. */
+  cue?: BodyPart | null
+}
+
+const CUE_RULES: [RegExp, BodyPart][] = [
+  [/hielen|heel edge|heelside/i, 'heel-edge'],
+  [/tenen|toe edge|toeside/i, 'toe-edge'],
+  [/schouder|bovenlijf|opwind|draai je schouders/i, 'shoulders'],
+  [/hoofd|kijk|blik|spot/i, 'head'],
+  [/pak|grab|hand|vuist|arm/i, 'hands'],
+  [/knie|zak|door de knie|absorbeer|klein/i, 'knees'],
+  [/tail|achterbeen|achterste been|achterste voet/i, 'tail'],
+  [/neus|voorbeen|voorste been|voorste voet/i, 'nose'],
+  [/gewicht|heup|billen|zit/i, 'hips'],
+  [/board|plat|land|edge|pop/i, 'board'],
+]
+
+/** Welk deel hoort bij deze stap? Expliciete `cue` wint, anders een slimme gok op basis van de tekst. */
+export function cueFor(step: Step | undefined): BodyPart | null {
+  if (!step) return null
+  if (step.cue !== undefined) return step.cue
+  for (const [re, part] of CUE_RULES) if (re.test(step.label)) return part
+  return null
+}
+
+export const CUE_LABEL: Record<BodyPart, string> = {
+  head: 'Hoofd',
+  shoulders: 'Schouders',
+  hands: 'Handen',
+  'front-hand': 'Voorste hand',
+  'back-hand': 'Achterste hand',
+  hips: 'Gewicht',
+  knees: 'Knieën',
+  'front-foot': 'Voorste voet',
+  'back-foot': 'Achterste voet',
+  nose: 'Neus',
+  tail: 'Tail',
+  board: 'Board',
+  'heel-edge': 'Heel edge',
+  'toe-edge': 'Toe edge',
 }
 
 export type Anim = SideAnim | TopAnim
@@ -100,7 +157,8 @@ export const ease = (u: number) => u * u * (3 - 2 * u)
 const lerp = (a: number, b: number, u: number) => a + (b - a) * u
 
 /** Geeft de geïnterpoleerde pose op tijd t (0..1). */
-export function sample<K extends { t: number }>(keys: Required<K>[], t: number): Required<K> {
+/** `linear`: velden die lineair (zonder easing) interpoleren, bijv. y in het bovenaanzicht voor vloeiende S-bochten. */
+export function sample<K extends { t: number }>(keys: Required<K>[], t: number, linear: string[] = []): Required<K> {
   if (keys.length === 0) throw new Error('geen keyframes')
   if (t <= keys[0].t) return keys[0]
   const last = keys[keys.length - 1]
@@ -115,7 +173,7 @@ export function sample<K extends { t: number }>(keys: Required<K>[], t: number):
   for (const key of Object.keys(a)) {
     const va = (a as Record<string, unknown>)[key]
     const vb = (b as Record<string, unknown>)[key]
-    if (typeof va === 'number' && typeof vb === 'number') out[key] = lerp(va, vb, u)
+    if (typeof va === 'number' && typeof vb === 'number') out[key] = lerp(va, vb, linear.includes(key) ? (t - a.t) / span : u)
     else out[key] = u < 0.5 ? va : vb
   }
   out.t = t

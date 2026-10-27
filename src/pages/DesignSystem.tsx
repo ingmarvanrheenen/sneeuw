@@ -28,7 +28,7 @@ export default function DesignSystem() {
   const [n, setN] = useState(3)
   return (
     <Page>
-      <PageHeader kicker="Sneeuw Daddy / DS" title="Design system" back />
+      <PageHeader title="Design system" back />
 
       <Section title="Kleur-tokens" className="mt-0">
         <div className="grid grid-cols-3 gap-2">
@@ -57,7 +57,7 @@ export default function DesignSystem() {
           {ICON_NAMES.map((name) => (
             <div key={name} className="card flex flex-col items-center gap-1 p-2">
               <Icon name={name} size={22} />
-              <span className="w-full truncate text-center font-mono text-[8px] text-muted">{name}</span>
+              <span className="w-full truncate text-center text-[9px] text-muted">{name}</span>
             </div>
           ))}
         </div>

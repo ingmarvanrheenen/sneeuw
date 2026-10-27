@@ -28,20 +28,11 @@ export default function Vault() {
 
   return (
     <Page>
-      <PageHeader kicker="Kluis" title="Je kluis" back />
-      <div className="card p-4">
-        <div className="flex items-end justify-between">
-          <div>
-            <div className="label">Geland</div>
-            <div className="num text-3xl font-semibold">
-              {landed.length}
-              <span className="text-base text-muted">/{TRICKS.length}</span>
-            </div>
-          </div>
-          <Icon name="vault" size={36} className="text-accent-text" />
-        </div>
-        <Progress value={landed.length / TRICKS.length} className="mt-3" />
-      </div>
+      <PageHeader title="Je kluis" back />
+      <p className="text-[15px] text-muted">
+        <span className="font-semibold text-text">{landed.length}</span> van {TRICKS.length} tricks geland
+      </p>
+      <Progress value={landed.length / TRICKS.length} className="mt-2" />
       <div className="no-scrollbar -mx-4 mt-4 flex gap-2 overflow-x-auto px-4">
         <Chip active={track === 'alle'} onClick={() => setTrack('alle')}>
           Alles

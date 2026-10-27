@@ -1,6 +1,6 @@
-import { useEffect, type ButtonHTMLAttributes, type ReactNode } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { Icon } from '../design/icons'
+import { useEffect, useState, type ButtonHTMLAttributes, type ReactNode } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
+import { Icon, type IconName } from '../design/icons'
 import { sfx } from '../lib/sounds'
 
 export function cx(...parts: (string | false | null | undefined)[]) {
@@ -11,34 +11,68 @@ export function Page({ children, className }: { children: ReactNode; className?:
   return <div className={cx('mx-auto w-full max-w-xl px-4 pb-28', className)}>{children}</div>
 }
 
-export function PageHeader({ title, kicker, back, right }: { title: string; kicker?: string; back?: boolean | string; right?: ReactNode }) {
+/**
+ * iOS-achtige grote titel. Bij scrollen verschijnt een compacte balk met de titel klein.
+ * `subtitle` staat ónder de titel en draagt echte informatie (datum, voortgang), nooit een label.
+ */
+export function PageHeader({
+  title,
+  subtitle,
+  back,
+  right,
+}: {
+  title: string
+  subtitle?: ReactNode
+  back?: boolean | string
+  right?: ReactNode
+}) {
   const nav = useNavigate()
+  const [compact, setCompact] = useState(false)
+  useEffect(() => {
+    const onScroll = () => setCompact(window.scrollY > 56)
+    onScroll()
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => window.removeEventListener('scroll', onScroll)
+  }, [])
+  const backBtn = back ? (
+    <button
+      onClick={() => (typeof back === 'string' ? nav(back) : nav(-1))}
+      className="-ml-2 flex h-11 items-center gap-0.5 pr-2 text-[17px] text-accent-text"
+    >
+      <Icon name="back" size={20} stroke={2.2} />
+      Terug
+    </button>
+  ) : (
+    <span />
+  )
   return (
-    <header className="pt-safe sticky top-0 z-20 -mx-4 mb-4 border-b hairline bg-bg/85 px-4 pb-3 backdrop-blur-md">
-      <div className="flex min-h-11 items-end justify-between gap-3">
-        <div className="flex min-w-0 items-end gap-2">
-          {back && (
-            <button
-              aria-label="Terug"
-              onClick={() => (typeof back === 'string' ? nav(back) : nav(-1))}
-              className="-ml-2 mb-0.5 grid size-9 place-items-center rounded-full text-muted active:bg-surface-2"
-            >
-              <Icon name="back" size={20} />
-            </button>
-          )}
-          <div className="min-w-0">
-            {kicker && <div className="label">{kicker}</div>}
-            <h1 className="truncate text-[26px] font-semibold leading-tight tracking-tight">{title}</h1>
-          </div>
+    <>
+      <div
+        className={cx(
+          'pt-safe fixed inset-x-0 top-0 z-30 border-b bg-bg/90 backdrop-blur-xl transition-[border-color,opacity] duration-200',
+          compact ? 'hairline opacity-100' : 'pointer-events-none border-transparent opacity-0',
+        )}
+      >
+        <div className="mx-auto grid h-11 max-w-xl grid-cols-[1fr_auto_1fr] items-center px-4">
+          <div className="justify-self-start">{back ? backBtn : null}</div>
+          <div className="max-w-[60vw] truncate text-[17px] font-semibold">{title}</div>
+          <div className="flex items-center gap-2 justify-self-end">{right}</div>
         </div>
-        {right && <div className="mb-1 flex shrink-0 items-center gap-2">{right}</div>}
       </div>
-    </header>
+      <header className="pt-safe mb-5">
+        <div className="flex h-11 items-center justify-between">
+          {backBtn}
+          <div className="flex items-center gap-2">{right}</div>
+        </div>
+        <h1 className="display mt-1 text-[38px] text-text">{title}</h1>
+        {subtitle && <div className="mt-1.5 text-[15px] text-muted">{subtitle}</div>}
+      </header>
+    </>
   )
 }
 
 type BtnProps = ButtonHTMLAttributes<HTMLButtonElement> & {
-  variant?: 'primary' | 'ghost' | 'outline' | 'danger'
+  variant?: 'primary' | 'ghost' | 'outline' | 'danger' | 'plain'
   size?: 'sm' | 'md' | 'lg'
   icon?: ReactNode
 }
@@ -52,14 +86,15 @@ export function Button({ variant = 'primary', size = 'md', icon, className, chil
         onClick?.(e)
       }}
       className={cx(
-        'inline-flex select-none items-center justify-center gap-2 rounded-full font-medium transition active:scale-[0.97] disabled:opacity-40',
-        size === 'sm' && 'h-9 px-3.5 text-sm',
-        size === 'md' && 'h-11 px-5 text-[15px]',
-        size === 'lg' && 'h-14 px-6 text-base',
+        'inline-flex select-none items-center justify-center gap-2 font-semibold transition duration-150 active:opacity-70 disabled:opacity-40',
+        size === 'sm' && 'h-9 rounded-[10px] px-3.5 text-[15px]',
+        size === 'md' && 'h-11 rounded-xl px-5 text-[17px]',
+        size === 'lg' && 'h-[52px] rounded-[14px] px-6 text-[17px]',
         variant === 'primary' && 'bg-accent text-accent-ink',
         variant === 'ghost' && 'bg-surface-2 text-text',
         variant === 'outline' && 'border hairline text-text',
-        variant === 'danger' && 'bg-danger/15 text-danger',
+        variant === 'danger' && 'bg-surface text-danger',
+        variant === 'plain' && 'text-accent-text',
         className,
       )}
     >
@@ -87,7 +122,7 @@ export function IconButton({
         sfx.tap()
         onClick?.()
       }}
-      className={cx('grid size-10 place-items-center rounded-full border hairline bg-surface text-text active:scale-95', className)}
+      className={cx('grid size-11 place-items-center rounded-full text-accent-text active:opacity-60', className)}
     >
       {children}
     </button>
@@ -98,7 +133,7 @@ export function Card({ children, className, onClick }: { children: ReactNode; cl
   return (
     <div
       onClick={onClick}
-      className={cx('card p-4', onClick && 'cursor-pointer transition active:scale-[0.99]', className)}
+      className={cx('card p-4', onClick && 'cursor-pointer transition-opacity duration-150 active:opacity-70', className)}
       role={onClick ? 'button' : undefined}
     >
       {children}
@@ -118,14 +153,77 @@ export function Section({
   className?: string
 }) {
   return (
-    <section className={cx('mt-6', className)}>
-      <div className="mb-2 flex items-center justify-between">
-        <h2 className="label">{title}</h2>
+    <section className={cx('mt-8', className)}>
+      <div className="mb-2.5 flex items-baseline justify-between gap-3">
+        <h2 className="text-[20px] font-semibold tracking-tight">{title}</h2>
         {action}
       </div>
       {children}
     </section>
   )
+}
+
+/** Tekstlink rechts in een sectiekop, iOS-stijl. */
+export function SectionLink({ to, children }: { to: string; children: ReactNode }) {
+  return (
+    <Link to={to} className="text-[15px] text-accent-text">
+      {children}
+    </Link>
+  )
+}
+
+/** Gegroepeerde lijst zoals iOS Instellingen. */
+export function List({ children, className }: { children: ReactNode; className?: string }) {
+  return <div className={cx('card divide-y divide-[var(--line)] overflow-hidden', className)}>{children}</div>
+}
+
+export function Row({
+  icon,
+  title,
+  detail,
+  value,
+  to,
+  onClick,
+  chevron = !!(to || onClick),
+  className,
+  children,
+}: {
+  icon?: IconName | ReactNode
+  title: ReactNode
+  detail?: ReactNode
+  value?: ReactNode
+  to?: string
+  onClick?: () => void
+  chevron?: boolean
+  className?: string
+  children?: ReactNode
+}) {
+  const body = (
+    <>
+      {icon && (typeof icon === 'string' ? <Icon name={icon as IconName} size={22} className="shrink-0 text-accent-text" /> : icon)}
+      <div className="min-w-0 flex-1">
+        <div className="truncate">{title}</div>
+        {detail && <div className="truncate text-[13px] text-muted">{detail}</div>}
+      </div>
+      {value !== undefined && <div className="num shrink-0 text-[15px] text-muted">{value}</div>}
+      {children}
+      {chevron && <Icon name="chevron" size={14} stroke={2.2} className="shrink-0 text-muted/60" />}
+    </>
+  )
+  const cls = cx('flex min-h-11 w-full items-center gap-3 px-4 py-2.5 text-left', (to || onClick) && 'active:bg-surface-2', className)
+  if (to)
+    return (
+      <Link to={to} className={cls}>
+        {body}
+      </Link>
+    )
+  if (onClick)
+    return (
+      <button type="button" onClick={onClick} className={cls}>
+        {body}
+      </button>
+    )
+  return <div className={cls}>{body}</div>
 }
 
 export function Chip({
@@ -142,13 +240,14 @@ export function Chip({
   return (
     <button
       type="button"
+      aria-pressed={active}
       onClick={() => {
         sfx.toggle()
         onClick?.()
       }}
       className={cx(
-        'inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full border px-3.5 text-sm transition active:scale-95',
-        active ? 'border-accent bg-accent text-accent-ink' : 'hairline bg-surface text-text',
+        'inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full px-3.5 text-[15px] transition-colors duration-150',
+        active ? 'bg-accent text-accent-ink' : 'bg-surface text-text',
         className,
       )}
     >
@@ -157,6 +256,7 @@ export function Chip({
   )
 }
 
+/** iOS segmented control. */
 export function Segmented<T extends string>({
   value,
   options,
@@ -167,18 +267,20 @@ export function Segmented<T extends string>({
   onChange: (v: T) => void
 }) {
   return (
-    <div className="flex rounded-full border hairline bg-surface p-1">
+    <div className="flex rounded-[10px] bg-surface-2 p-0.5" role="tablist">
       {options.map((o) => (
         <button
           key={o.value}
           type="button"
+          role="tab"
+          aria-selected={value === o.value}
           onClick={() => {
             sfx.toggle()
             onChange(o.value)
           }}
           className={cx(
-            'h-9 flex-1 rounded-full px-3 text-sm font-medium transition',
-            value === o.value ? 'bg-accent text-accent-ink' : 'text-muted',
+            'h-8 flex-1 rounded-[8px] px-3 text-[13px] font-semibold transition duration-200',
+            value === o.value ? 'bg-surface text-text shadow-[0_1px_3px_rgba(0,0,0,0.12)]' : 'text-muted',
           )}
         >
           {o.label}
@@ -213,11 +315,11 @@ export function Stepper({
         type="button"
         aria-label="Minder"
         onClick={() => set(value - step)}
-        className="grid size-11 place-items-center rounded-full border hairline bg-surface active:scale-95"
+        className="grid size-11 place-items-center rounded-full bg-surface-2 active:opacity-60"
       >
         <Icon name="minus" size={18} />
       </button>
-      <div className="num min-w-16 text-center text-2xl font-semibold">
+      <div className="display num min-w-14 text-center text-[32px]">
         {value}
         {suffix && <span className="ml-1 text-sm text-muted">{suffix}</span>}
       </div>
@@ -225,7 +327,7 @@ export function Stepper({
         type="button"
         aria-label="Meer"
         onClick={() => set(value + step)}
-        className="grid size-11 place-items-center rounded-full border hairline bg-surface active:scale-95"
+        className="grid size-11 place-items-center rounded-full bg-surface-2 active:opacity-60"
       >
         <Icon name="plus" size={18} />
       </button>
@@ -236,31 +338,39 @@ export function Stepper({
 export function Field({ label, children, hint }: { label: string; children: ReactNode; hint?: string }) {
   return (
     <label className="mt-4 block">
-      <span className="label">{label}</span>
+      <span className="label pl-1">{label}</span>
       <div className="mt-1.5">{children}</div>
-      {hint && <p className="mt-1 text-xs text-muted">{hint}</p>}
+      {hint && <p className="mt-1 pl-1 text-[13px] text-muted">{hint}</p>}
     </label>
   )
 }
 
 export const inputCls =
-  'w-full rounded-2xl border hairline bg-surface px-4 py-3 text-text outline-none placeholder:text-muted/70 focus:border-accent'
+  'w-full rounded-xl border border-transparent bg-surface px-4 py-3 text-text outline-none placeholder:text-muted/70 focus:border-accent'
 
 export function Progress({ value, className }: { value: number; className?: string }) {
   return (
-    <div className={cx('h-2 overflow-hidden rounded-full bg-surface-2', className)}>
-      <div className="h-full rounded-full bg-accent transition-[width] duration-700" style={{ width: `${Math.round(value * 100)}%` }} />
+    <div
+      className={cx('h-1.5 overflow-hidden rounded-full bg-surface-2', className)}
+      role="progressbar"
+      aria-valuenow={Math.round(value * 100)}
+    >
+      <div
+        className="h-full rounded-full bg-accent transition-[width] duration-500 ease-[var(--ease-out-expo)]"
+        style={{ width: `${Math.round(value * 100)}%` }}
+      />
     </div>
   )
 }
 
+/** Lege staat die uitlegt wat hier komt en hoe je begint. */
 export function Empty({ icon, title, body, action }: { icon: ReactNode; title: string; body?: string; action?: ReactNode }) {
   return (
-    <div className="card flex flex-col items-center px-6 py-10 text-center">
-      <div className="mb-3 text-4xl">{icon}</div>
-      <div className="font-semibold">{title}</div>
-      {body && <p className="mt-1 max-w-xs text-sm text-muted">{body}</p>}
-      {action && <div className="mt-4">{action}</div>}
+    <div className="flex flex-col items-center px-6 py-12 text-center">
+      <div className="mb-3 text-muted">{icon}</div>
+      <div className="text-[17px] font-semibold">{title}</div>
+      {body && <p className="mt-1 max-w-xs text-[15px] text-muted">{body}</p>}
+      {action && <div className="mt-5">{action}</div>}
     </div>
   )
 }
@@ -270,22 +380,28 @@ export function Sheet({ open, onClose, title, children }: { open: boolean; onClo
     if (!open) return
     const prev = document.body.style.overflow
     document.body.style.overflow = 'hidden'
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
+    window.addEventListener('keydown', onKey)
     return () => {
       document.body.style.overflow = prev
+      window.removeEventListener('keydown', onKey)
     }
-  }, [open])
+  }, [open, onClose])
   if (!open) return null
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/55 backdrop-blur-[2px]" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-[var(--scrim)]" onClick={onClose}>
       <div
-        className="pop-in pb-safe max-h-[88dvh] w-full max-w-xl overflow-y-auto rounded-t-[28px] border-t hairline bg-surface px-4 pt-3"
+        role="dialog"
+        aria-label={title}
+        className="sheet-in pb-safe max-h-[90dvh] w-full max-w-xl overflow-y-auto rounded-t-[14px] bg-bg px-4 pt-2"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-line" />
-        <div className="mb-3 flex items-center justify-between">
-          <h3 className="text-lg font-semibold">{title}</h3>
-          <button aria-label="Sluiten" onClick={onClose} className="grid size-9 place-items-center rounded-full bg-surface-2">
-            <Icon name="close" size={16} />
+        <div className="mx-auto mb-2 h-1.5 w-9 rounded-full bg-line" />
+        <div className="mb-3 grid grid-cols-[1fr_auto_1fr] items-center">
+          <span />
+          <h3 className="text-[17px] font-semibold">{title}</h3>
+          <button onClick={onClose} className="justify-self-end text-[17px] font-semibold text-accent-text">
+            Klaar
           </button>
         </div>
         {children}
@@ -294,30 +410,37 @@ export function Sheet({ open, onClose, title, children }: { open: boolean; onClo
   )
 }
 
+/** Getal + omschrijving. Zet er meerdere in een `StatGroup`. */
 export function Stat({ label, value, sub }: { label: string; value: ReactNode; sub?: string }) {
   return (
-    <div className="card p-3.5">
-      <div className="label">{label}</div>
-      <div className="num mt-1 text-2xl font-semibold">{value}</div>
-      {sub && <div className="text-xs text-muted">{sub}</div>}
+    <div className="px-3 py-3">
+      <div className="display num text-[30px]">{value}</div>
+      <div className="mt-1 text-[13px] text-muted">
+        {label}
+        {sub ? ` ${sub}` : ''}
+      </div>
     </div>
   )
+}
+
+export function StatGroup({ children, className }: { children: ReactNode; className?: string }) {
+  return <div className={cx('card grid grid-cols-3 divide-x divide-[var(--line)]', className)}>{children}</div>
 }
 
 export function LevelDots({ level }: { level: number }) {
   return (
     <span className="inline-flex gap-0.5" aria-label={`Niveau ${level} van 5`}>
       {[1, 2, 3, 4, 5].map((i) => (
-        <span key={i} className={cx('h-1.5 w-3 rounded-full', i <= level ? 'bg-accent' : 'bg-line')} />
+        <span key={i} className={cx('h-1.5 w-2.5 rounded-full', i <= level ? 'bg-accent' : 'bg-line')} />
       ))}
     </span>
   )
 }
 
-/** Landcode als klein mono-tagje (geen vlag-emoji). */
+/** Landcode als klein tagje (geen vlag-emoji). */
 export function CountryTag({ code }: { code: string }) {
   return (
-    <span className="num inline-grid h-6 w-8 shrink-0 place-items-center rounded-md border hairline text-[10px] font-semibold text-muted">
+    <span className="inline-grid h-6 w-8 shrink-0 place-items-center rounded-md bg-surface-2 text-[11px] font-semibold text-muted">
       {code}
     </span>
   )

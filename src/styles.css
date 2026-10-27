@@ -1,70 +1,82 @@
 @import 'tailwindcss';
-@import '@fontsource-variable/space-grotesk';
-@import '@fontsource-variable/jetbrains-mono';
+@import '@fontsource-variable/archivo/wdth.css';
 
 /* ── Design tokens ────────────────────────────────────────────────────────
-   Zwart + groen, rustig en clean met een underground randje:
-   mono-labels, dunne lijnen, veel ruimte. */
+   Gebruiksscène: buiten op de berg (fel sneeuwlicht) en 's avonds in het huisje.
+   Daarom zijn licht en donker allebei eersteklas. UI in het systeemfont (SF Pro op iPhone),
+   Archivo smal en zwaar alleen voor titels en grote getallen, als een workwear-label.
+   Eén groene tint, alleen voor acties, selectie en voortgang. */
 :root {
-  --bg: #0b0d0a;
-  --surface: #131611;
-  --surface-2: #1b1f18;
-  --line: #262b22;
-  --text: #ecefe6;
-  --muted: #8b9483;
-  --accent: #9be564;
-  --accent-ink: #0b0d0a;
-  --accent-text: #9be564;
-  --accent-soft: rgba(155, 229, 100, 0.12);
-  --warn: #ffb347;
-  --danger: #ff6b5c;
-  --heel: #6cc3ff;
-  --toe: #ff9f5c;
-  --shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
-  color-scheme: dark;
-}
-
-:root[data-theme='light'] {
-  --bg: #efede4;
-  --surface: #f8f7f1;
-  --surface-2: #e7e4d8;
-  --line: #d3cfbf;
-  --text: #141611;
-  --muted: #676b5d;
-  --accent: #9be564;
-  --accent-ink: #0b0d0a;
-  --accent-text: #2f7a14;
-  --accent-soft: rgba(63, 140, 30, 0.12);
-  --warn: #b36b00;
-  --danger: #c23a2b;
-  --heel: #1d7fc4;
-  --toe: #c8621a;
-  --shadow: 0 10px 30px rgba(40, 40, 20, 0.12);
+  --bg: #f3f5f2;
+  --surface: #ffffff;
+  --surface-2: #e8ece7;
+  --line: #d7ddd6;
+  --text: #0f1410;
+  --muted: #576157;
+  --accent: #1f7a3d;
+  --accent-ink: #ffffff;
+  --accent-text: #1c6f37;
+  --accent-soft: rgba(31, 122, 61, 0.1);
+  --warn: #9a5a00;
+  --danger: #b4321f;
+  --heel: #1767b0;
+  --toe: #b8561b;
+  --skin: #c99a78;
+  --jacket: #1f7a3d;
+  --pants: #2a312b;
+  --scrim: rgba(15, 20, 16, 0.45);
   color-scheme: light;
 }
 
-@media (prefers-color-scheme: light) {
-  :root:not([data-theme='dark']) {
-    --bg: #efede4;
-    --surface: #f8f7f1;
-    --surface-2: #e7e4d8;
-    --line: #d3cfbf;
-    --text: #141611;
-    --muted: #676b5d;
-    --accent-text: #2f7a14;
-    --accent-soft: rgba(63, 140, 30, 0.12);
-    --warn: #b36b00;
-    --danger: #c23a2b;
-    --heel: #1d7fc4;
-    --toe: #c8621a;
-    --shadow: 0 10px 30px rgba(40, 40, 20, 0.12);
-    color-scheme: light;
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --bg: #0d100e;
+    --surface: #151916;
+    --surface-2: #1e231f;
+    --line: #2a312b;
+    --text: #edf1eb;
+    --muted: #98a297;
+    --accent: #73cf80;
+    --accent-ink: #09120b;
+    --accent-text: #7fd78b;
+    --accent-soft: rgba(115, 207, 128, 0.12);
+    --warn: #e8a64a;
+    --danger: #f07b66;
+    --heel: #6db4f0;
+    --toe: #f0a06a;
+    --skin: #d6aa88;
+    --jacket: #73cf80;
+    --pants: #c9d1c7;
+    --scrim: rgba(0, 0, 0, 0.6);
+    color-scheme: dark;
   }
 }
 
+:root[data-theme='dark'] {
+  --bg: #0d100e;
+  --surface: #151916;
+  --surface-2: #1e231f;
+  --line: #2a312b;
+  --text: #edf1eb;
+  --muted: #98a297;
+  --accent: #73cf80;
+  --accent-ink: #09120b;
+  --accent-text: #7fd78b;
+  --accent-soft: rgba(115, 207, 128, 0.12);
+  --warn: #e8a64a;
+  --danger: #f07b66;
+  --heel: #6db4f0;
+  --toe: #f0a06a;
+  --skin: #d6aa88;
+  --jacket: #73cf80;
+  --pants: #c9d1c7;
+  --scrim: rgba(0, 0, 0, 0.6);
+  color-scheme: dark;
+}
+
 @theme {
-  --font-sans: 'Space Grotesk Variable', ui-sans-serif, system-ui, sans-serif;
-  --font-mono: 'JetBrains Mono Variable', ui-monospace, monospace;
+  --font-sans: -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+  --font-display: 'Archivo Variable', -apple-system, system-ui, sans-serif;
   --color-bg: var(--bg);
   --color-surface: var(--surface);
   --color-surface-2: var(--surface-2);
@@ -79,6 +91,7 @@
   --color-danger: var(--danger);
   --color-heel: var(--heel);
   --color-toe: var(--toe);
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 html,
@@ -86,24 +99,39 @@ body {
   background: var(--bg);
   color: var(--text);
   font-family: var(--font-sans);
+  font-size: 17px;
+  line-height: 1.4;
   -webkit-font-smoothing: antialiased;
   -webkit-tap-highlight-color: transparent;
   overscroll-behavior-y: none;
+  caret-color: var(--accent);
 }
 
 body {
   min-height: 100dvh;
-  /* Subtiel raster, net wat anders dan normaal */
-  background-image: radial-gradient(color-mix(in srgb, var(--text) 7%, transparent) 1px, transparent 1px);
-  background-size: 22px 22px;
-  background-attachment: fixed;
+}
+
+::selection {
+  background: var(--accent-soft);
+  color: var(--text);
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 10px;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--line) transparent;
 }
 
 /* iOS zoomt in op inputs < 16px */
 input,
 select,
 textarea {
-  font-size: 16px;
+  font-size: 17px;
 }
 
 button {
@@ -118,23 +146,31 @@ button {
   padding-bottom: max(env(safe-area-inset-bottom), 10px);
 }
 
+/* Titels en grote getallen: smal en zwaar, workwear-label */
+.display {
+  font-family: var(--font-display);
+  font-stretch: 72%;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  line-height: 1;
+  text-wrap: balance;
+}
+
+/* Footnote/caption: rustige secundaire tekst (geen mono-kostuum) */
 .label {
-  font-family: var(--font-mono);
-  font-size: 10.5px;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
+  font-size: 13px;
+  line-height: 1.3;
   color: var(--muted);
 }
 
 .num {
-  font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
 }
 
+/* Gegroepeerd blok, zoals een inset-lijst in iOS. Alleen waar iets echt een groep is. */
 .card {
   background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: 18px;
+  border-radius: 14px;
 }
 
 .hairline {
@@ -150,7 +186,7 @@ button {
 
 @keyframes pop-in {
   from {
-    transform: translateY(8px) scale(0.98);
+    transform: translateY(6px);
     opacity: 0;
   }
   to {
@@ -159,21 +195,46 @@ button {
   }
 }
 .pop-in {
-  animation: pop-in 0.28s cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+  animation: pop-in 220ms var(--ease-out-expo) both;
 }
 
-@keyframes blink {
-  50% {
-    opacity: 0.25;
+@keyframes sheet-in {
+  from {
+    transform: translateY(24px);
+    opacity: 0.6;
+  }
+  to {
+    transform: none;
+    opacity: 1;
   }
 }
-.blink {
-  animation: blink 1.2s steps(2) infinite;
+.sheet-in {
+  animation: sheet-in 300ms var(--ease-out-expo) both;
+}
+
+/* Markering op het lichaamsdeel waar de stap om draait */
+@keyframes cue-pulse {
+  from {
+    transform: scale(1);
+    opacity: 1;
+  }
+  to {
+    transform: scale(1.9);
+    opacity: 0;
+  }
+}
+.cue-ring {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: cue-pulse 1.3s var(--ease-out-expo) infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {
   .pop-in,
-  .blink {
+  .sheet-in {
+    animation-duration: 1ms;
+  }
+  .cue-ring {
     animation: none;
   }
 }

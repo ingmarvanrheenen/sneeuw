@@ -63,7 +63,7 @@ export default function GearPage() {
 
   return (
     <Page>
-      <PageHeader kicker="Setup" title="Gear & stance" back />
+      <PageHeader title="Gear & stance" back />
 
       {profile && (
         <Card>
@@ -103,31 +103,43 @@ export default function GearPage() {
               {(profile.stanceWidth ?? 52) * 1} cm breed · {profile.angleFront}° / {profile.angleBack}°
             </text>
           </svg>
-          <div className="mt-2 grid grid-cols-3 gap-2 text-center">
-            <div>
-              <div className="label mb-1">Voor</div>
-              <Stepper
-                value={profile.angleFront ?? 15}
-                onChange={(v) => saveStance({ ...profile, angleFront: v })}
-                min={-30}
-                max={45}
-                step={3}
-              />
-            </div>
-            <div>
-              <div className="label mb-1">Achter</div>
-              <Stepper
-                value={profile.angleBack ?? -15}
-                onChange={(v) => saveStance({ ...profile, angleBack: v })}
-                min={-30}
-                max={30}
-                step={3}
-              />
-            </div>
-            <div>
-              <div className="label mb-1">Breedte</div>
-              <Stepper value={profile.stanceWidth ?? 52} onChange={(v) => saveStance({ ...profile, stanceWidth: v })} min={40} max={65} />
-            </div>
+          <div className="mt-3 divide-y divide-[var(--line)]">
+            {(
+              [
+                ['Voorste binding', 'angleFront', 15, -30, 45, 3, '°'],
+                ['Achterste binding', 'angleBack', -15, -30, 30, 3, '°'],
+                ['Stance-breedte', 'stanceWidth', 52, 40, 65, 1, ' cm'],
+              ] as const
+            ).map(([label, key, def, min, max, step, unit]) => (
+              <div key={key} className="flex items-center justify-between gap-3 py-2">
+                <span className="text-[15px]">{label}</span>
+                <span className="flex items-center gap-2">
+                  <span className="num w-14 text-right text-[17px] font-semibold">
+                    {profile[key] ?? def}
+                    {unit}
+                  </span>
+                  <span className="flex overflow-hidden rounded-[9px] bg-surface-2">
+                    <button
+                      type="button"
+                      aria-label={`${label} lager`}
+                      onClick={() => saveStance({ ...profile, [key]: Math.max(min, (profile[key] ?? def) - step) })}
+                      className="grid h-8 w-11 place-items-center active:bg-line"
+                    >
+                      <Icon name="minus" size={16} />
+                    </button>
+                    <span className="my-1.5 w-px bg-line" />
+                    <button
+                      type="button"
+                      aria-label={`${label} hoger`}
+                      onClick={() => saveStance({ ...profile, [key]: Math.min(max, (profile[key] ?? def) + step) })}
+                      className="grid h-8 w-11 place-items-center active:bg-line"
+                    >
+                      <Icon name="plus" size={16} />
+                    </button>
+                  </span>
+                </span>
+              </div>
+            ))}
           </div>
           <p className="mt-3 text-xs text-muted">Beginners: +15 / −15 (duck) is een prima start. Fijn voor switch, en dat ga je willen.</p>
         </Card>
@@ -185,11 +197,15 @@ export default function GearPage() {
             body="Houd bij wat je hebt, wat je huurt en wat op je wishlist staat."
           />
         ) : (
-          <div className="space-y-2">
+          <div className="card divide-y divide-[var(--line)] overflow-hidden">
             {gear.map((g) => {
               const k = KINDS.find((x) => x.id === g.gearKind)!
               return (
-                <Card key={g.id} onClick={() => setEdit(g)} className="flex items-center gap-3 py-3">
+                <button
+                  key={g.id}
+                  onClick={() => setEdit(g)}
+                  className="flex w-full items-center gap-3 px-4 py-3 text-left active:bg-surface-2"
+                >
                   <Icon name={k.icon} size={22} className="text-accent-text" />
                   <div className="min-w-0 flex-1">
                     <div className="truncate text-sm font-medium">
@@ -209,7 +225,7 @@ export default function GearPage() {
                   >
                     {g.owned}
                   </span>
-                </Card>
+                </button>
               )
             })}
           </div>

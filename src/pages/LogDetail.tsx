@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { Button, Card, Page, PageHeader, Section, Stat, Sheet } from '../components/ui'
+import { Button, Card, Page, PageHeader, Section, Stat, Sheet, StatGroup } from '../components/ui'
 import { Icon, Mood, MOOD_LABELS } from '../design/icons'
 import { MediaGrid } from '../components/Media'
 import { remove, useRecord } from '../lib/repo'
@@ -40,7 +40,7 @@ export default function LogDetail() {
   return (
     <Page>
       <PageHeader
-        kicker={fmtDate(s.date, true)}
+        subtitle={fmtDate(s.date, true)}
         title={s.resortName || 'Dag'}
         back="/log"
         right={
@@ -66,11 +66,11 @@ export default function LogDetail() {
         </div>
       </Card>
 
-      <div className="mt-2 grid grid-cols-3 gap-2">
+      <StatGroup className="mt-2">
         <Stat label="Uren" value={s.hours} />
         <Stat label="Gevallen" value={s.falls} />
         <Stat label="Geland" value={s.landed.length} />
-      </div>
+      </StatGroup>
 
       {(s.snow || weather || s.pistes.length > 0) && (
         <Card className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">

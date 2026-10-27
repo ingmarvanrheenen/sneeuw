@@ -1,39 +1,43 @@
-import { Link } from 'react-router-dom'
-import { Page, PageHeader } from '../components/ui'
-import { Icon, type IconName } from '../design/icons'
+import { List, Page, PageHeader, Row } from '../components/ui'
 import { SyncBadge } from '../components/SyncBadge'
+import type { IconName } from '../design/icons'
 
-const ITEMS: { to: string; label: string; sub: string; icon: IconName }[] = [
-  { to: '/coach', label: 'Coach Daddy', sub: 'Je AI-buddy', icon: 'chat' },
-  { to: '/stats', label: 'Stats', sub: 'Grafieken & progressie', icon: 'chart' },
-  { to: '/badges', label: 'Levels & badges', sub: 'Je trofeeënkast', icon: 'trophy' },
-  { to: '/kluis', label: 'Kluis', sub: 'Gelande tricks + clips', icon: 'vault' },
-  { to: '/doelen', label: 'Doelen', sub: 'Wat wil je leren', icon: 'target' },
-  { to: '/reizen', label: 'Trips & paklijst', sub: 'Aftellen en inpakken', icon: 'suitcase' },
-  { to: '/weer', label: 'Weer & sneeuw', sub: 'Frankrijk & Oostenrijk', icon: 'snow' },
-  { to: '/gear', label: 'Gear & stance', sub: 'Je setup', icon: 'board' },
-  { to: '/quiz', label: 'Quiz', sub: 'Ken je de termen?', icon: 'quiz' },
-  { to: '/instellingen', label: 'Instellingen', sub: 'Account, thema, geluid', icon: 'sliders' },
+type Item = { to: string; label: string; icon: IconName }
+
+// Gegroepeerd op wat je ermee doet, zoals iOS Instellingen.
+const GROUPS: Item[][] = [
+  [
+    { to: '/coach', label: 'Coach Daddy', icon: 'chat' },
+    { to: '/stats', label: 'Stats', icon: 'chart' },
+    { to: '/badges', label: 'Levels en badges', icon: 'trophy' },
+    { to: '/kluis', label: 'Kluis', icon: 'vault' },
+  ],
+  [
+    { to: '/doelen', label: 'Doelen', icon: 'target' },
+    { to: '/reizen', label: 'Trips en paklijst', icon: 'suitcase' },
+    { to: '/weer', label: 'Sneeuwradar', icon: 'snow' },
+    { to: '/gear', label: 'Gear en stance', icon: 'board' },
+    { to: '/quiz', label: 'Quiz', icon: 'quiz' },
+  ],
+  [
+    { to: '/instellingen', label: 'Instellingen', icon: 'sliders' },
+    { to: '/design', label: 'Design system', icon: 'palette' },
+  ],
 ]
 
 export default function More() {
   return (
     <Page>
-      <PageHeader kicker="04 / Meer" title="Meer" right={<SyncBadge />} />
-      <div className="grid grid-cols-2 gap-2">
-        {ITEMS.map((it) => (
-          <Link key={it.to} to={it.to} className="card flex flex-col gap-3 p-4 active:scale-[0.98]">
-            <Icon name={it.icon} size={26} className="text-accent-text" />
-            <div>
-              <div className="font-semibold leading-tight">{it.label}</div>
-              <div className="mt-0.5 text-xs text-muted">{it.sub}</div>
-            </div>
-          </Link>
+      <PageHeader title="Meer" right={<SyncBadge />} />
+      <div className="space-y-6">
+        {GROUPS.map((g, i) => (
+          <List key={i}>
+            {g.map((it) => (
+              <Row key={it.to} icon={it.icon} title={it.label} to={it.to} />
+            ))}
+          </List>
         ))}
       </div>
-      <Link to="/design" className="label mt-8 block text-center">
-        Design system
-      </Link>
     </Page>
   )
 }

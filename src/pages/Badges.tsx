@@ -9,7 +9,7 @@ export default function Badges() {
   const unlocked = new Set(p.badges.map((b) => b.id))
   return (
     <Page>
-      <PageHeader kicker="Progressie" title="Levels & badges" back />
+      <PageHeader title="Levels & badges" back />
       <Card>
         <div className="flex items-end justify-between">
           <div>
@@ -28,7 +28,7 @@ export default function Badges() {
             const current = i + 1 === p.level.level
             return (
               <li key={l.name} className={cx('flex items-center gap-3 px-4 py-2.5', current && 'bg-accent-soft')}>
-                <span className={cx('num w-6 text-sm', reached ? 'text-accent-text' : 'text-muted')}>{String(i + 1).padStart(2, '0')}</span>
+                <span className={cx('num w-6 text-sm', reached ? 'text-accent-text' : 'text-muted')}>{i + 1}</span>
                 <span className={cx('flex-1 text-sm', reached ? 'font-medium' : 'text-muted')}>{l.name}</span>
                 <span className="num text-xs text-muted">{l.xp}</span>
               </li>

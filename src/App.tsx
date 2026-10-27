@@ -41,7 +41,7 @@ function TabBar() {
   const { pathname } = useLocation()
   if (pathname === '/log/nieuw' || pathname.endsWith('/bewerk') || pathname === '/coach') return null
   return (
-    <nav className="pb-safe fixed inset-x-0 bottom-0 z-30 border-t hairline bg-bg/90 backdrop-blur-md">
+    <nav className="pb-safe fixed inset-x-0 bottom-0 z-30 border-t hairline bg-bg/90 backdrop-blur-xl">
       <div className="mx-auto flex max-w-xl">
         {TABS.map(({ to, label, icon, end }) => (
           <NavLink
@@ -50,15 +50,15 @@ function TabBar() {
             end={end}
             className={({ isActive }) =>
               cx(
-                'flex flex-1 flex-col items-center gap-0.5 pt-2.5 pb-1 text-[10px] font-medium',
+                'flex flex-1 flex-col items-center gap-1 pt-2 pb-0.5 text-[10px] font-medium transition-colors duration-150',
                 isActive ? 'text-accent-text' : 'text-muted',
               )
             }
           >
             {({ isActive }) => (
               <>
-                <Icon name={icon} size={22} stroke={isActive ? 2.2 : 1.6} />
-                <span className="font-mono uppercase tracking-wider">{label}</span>
+                <Icon name={icon} size={25} stroke={isActive ? 2.1 : 1.6} />
+                <span>{label}</span>
               </>
             )}
           </NavLink>

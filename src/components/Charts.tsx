@@ -54,7 +54,7 @@ export function BarChart({
                 />
               )}
               {i === active && d.value > 0 && (
-                <text x={x + bw / 2} y={top - 6} textAnchor="middle" fill="var(--text)" style={{ font: '600 11px var(--font-mono)' }}>
+                <text x={x + bw / 2} y={top - 6} textAnchor="middle" fill="var(--text)" style={{ font: '600 12px var(--font-sans)' }}>
                   {Number.isInteger(d.value) ? d.value : d.value.toFixed(1)}
                   {unit}
                 </text>
@@ -122,7 +122,7 @@ export function LineChart({
           y={12}
           textAnchor={active > data.length / 2 ? 'end' : 'start'}
           fill="var(--text)"
-          style={{ font: '600 11px var(--font-mono)' }}
+          style={{ font: '600 12px var(--font-sans)' }}
         >
           {data[active].label} · {data[active].value.toFixed(1)}
           {unit}

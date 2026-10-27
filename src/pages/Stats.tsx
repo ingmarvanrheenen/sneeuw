@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { Card, Empty, Page, PageHeader, Section, Stat } from '../components/ui'
+import { Card, Empty, Page, PageHeader, Section, Stat, StatGroup } from '../components/ui'
 import { BarChart, HBar, LineChart } from '../components/Charts'
 import { Icon, Mood, MOOD_LABELS } from '../design/icons'
 import { useProgress } from '../lib/useProgress'
@@ -46,7 +46,7 @@ export default function Stats() {
 
   return (
     <Page>
-      <PageHeader kicker="Stats" title="Je progressie" back />
+      <PageHeader title="Je progressie" back />
       {s.days === 0 ? (
         <Empty
           icon={<Icon name="chart" size={40} className="text-muted" />}
@@ -55,14 +55,16 @@ export default function Stats() {
         />
       ) : (
         <>
-          <div className="grid grid-cols-3 gap-2">
+          <StatGroup>
             <Stat label="Dagen" value={s.days} />
             <Stat label="Uren" value={s.hours} />
             <Stat label="Gevallen" value={s.falls} />
-            <Stat label="Geland" value={s.tricksLanded} sub="tricks" />
+          </StatGroup>
+          <StatGroup className="mt-2">
+            <Stat label="Tricks geland" value={s.tricksLanded} />
             <Stat label="Gebieden" value={s.resorts} />
-            <Stat label="Val/uur" value={s.fallsPerHour.toFixed(1)} />
-          </div>
+            <Stat label="Val per uur" value={s.fallsPerHour.toFixed(1)} />
+          </StatGroup>
 
           {data.trend && (
             <Card className="mt-2 flex items-center gap-3">
