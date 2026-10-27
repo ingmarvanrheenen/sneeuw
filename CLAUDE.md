@@ -6,11 +6,19 @@ Snowboard-PWA (React 19 + Vite + TS + Tailwind v4 + Dexie, optioneel Supabase). 
 
 - `npm run dev`: dev-server
 - `npm test`: vitest
+- `npm run test:db`: RLS/migratietests tegen lokale Postgres 16
 - `npm run lint`: prettier-check + typecheck
 - `npm run format`: prettier write
 - `npm run build`: productie-build
 
 Draai vóór elke commit `npm run lint && npm test && npm run build`.
+
+## Tests (afspraak)
+
+- **Alles wat je bouwt of wijzigt krijgt unit tests in dezelfde commit**: logica in `src/lib`, componenten en pagina's, en bugfixes (eerst een test die de bug laat zien, dan de fix).
+- Tests staan in `src/test/*.test.ts(x)` (vitest + jsdom + fake-indexeddb). Componenten test je met Testing Library (`@testing-library/react`, `user-event`): wat de gebruiker ziet en doet, niet de implementatie.
+- Supabase en andere netwerkcalls worden in unit tests gemockt (`vi.mock`); nooit echte API's of API-keys in tests.
+- Database-regels (migraties, RLS) test je tegen een lokale Postgres 16 met `npm run test:db` (stub + scripts in `supabase/tests/`) voordat de migratie naar Supabase gaat. Nieuwe tabel of policy = nieuw scenario-script daar.
 
 ## Afspraken
 
