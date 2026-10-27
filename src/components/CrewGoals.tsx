@@ -41,9 +41,12 @@ export function CrewGoals({ tripId, crewId, ownerId, ready = true }: { tripId: s
     const refresh = () => document.visibilityState === 'visible' && void load()
     document.addEventListener('visibilitychange', refresh)
     window.addEventListener('online', refresh)
+    // zolang je kijkt elke halve minuut, zodat je het vinkje van je maat ziet
+    const t = setInterval(refresh, 30_000)
     return () => {
       document.removeEventListener('visibilitychange', refresh)
       window.removeEventListener('online', refresh)
+      clearInterval(t)
     }
   }, [tripId, load])
 

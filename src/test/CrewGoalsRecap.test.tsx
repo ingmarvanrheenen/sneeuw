@@ -141,6 +141,22 @@ describe('crew-doelen', () => {
     expect(screen.getByText('1/3 gehaald')).toBeTruthy()
   })
 
+  it('ververst elke halve minuut zolang je kijkt: je ziet het vinkje van je maat', async () => {
+    vi.useFakeTimers({ toFake: ['setInterval'] })
+    try {
+      render(<CrewGoals tripId="t1" crewId="c1" ownerId="daan" />)
+      await loaded()
+      api.listGoals.mockResolvedValue([
+        goal({ id: 'g1', title: 'Iedereen een rode piste', done: ['daan', 'sem'] }),
+        goal({ id: 'g2', title: 'Samen de eerste lift', created_by: ME, done: ['sem'] }),
+      ])
+      vi.advanceTimersByTime(30_000)
+      expect(await screen.findByText('1/3 gehaald · Sem')).toBeTruthy()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
   it('offline: laatst bekende doelen, niks bewerken', async () => {
     online(false)
     api.cachedGoals.mockResolvedValue([goal({ id: 'g1', title: 'Iedereen een rode piste' })])
