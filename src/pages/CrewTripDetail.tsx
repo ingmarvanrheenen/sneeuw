@@ -4,6 +4,9 @@ import { useParams } from 'react-router-dom'
 import { Empty, Page, PageHeader, Stat, StatGroup } from '../components/ui'
 import { Icon, Spinner } from '../design/icons'
 import { GroupList } from '../components/GroupList'
+import { CrewGoals } from '../components/CrewGoals'
+import { TripRecap } from '../components/TripRecap'
+import { todayISO } from '../lib/ids'
 import { cachedCrewTrips, crewTrips, type CrewTrip } from '../lib/crewTrips'
 import { crewMembers } from '../lib/crew'
 import { daysUntil, fmtShort } from '../lib/format'
@@ -67,6 +70,8 @@ export default function CrewTripDetail() {
         <Stat label="Van" value={t.startDate ? fmtShort(t.startDate) : '–'} />
         <Stat label="Tot" value={t.endDate ? fmtShort(t.endDate) : '–'} />
       </StatGroup>
+      {t.startDate && t.startDate <= todayISO() && <TripRecap tripId={ct.id} crewId={ct.crewId} trip={t} />}
+      <CrewGoals tripId={ct.id} crewId={ct.crewId} ownerId={ct.ownerId} />
       <GroupList tripId={ct.id} crewId={ct.crewId} ownerId={ct.ownerId} />
     </Page>
   )

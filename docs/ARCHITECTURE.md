@@ -52,6 +52,9 @@ Foto's worden op het toestel verkleind naar max 2048 px (JPEG). Video's gaan doo
 - Storage-policy: je leest je eigen map, plus bestanden die aan een met jouw crew gedeeld media-record hangen.
 - `reactions` voor reacties op posts; `crew_members_with_stats` levert het leaderboard.
 - **Crew-trip**: een trip met `crewId` is leesbaar voor de crew (gewone records-RLS). De **groepslijst** staat in `crew_trip_items` (migratie `20261027000000`): iedereen in de crew mag toevoegen, afvinken en zichzelf claimen ("ik neem 'm mee"); claimen voor een ander kan niet (trigger), verwijderen kan wie het toevoegde of de trip-eigenaar, en `crew_id`/`trip_id` liggen vast (kolomrechten). Toevoegen kan pas als de trip gesynct is (`is_crew_trip()` checkt het record). Online-first met de laatst bekende lijst lokaal in `kv`.
+- **Crew-doelen** (migratie `20261027010000`): `crew_trip_goals` (titel, wie het aanmaakte) plus `crew_trip_goal_done` (één rij per persoon die het haalde). Iedereen vinkt alleen voor zichzelf af (RLS: `user_id = auth.uid()`), de titel wijzigen kan alleen de maker, verwijderen de maker of de trip-eigenaar. Wie als laatste van de crew afvinkt, krijgt het feestje.
+- **Trip-recap**: geen eigen tabel. `tripDays()` haalt de met de crew gedeelde dagen (`records` kind `session` met die `crewId`) binnen de tripperiode op, `computeRecap()` (puur) telt per persoon dagen, uren, valpartijen en tricks op. De laatste recap staat in `kv` voor offline.
+- **Online-first lijsten** (groepslijst, doelen): een lege cache wordt online genegeerd (spinner tot de server antwoordt), en een refresh die liep terwijl jij iets wijzigde, wordt weggegooid zodat hij je net gezette vinkje niet terugdraait.
 - Je crewlijst staat ook lokaal (`kv: crews`), zodat je zonder bereik een dag met je crew kunt delen. De feed ververst stil bij terugkomen, weer online en elke minuut.
 
 ## Coach Daddy

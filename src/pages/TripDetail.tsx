@@ -2,6 +2,9 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { Button, List, Page, PageHeader, Progress, Row, Section, Stat, Toggle, cx, inputCls, StatGroup } from '../components/ui'
 import { GroupList } from '../components/GroupList'
+import { CrewGoals } from '../components/CrewGoals'
+import { TripRecap } from '../components/TripRecap'
+import { todayISO, uid } from '../lib/ids'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { kvGet } from '../lib/db'
 import { authStore } from '../lib/auth'
@@ -10,7 +13,7 @@ import { cachedCrews, myCrews, type Crew } from '../lib/crew'
 import { Icon } from '../design/icons'
 import { remove, update, useKind, useRecord } from '../lib/repo'
 import { daysUntil, fmtShort } from '../lib/format'
-import { uid } from '../lib/ids'
+
 import { sfx } from '../lib/sounds'
 import { celebrate, undoToast } from '../lib/toast'
 import type { PackItem, Trip } from '../lib/types'
@@ -58,7 +61,13 @@ function CrewShare({ trip }: { trip: Trip }) {
           </List>
         )}
       </Section>
-      {shared && <GroupList tripId={trip.id} crewId={shared.id} ownerId={trip.userId ?? user.id} ready={ready} />}
+      {shared && (
+        <>
+          {trip.startDate && trip.startDate <= todayISO() && <TripRecap tripId={trip.id} crewId={shared.id} trip={trip} />}
+          <CrewGoals tripId={trip.id} crewId={shared.id} ownerId={trip.userId ?? user.id} ready={ready} />
+          <GroupList tripId={trip.id} crewId={shared.id} ownerId={trip.userId ?? user.id} ready={ready} />
+        </>
+      )}
     </>
   )
 }

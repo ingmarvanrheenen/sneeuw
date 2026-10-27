@@ -5,7 +5,7 @@
 import { supabase } from './supabase'
 import { kvGet, kvSet } from './db'
 import { getCurrentUserId } from './auth-state'
-import type { Trip } from './types'
+import type { Session, Trip } from './types'
 
 export interface CrewTripItem {
   id: string
@@ -111,4 +111,142 @@ export async function setDone(itemId: string, done: boolean) {
 export async function removeItem(itemId: string) {
   const { error } = await need().from('crew_trip_items').delete().eq('id', itemId)
   if (error) throw error
+}
+
+// ── Crew-doelen: "iedereen een rode piste", iedereen vinkt voor zichzelf af ──────────────────
+
+export interface CrewGoal {
+  id: string
+  crew_id: string
+  trip_id: string
+  title: string
+  created_by: string
+  created_at: string
+  /** wie het gehaald heeft */
+  done: string[]
+}
+
+const goalsKey = (tripId: string) => `tripGoals:${tripId}`
+
+export function cachedGoals(tripId: string): Promise<CrewGoal[]> {
+  return kvGet<CrewGoal[]>(goalsKey(tripId), [])
+}
+
+export async function listGoals(tripId: string): Promise<CrewGoal[]> {
+  const sb = need()
+  const { data: goals, error } = await sb
+    .from('crew_trip_goals')
+    .select('id, crew_id, trip_id, title, created_by, created_at')
+    .eq('trip_id', tripId)
+    .order('created_at')
+  if (error) throw error
+  const ids = (goals ?? []).map((g) => g.id)
+  let done: { goal_id: string; user_id: string }[] = []
+  if (ids.length) {
+    const res = await sb.from('crew_trip_goal_done').select('goal_id, user_id').in('goal_id', ids)
+    if (res.error) throw res.error
+    done = res.data ?? []
+  }
+  const list = (goals ?? []).map((g) => ({ ...g, done: done.filter((d) => d.goal_id === g.id).map((d) => d.user_id) })) as CrewGoal[]
+  await kvSet(goalsKey(tripId), list)
+  return list
+}
+
+export async function addGoal(crewId: string, tripId: string, title: string): Promise<CrewGoal> {
+  const { data, error } = await need()
+    .from('crew_trip_goals')
+    .insert({ crew_id: crewId, trip_id: tripId, title: title.trim().slice(0, 80) })
+    .select('id, crew_id, trip_id, title, created_by, created_at')
+    .single()
+  if (error) throw error
+  return { ...(data as Omit<CrewGoal, 'done'>), done: [] }
+}
+
+export async function removeGoal(goalId: string) {
+  const { error } = await need().from('crew_trip_goals').delete().eq('id', goalId)
+  if (error) throw error
+}
+
+/** Alleen voor jezelf: de database staat niks anders toe. */
+export async function setGoalDone(goalId: string, done: boolean) {
+  const sb = need()
+  const me = getCurrentUserId()
+  const { error } = done
+    ? await sb.from('crew_trip_goal_done').insert({ goal_id: goalId })
+    : await sb
+        .from('crew_trip_goal_done')
+        .delete()
+        .eq('goal_id', goalId)
+        .eq('user_id', me ?? '')
+  if (error) throw error
+}
+
+// ── Trip-recap: alle met de crew gedeelde dagen binnen de tripperiode bij elkaar ─────────────
+
+export interface SharedDay {
+  user_id: string
+  data: Session
+}
+
+export async function tripDays(crewId: string, trip: Pick<Trip, 'startDate' | 'endDate'>): Promise<SharedDay[]> {
+  if (!trip.startDate) return []
+  const { data, error } = await need()
+    .from('records')
+    .select('user_id, data')
+    .eq('kind', 'session')
+    .eq('crew_id', crewId)
+    .eq('deleted', false)
+  if (error) throw error
+  const end = trip.endDate ?? trip.startDate
+  return ((data ?? []) as SharedDay[]).filter((d) => d.data.date >= trip.startDate! && d.data.date <= end)
+}
+
+export interface RecapPerson {
+  userId: string
+  name: string
+  days: number
+  hours: number
+  falls: number
+  landed: string[]
+}
+
+export interface Recap {
+  days: number
+  hours: number
+  falls: number
+  /** unieke trick-ids die iemand in de crew deze trip landde */
+  landed: string[]
+  people: RecapPerson[]
+  mostHours?: RecapPerson
+  mostFalls?: RecapPerson
+  mostTricks?: RecapPerson
+}
+
+/** Rekent de recap uit. Puur: geen netwerk, zodat hij makkelijk te testen is. */
+export function computeRecap(days: SharedDay[], names: Record<string, string>): Recap {
+  const byUser = new Map<string, RecapPerson>()
+  for (const { user_id, data: s } of days) {
+    const p = byUser.get(user_id) ?? { userId: user_id, name: names[user_id] ?? 'Iemand', days: 0, hours: 0, falls: 0, landed: [] }
+    p.days += 1
+    p.hours += s.hours || 0
+    p.falls += s.falls || 0
+    for (const t of s.landed ?? []) if (!p.landed.includes(t)) p.landed.push(t)
+    byUser.set(user_id, p)
+  }
+  const people = [...byUser.values()].sort((a, b) => b.hours - a.hours || a.name.localeCompare(b.name))
+  const top = (key: 'hours' | 'falls') => {
+    const best = [...people].sort((a, b) => b[key] - a[key])[0]
+    return best && best[key] > 0 ? best : undefined
+  }
+  const mostTricks = [...people].sort((a, b) => b.landed.length - a.landed.length)[0]
+  return {
+    days: days.length,
+    hours: Math.round(people.reduce((a, p) => a + p.hours, 0) * 10) / 10,
+    falls: people.reduce((a, p) => a + p.falls, 0),
+    landed: [...new Set(people.flatMap((p) => p.landed))],
+    people,
+    mostHours: people.length > 1 ? top('hours') : undefined,
+    mostFalls: people.length > 1 ? top('falls') : undefined,
+    mostTricks: people.length > 1 && mostTricks?.landed.length ? mostTricks : undefined,
+  }
 }

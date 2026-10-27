@@ -22,6 +22,9 @@ vi.mock('../lib/crewTrips', async (orig) => ({
   crewTrips: m.crewTrips,
   cachedCrewTrips: m.cachedCrewTrips,
 }))
+// crew-doelen en recap hebben eigen tests; hier alleen of ze getoond worden
+vi.mock('../components/CrewGoals', () => ({ CrewGoals: (p: { tripId: string }) => <div data-testid="crewgoals">{p.tripId}</div> }))
+vi.mock('../components/TripRecap', () => ({ TripRecap: (p: { tripId: string }) => <div data-testid="recap">{p.tripId}</div> }))
 // de groepslijst heeft eigen tests; hier alleen kijken of en hoe hij getoond wordt
 vi.mock('../components/GroupList', () => ({
   GroupList: (p: { tripId: string; crewId: string; ready?: boolean }) => (
@@ -118,6 +121,40 @@ describe('groepslijst blijft bruikbaar', () => {
     await user.click(screen.getByRole('checkbox', { name: /Helm/ }))
     await waitFor(async () => expect((await db.records.get(t.id))?.dirty).toBe(1))
     expect(screen.getByTestId('grouplist').textContent).toBe(`${t.id}|c1|klaar`)
+  })
+})
+
+describe('crew-doelen en recap op de trippagina', () => {
+  it('gedeelde trip: crew-doelen altijd, recap pas als de trip begonnen is', async () => {
+    const t = await create('trip', { name: 'Toekomst', startDate: '2099-01-01', packing: [] })
+    await db.records.update(t.id, { crewId: 'c1', dirty: 0 })
+    page(`/reizen/${t.id}`)
+    expect(await screen.findByTestId('crewgoals')).toBeTruthy()
+    expect(screen.queryByTestId('recap')).toBeNull()
+  })
+
+  it('begonnen trip: recap staat erbij', async () => {
+    const t = await create('trip', { name: 'Nu', startDate: '2020-01-01', endDate: '2020-01-08', packing: [] })
+    await db.records.update(t.id, { crewId: 'c1', dirty: 0 })
+    page(`/reizen/${t.id}`)
+    expect(await screen.findByTestId('recap')).toBeTruthy()
+  })
+
+  it('niet gedeeld: geen crew-doelen of recap', async () => {
+    const t = await create('trip', { name: 'Solo', startDate: '2020-01-01', packing: [] })
+    page(`/reizen/${t.id}`)
+    await screen.findByText(/Delen met Shredheads/)
+    expect(screen.queryByTestId('crewgoals')).toBeNull()
+    expect(screen.queryByTestId('recap')).toBeNull()
+  })
+
+  it('crew-trip van een maat: doelen en (als begonnen) recap', async () => {
+    m.crewTrips.mockResolvedValue([
+      { id: 't8', ownerId: 'daan', crewId: 'c1', trip: { name: 'Bezig', startDate: '2020-01-01', packing: [] } },
+    ])
+    page('/reizen/crew/t8')
+    expect(await screen.findByTestId('crewgoals')).toBeTruthy()
+    expect(screen.getByTestId('recap')).toBeTruthy()
   })
 })
 

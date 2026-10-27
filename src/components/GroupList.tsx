@@ -1,5 +1,5 @@
 // Gedeelde groepslijst van een crew-trip: toevoegen, "ik neem 'm mee" en afvinken, samen met je crew.
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Chip, List, cx, inputCls } from './ui'
 import { Icon, Spinner } from '../design/icons'
 import { crewMembers, type CrewMember } from '../lib/crew'
@@ -16,15 +16,19 @@ export function GroupList({ tripId, crewId, ownerId, ready = true }: { tripId: s
   const [text, setText] = useState('')
   const [online, setOnline] = useState(navigator.onLine)
   const [refreshing, setRefreshing] = useState(false)
+  // telt lokale wijzigingen: een refresh die tijdens een wijziging liep, heeft een oude stand
+  const edits = useRef(0)
 
   const load = useCallback(async () => {
     if (!navigator.onLine || !ready) return
     setRefreshing(true)
+    const at = edits.current
     try {
       const [list, mem] = await Promise.all([listItems(tripId), crewMembers(crewId)])
-      setItems(list)
       setMembers(mem)
+      if (edits.current === at) setItems(list)
     } catch (e) {
+      setItems((cur) => cur ?? [])
       toast({ title: 'Groepslijst laden lukte niet', body: errMsg(e), tone: 'error', icon: 'alert' })
     } finally {
       setRefreshing(false)
@@ -32,7 +36,8 @@ export function GroupList({ tripId, crewId, ownerId, ready = true }: { tripId: s
   }, [tripId, crewId, ready])
 
   useEffect(() => {
-    void cachedItems(tripId).then((c) => setItems((cur) => cur ?? c))
+    // een lege cache zegt online niks (nog nooit geladen), dus dan wachten op de server
+    void cachedItems(tripId).then((c) => (c.length || !navigator.onLine) && setItems((cur) => cur ?? c))
     void load()
     // vers houden: terug in de app, weer bereik, en elke halve minuut zolang je kijkt
     const refresh = () => document.visibilityState === 'visible' && void load()
@@ -57,6 +62,7 @@ export function GroupList({ tripId, crewId, ownerId, ready = true }: { tripId: s
 
   /** Meteen tonen, dan pas opslaan; lukt het niet, dan terug naar wat de server zegt. */
   async function change(next: (list: CrewTripItem[]) => CrewTripItem[], run: () => Promise<unknown>) {
+    edits.current++
     setItems((cur) => next(cur ?? []))
     try {
       await run()
@@ -73,6 +79,7 @@ export function GroupList({ tripId, crewId, ownerId, ready = true }: { tripId: s
     try {
       const item = await addItem(crewId, tripId, clean, claim)
       sfx.tap()
+      edits.current++
       setItems((cur) => [...(cur ?? []), item])
     } catch (e) {
       toast({ title: 'Toevoegen lukte niet', body: errMsg(e), tone: 'error', icon: 'alert' })
@@ -214,7 +221,7 @@ export function GroupList({ tripId, crewId, ownerId, ready = true }: { tripId: s
               <Icon name="plus" size={20} />
             </button>
           </form>
-          {suggestions.length > 0 && (
+          {items !== null && suggestions.length > 0 && (
             <div className="mt-3 flex flex-wrap gap-2">
               {suggestions.map((s) => (
                 <Chip key={s} onClick={() => void add(s)}>

@@ -20,7 +20,15 @@ import {
   setClaim,
   setDone,
   GROUP_SUGGESTIONS,
+  addGoal,
+  computeRecap,
+  listGoals,
+  setGoalDone,
+  tripDays,
+  cachedGoals,
 } from '../lib/crewTrips'
+import { EMPTY_DRAFT } from '../lib/sessions'
+import type { Session } from '../lib/types'
 
 const fake = () => sb.ref!
 const ME = 'user-me'
@@ -98,5 +106,105 @@ describe('crew-trips', () => {
   it('suggesties zijn uniek en niet leeg', () => {
     expect(new Set(GROUP_SUGGESTIONS.map((s) => s.toLowerCase())).size).toBe(GROUP_SUGGESTIONS.length)
     expect(GROUP_SUGGESTIONS.every((s) => s.trim().length > 0 && s.length <= 80)).toBe(true)
+  })
+})
+
+const day = (user_id: string, date: string, over: Partial<Session> = {}) => ({
+  user_id,
+  data: { ...EMPTY_DRAFT, id: date + user_id, kind: 'session', createdAt: 0, updatedAt: 0, date, ...over } as Session,
+})
+
+describe('crew-doelen', () => {
+  it('haalt doelen op met wie ze gehaald heeft, en bewaart ze voor offline', async () => {
+    fake().respond((c) =>
+      c.table === 'crew_trip_goals'
+        ? { data: [{ id: 'g1', crew_id: 'c1', trip_id: 't1', title: 'Rode piste', created_by: ME, created_at: 'x' }] }
+        : {
+            data: [
+              { goal_id: 'g1', user_id: 'daan' },
+              { goal_id: 'g1', user_id: ME },
+            ],
+          },
+    )
+    const goals = await listGoals('t1')
+    expect(goals[0].done).toEqual(['daan', ME])
+    expect(fake().calls[1].filters).toContainEqual(['in', 'goal_id', ['g1']])
+    expect(await cachedGoals('t1')).toEqual(goals)
+  })
+
+  it('geen doelen: geen tweede query', async () => {
+    fake().respond(() => ({ data: [] }))
+    expect(await listGoals('t1')).toEqual([])
+    expect(fake().calls).toHaveLength(1)
+  })
+
+  it('afvinken alleen voor jezelf; uitvinken haalt alleen jouw vinkje weg', async () => {
+    await setGoalDone('g1', true)
+    await setGoalDone('g1', false)
+    expect(fake().calls[0]).toMatchObject({ table: 'crew_trip_goal_done', op: 'insert', payload: { goal_id: 'g1' } })
+    expect(fake().calls[1].op).toBe('delete')
+    expect(fake().calls[1].filters).toContainEqual(['eq', 'user_id', ME])
+  })
+
+  it('doel toevoegen met opgeschoonde titel', async () => {
+    fake().respond((c) => ({ data: { id: 'g2', ...(c.payload as object), created_by: ME, created_at: 'x' } }))
+    const g = await addGoal('c1', 't1', '  Iedereen een carve  ')
+    expect(g).toMatchObject({ title: 'Iedereen een carve', done: [] })
+  })
+})
+
+describe('trip-recap', () => {
+  it('neemt alleen gedeelde dagen binnen de tripperiode mee', async () => {
+    fake().respond(() => ({
+      data: [day('a', '2027-01-15'), day('a', '2027-01-16'), day('b', '2027-01-23'), day('b', '2027-01-24')],
+    }))
+    const days = await tripDays('c1', { startDate: '2027-01-16', endDate: '2027-01-23' })
+    expect(days.map((d) => d.data.date)).toEqual(['2027-01-16', '2027-01-23'])
+    expect(fake().calls[0].filters).toContainEqual(['eq', 'crew_id', 'c1'])
+    expect(fake().calls[0].filters).toContainEqual(['eq', 'kind', 'session'])
+  })
+
+  it('trip zonder startdatum: niks ophalen', async () => {
+    expect(await tripDays('c1', {})).toEqual([])
+    expect(fake().calls).toHaveLength(0)
+  })
+
+  it('telt per persoon en voor de hele crew, met de opvallendste', () => {
+    const r = computeRecap(
+      [
+        day('a', '2027-01-16', { hours: 5, falls: 2, landed: ['ollie'] }),
+        day('a', '2027-01-17', { hours: 4.5, falls: 0, landed: ['ollie', 'fs-180'] }),
+        day('b', '2027-01-16', { hours: 3, falls: 9, landed: [] }),
+      ],
+      { a: 'Daan', b: 'Ingmar' },
+    )
+    expect(r).toMatchObject({ days: 3, hours: 12.5, falls: 11 })
+    expect(r.landed.sort()).toEqual(['fs-180', 'ollie'])
+    expect(r.people.map((p) => [p.name, p.days, p.hours, p.landed.length])).toEqual([
+      ['Daan', 2, 9.5, 2],
+      ['Ingmar', 1, 3, 0],
+    ])
+    expect(r.mostHours?.name).toBe('Daan')
+    expect(r.mostFalls?.name).toBe('Ingmar')
+    expect(r.mostTricks?.name).toBe('Daan')
+  })
+
+  it('alleen jij: geen "meeste"-lijstje, en onbekende namen worden "Iemand"', () => {
+    const r = computeRecap([day('x', '2027-01-16', { hours: 2, falls: 1, landed: ['ollie'] })], {})
+    expect(r.people[0].name).toBe('Iemand')
+    expect(r.mostHours).toBeUndefined()
+    expect(r.mostFalls).toBeUndefined()
+    expect(r.mostTricks).toBeUndefined()
+  })
+
+  it('niemand gevallen of niks geland: daar geen winnaar voor', () => {
+    const r = computeRecap([day('a', '2027-01-16', { hours: 2 }), day('b', '2027-01-16', { hours: 3 })], { a: 'A', b: 'B' })
+    expect(r.mostHours?.name).toBe('B')
+    expect(r.mostFalls).toBeUndefined()
+    expect(r.mostTricks).toBeUndefined()
+  })
+
+  it('lege trip', () => {
+    expect(computeRecap([], {})).toMatchObject({ days: 0, hours: 0, falls: 0, landed: [], people: [] })
   })
 })
