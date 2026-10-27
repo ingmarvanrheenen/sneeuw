@@ -32,9 +32,9 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import type { BodyPart } from '../anim/engine'
 import { Rider, type RigColors } from './rig'
 import { headingVectors, solve, type Body3 } from './solve'
-import { SIDE_SCALE } from './builders'
 import { Track, type Pose3 } from './interp'
 import { KNUCKLE_Z, kickerProfile, kickerSurface } from './kicker'
+import { JIB } from './jib'
 import { Spray } from './spray'
 import type { CameraPreset, FullKey3, Motion } from './types'
 
@@ -266,8 +266,6 @@ export class Stage {
       this.terrainGroup.add(o)
       return o
     }
-    const Z = SIDE_SCALE.z
-    const Y = SIDE_SCALE.y
     if (m.terrain === 'piste' || m.terrain === 'bulten' || m.terrain === 'lift') {
       // pistepalen langs de rand: geven gevoel voor snelheid en richting
       const pole = new MeshStandardMaterial({ color: new Color('#2f7fe0'), roughness: 0.5 })
@@ -308,11 +306,39 @@ export class Stage {
         this.terrainGroup.add(line)
       }
     } else if (m.terrain === 'box') {
-      mesh(new BoxGeometry(0.5, 0.2 * Y, 0.8 * Z), 0, 0.1 * Y, 0)
+      // box met oprijramp, op dezelfde maten als waar de rider overheen glijdt (jib.ts)
+      const b = JIB.box
+      const sideMat = new MeshStandardMaterial({ color: new Color('#3b423e'), roughness: 0.6 })
+      const topMat = new MeshStandardMaterial({ color: new Color('#d9dedb'), roughness: 0.25 })
+      const box = new Mesh(new BoxGeometry(b.width, b.height, b.len), [sideMat, sideMat, topMat, sideMat, sideMat, sideMat])
+      box.position.set(0, b.height / 2, b.start + b.ramp + b.len / 2)
+      const w = new Shape()
+      w.moveTo(0, 0)
+      w.lineTo(b.ramp, b.height)
+      w.lineTo(b.ramp, 0)
+      w.lineTo(0, 0)
+      const wg = new ExtrudeGeometry(w, { depth: b.width, bevelEnabled: false })
+      wg.rotateY(-Math.PI / 2)
+      wg.translate(b.width / 2, 0, b.start)
+      const ramp = new Mesh(wg, [sideMat, topMat])
+      for (const o of [box, ramp]) {
+        o.castShadow = o.receiveShadow = true
+        this.terrainGroup.add(o)
+      }
     } else if (m.terrain === 'rail') {
-      const rail = mesh(new CylinderGeometry(0.035, 0.035, 0.8 * Z, 16), 0, 0.3 * Y, 0)
-      rail.rotation.x = Math.PI / 2
-      for (const z of [-0.3 * Z, 0.3 * Z]) mesh(new CylinderGeometry(0.03, 0.03, 0.3 * Y, 10), 0, 0.15 * Y, z)
+      // stalen rail op twee poten (jib.ts)
+      const r = JIB.rail
+      const steel = new MeshStandardMaterial({ color: new Color('#b7bfbb'), roughness: 0.35, metalness: 0.2 })
+      const bar = new Mesh(new CylinderGeometry(r.radius, r.radius, r.len, 16), steel)
+      bar.rotation.x = Math.PI / 2
+      bar.position.set(0, r.height, r.start + r.len / 2)
+      this.terrainGroup.add(bar)
+      for (const z of [r.start + 0.4, r.start + r.len - 0.4]) {
+        const leg = new Mesh(new CylinderGeometry(0.03, 0.03, r.height, 10), steel)
+        leg.position.set(0, r.height / 2, z)
+        leg.castShadow = bar.castShadow = true
+        this.terrainGroup.add(leg)
+      }
     } else if (m.terrain === 'bulten') {
       for (let i = 0; i < 26; i++) {
         const b = mesh(new SphereGeometry(1, 20, 12), -6 + (i % 5) * 3 + (Math.floor(i / 5) % 2) * 1.5, -0.55, -8 + Math.floor(i / 5) * 4)

@@ -16,9 +16,9 @@ export type Pose = { s: number } & Partial<Record<Channel, number>>
 
 const smooth = (u: number) => u * u * (3 - 2 * u)
 
-/** Waarde van één kanaal: zacht van pose naar pose; tussen poses zonder dit kanaal loopt het door. */
+/** Waarde van één kanaal: zacht van pose naar pose (in tijdsvolgorde); tussen poses zonder dit kanaal loopt het door. */
 export function channel(poses: Pose[], f: Channel, s: number, fallback: number): number {
-  const pts = poses.filter((p) => p[f] !== undefined)
+  const pts = poses.filter((p) => p[f] !== undefined).sort((a, b) => a.s - b.s)
   if (!pts.length) return fallback
   if (s <= pts[0].s) return pts[0][f]!
   for (let i = 0; i < pts.length - 1; i++) {

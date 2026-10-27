@@ -26,6 +26,16 @@ describe('pose-kanalen en sprong', () => {
     expect(channel(poses, 'twist', 1.5, 7)).toBe(7)
   })
 
+  it('kanaal: volgorde van de poses maakt niet uit', () => {
+    const sorted = [
+      { s: 0, heading: 90 },
+      { s: 1, heading: 0 },
+      { s: 2, heading: 90 },
+    ]
+    const shuffled = [sorted[2], sorted[0], sorted[1]]
+    for (const s of [0.3, 1, 1.4]) expect(channel(shuffled, 'heading', s, 0)).toBeCloseTo(channel(sorted, 'heading', s, 0))
+  })
+
   it('sprong is een echte boog: piek = g·T²/8 halverwege, nul buiten de lucht', () => {
     const T = 0.56
     expect(airHeight(0.9, 1, T)).toBe(0)
