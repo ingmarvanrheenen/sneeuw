@@ -89,6 +89,12 @@ describe('sync en media', () => {
     expect(syncStore.get().status).toBe('idle')
   })
 
+  it('onthoudt per trip met welke crew hij op de server staat', async () => {
+    const t = await create('trip', { name: 'Wintersport', packing: [], crewId: 'c1' })
+    await syncNow()
+    expect((await db.kv.get(`tripCrew:${t.id}`))?.value).toBe('c1')
+  })
+
   it('andere uploadfout: dag synct wel, clip wacht en de fout is zichtbaar', async () => {
     const { s, m } = await dayWithMedia(new Blob(['x'], { type: 'video/quicktime' }))
     fake().respond((c) => (c.op === 'upload' ? { error: { message: 'Netwerk weg' } } : { data: [] }))

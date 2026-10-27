@@ -128,6 +128,8 @@ async function push(userId: string) {
         if (cur && cur.updatedAt === r.updatedAt) await db.records.update(r.id, { dirty: 0 })
       }
     })
+    // onthouden met welke crew een trip op de server staat: de groepslijst werkt pas als de crew hem kan zien
+    for (const r of batch) if (r.kind === 'trip') await kvSet(`tripCrew:${r.id}`, r.deleted ? null : (r.crewId ?? null))
   }
   if (mediaError) throw mediaError
 }

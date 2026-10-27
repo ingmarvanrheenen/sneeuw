@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { Button, List, Page, PageHeader, Progress, Row, Section, Stat, Toggle, cx, inputCls, StatGroup } from '../components/ui'
 import { GroupList } from '../components/GroupList'
+import { useLiveQuery } from 'dexie-react-hooks'
+import { kvGet } from '../lib/db'
 import { authStore } from '../lib/auth'
 import { hasBackend } from '../lib/supabase'
 import { cachedCrews, myCrews, type Crew } from '../lib/crew'
@@ -17,6 +19,7 @@ import type { PackItem, Trip } from '../lib/types'
 function CrewShare({ trip }: { trip: Trip }) {
   const { user } = authStore.use()
   const [crews, setCrews] = useState<Crew[]>([])
+  const syncedCrew = useLiveQuery(() => kvGet<string | null>(`tripCrew:${trip.id}`, null), [trip.id])
   useEffect(() => {
     if (!hasBackend || !user) return
     let alive = true
@@ -31,6 +34,8 @@ function CrewShare({ trip }: { trip: Trip }) {
   }, [user])
   if (!hasBackend || !user) return null
   const shared = crews.find((c) => c.id === trip.crewId)
+  // klaar als de server de trip al met deze crew kent; een niet-gesyncte paklijst-wijziging doet daar niks aan af
+  const ready = syncedCrew === trip.crewId || !trip.dirty
 
   return (
     <>
@@ -53,7 +58,7 @@ function CrewShare({ trip }: { trip: Trip }) {
           </List>
         )}
       </Section>
-      {shared && <GroupList tripId={trip.id} crewId={shared.id} ownerId={trip.userId ?? user.id} ready={!trip.dirty} />}
+      {shared && <GroupList tripId={trip.id} crewId={shared.id} ownerId={trip.userId ?? user.id} ready={ready} />}
     </>
   )
 }

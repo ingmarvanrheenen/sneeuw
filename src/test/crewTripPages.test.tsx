@@ -34,7 +34,7 @@ import CrewTripDetail from '../pages/CrewTripDetail'
 import Trips from '../pages/Trips'
 import { authStore } from '../lib/auth'
 import { setCurrentUserId } from '../lib/auth-state'
-import { db } from '../lib/db'
+import { db, kvSet } from '../lib/db'
 import { create } from '../lib/repo'
 import type { User } from '@supabase/supabase-js'
 
@@ -100,6 +100,24 @@ describe('trip delen met je crew', () => {
     await user.click(screen.getByRole('switch', { name: /Delen met Shredheads/ }))
     await waitFor(() => expect(screen.queryByTestId('grouplist')).toBeNull())
     expect((await db.records.get(t.id))?.crewId).toBeNull()
+  })
+})
+
+describe('groepslijst blijft bruikbaar', () => {
+  it('ook als je iets op je eigen paklijst afvinkt (trip heeft dan lokale wijzigingen)', async () => {
+    const user = userEvent.setup()
+    const t = await create('trip', {
+      name: 'Wintersport',
+      packing: [{ id: 'p1', label: 'Helm', category: 'Op de piste', checked: false }],
+    })
+    await db.records.update(t.id, { crewId: 'c1', dirty: 0 })
+    // zoals de sync dat na een geslaagde push vastlegt
+    await kvSet(`tripCrew:${t.id}`, 'c1')
+    page(`/reizen/${t.id}`)
+    expect((await screen.findByTestId('grouplist')).textContent).toBe(`${t.id}|c1|klaar`)
+    await user.click(screen.getByRole('checkbox', { name: /Helm/ }))
+    await waitFor(async () => expect((await db.records.get(t.id))?.dirty).toBe(1))
+    expect(screen.getByTestId('grouplist').textContent).toBe(`${t.id}|c1|klaar`)
   })
 })
 
