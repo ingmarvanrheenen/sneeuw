@@ -1,9 +1,8 @@
-import { useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { List, Page, PageHeader, Row, Section, Segmented, cx, inputCls, LevelDots } from '../components/ui'
 import { Icon } from '../design/icons'
-import { TrickAnimation } from '../anim/TrickAnimation'
 import { MediaAddButton, MediaGrid } from '../components/Media'
 import { TRACKS, TRICK_BY_ID, trickXP, unlocks, ytUrl } from '../content/tricks'
 import { create, getTrickProgress, setTrickStatus, update, useKind } from '../lib/repo'
@@ -11,6 +10,8 @@ import { db } from '../lib/db'
 import { celebrate, toast } from '../lib/toast'
 import type { MediaMeta, TrickProgress, TrickStatus } from '../lib/types'
 import { STATUS_LABEL } from './Tricks'
+
+const Player3D = lazy(() => import('../anim3d/Player3D'))
 
 const STATUSES: TrickStatus[] = ['wil', 'bezig', 'geland', 'beheerst']
 
@@ -87,7 +88,9 @@ export default function TrickDetail() {
       <p className="-mt-1 mb-5 text-[17px] leading-relaxed">{trick.summary}</p>
 
       {trick.anim ? (
-        <TrickAnimation anim={trick.anim} stepList={false} />
+        <Suspense fallback={<div className="card aspect-[4/3]" />}>
+          <Player3D key={trick.id} trick={trick} />
+        </Suspense>
       ) : (
         <p className="flex items-center gap-2 text-[15px] text-muted">
           <Icon name="info" size={18} /> Geen animatie voor deze. Check de video's.

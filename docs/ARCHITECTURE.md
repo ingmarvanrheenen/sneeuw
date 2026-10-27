@@ -67,6 +67,14 @@ Gesprekken worden lokaal bewaard (laatste 30). De context wordt bij de start van
 - **Bovenaanzicht**: voor bochten, sideslips en falling leaf, met heel- en toe-edge in kleur en een spoor (breed voor slippen, dun voor carven).
 - Builders in `src/content/anims.ts` (`ollie()`, `kicker({ grab, spin, flip })`, `slide()`, `turns()`, ...) maken nieuwe tricks toevoegen een kwestie van één regel.
 
+## 3D-animaties (`src/anim3d`)
+
+- `types.ts`: keyframes in het hellingsassenstelsel (x dwars, z het dal in, y omhoog) met `heading`, `edge`, `crouch`, `lean`, `twist`, `look`, armen, grabs, vallen en een losse achtervoet.
+- `solve.ts`: bouwt het lichaam in board-coördinaten en lost benen en armen op met two-bone IK, zodat de voeten in de bindingen blijven. Kantelen op de edge neemt het lichaam mee; angulatie houdt het bovenlijf rechter dan het board.
+- `builders.ts`: `fromPath()` leidt uit een rijbaan de edge af met echte fysica (de sneeuw moet bochtkracht plus zwaartekracht langs de helling leveren, kanteling = atan(zijwaartse kracht / g·cos θ)), plus schouders die de bocht in leiden en een blik naar de rijrichting. `drive()` rijdt segmenten (richting, snelheid, board-hoek), `turns()` maakt gekoppelde bochten in vijf stijlen van slippen tot eurocarve.
+- `motions.ts`: handgemaakte bewegingen voor basis, liften, bochten en carven, opgebouwd volgens de standaard lesmethode. Andere tricks worden met `fromSide()`/`fromTop()` uit hun 2D-animatie omgezet.
+- `rig.ts` (rider) en `stage.ts` (helling, corduroy, spoor, obstakels, licht, camera's) met three.js. Kleuren komen uit de CSS-tokens en volgen licht/donker.
+
 ## Tests
 
 `npm test`:
@@ -74,4 +82,5 @@ Gesprekken worden lokaal bewaard (laatste 30). De context wordt bij de start van
 - content-integriteit: unieke ids, voorkennis bestaat, geen cirkels in de skill tree, complete uitleg, geldige animaties die naar eindige coördinaten renderen;
 - XP, levels en badges;
 - lokale opslag (dirty-vlag, soft delete, eerste landing);
+- 3D: elke beweging lost op naar eindige posities, voeten blijven in de bindingen, en de fysica klopt (traverse op de heel edge, carven kantelt meer dan slippen);
 - design-regel: geen emoji in `src/`.

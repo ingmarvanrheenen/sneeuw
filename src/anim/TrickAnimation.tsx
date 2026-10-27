@@ -257,7 +257,7 @@ function TopScene({ anim, t, cue }: { anim: TopAnim & { trail?: 'skid' | 'carve'
 
 // ── Meters ──────────────────────────────────────────────────────────────────
 
-function Meter({
+export function Meter({
   label,
   value,
   left,
@@ -358,10 +358,10 @@ function TopMeters({ anim, t }: { anim: TopAnim; t: number }) {
 
 // ── Speler ──────────────────────────────────────────────────────────────────
 
-const SPEEDS = [0.25, 0.5, 1] as const
-const HOLD_MS = 1100
+export const SPEEDS = [0.25, 0.5, 1] as const
+export const HOLD_MS = 1100
 
-function Toggle({ on, onClick, children }: { on: boolean; onClick: () => void; children: ReactNode }) {
+export function Toggle({ on, onClick, children }: { on: boolean; onClick: () => void; children: ReactNode }) {
   return (
     <button
       onClick={onClick}

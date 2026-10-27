@@ -62,14 +62,16 @@ Tikdoelen zijn minimaal 44pt. Safe areas via `pt-safe` en `pb-safe`.
 
 ## Trick-animaties
 
-De speler (`src/anim/TrickAnimation.tsx`) is een leermiddel, geen versiering:
+De speler is een leermiddel, geen versiering. Op de trick-pagina draait de 3D-speler (`src/anim3d/Player3D.tsx`, lazy geladen); de 2D-speler (`src/anim/TrickAnimation.tsx`) blijft voor de quiz, compacte previews en als fallback zonder WebGL.
 
+- **Clean mannequin**: een neutrale rider uit capsules in jas- en broekkleur, zonder gezicht of franje. Heel- en toe-edge lichten op in hun eigen kleur zodra ze in de sneeuw staan.
+- **Camera**: Zij, Achter, Voor, Boven of Mee. Horizontaal vegen draait om de rider, verticaal vegen scrolt gewoon de pagina.
 - **Lesmodus**: de animatie staat bij het begin van elke stap even stil.
 - **Stap-navigatie**: vorige en volgende stap, plus stapmarkeringen op de tijdlijn.
-- **Cue**: per stap wordt het lichaamsdeel gemarkeerd waar het om draait (knieën, schouders, tail…). Dat gebeurt automatisch uit de staptekst, of expliciet met `cue` op een stap.
-- **Meters**: gewicht (tail ↔ neus), kniebuiging, rotatie of hoogte in het zijaanzicht; edge en board-hoek t.o.v. de valrichting in het bovenaanzicht.
-- **Camera** volgt en zoomt in op de rider. Snelheid ¼, ½ of 1×, bewegingssporen, goofy-spiegeling.
-- De rider wordt in pseudo-3D opgebouwd (`pose.ts`), dus spins, presses, grabs en flips kloppen vanuit elke hoek.
+- **Cue**: per stap licht het lichaamsdeel op waar het om draait (knieën, schouders, heel edge…), met een label in beeld.
+- **Meters**: gewicht (tail ↔ neus), knieën, edge (heel ↔ toe) en schouders, of rotatie bij spins.
+- **Spoor** in de sneeuw: breed als je slipt, een dun lijntje als je carvet.
+- Snelheid ¼, ½ of 1×, goofy spiegelt de hele wereld.
 
 ## Toon
 
