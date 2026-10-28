@@ -3,7 +3,7 @@
 ## Stack
 
 - **Vite + React 19 + TypeScript**, Tailwind v4 voor styling (met eigen tokens).
-- **PWA** via `vite-plugin-pwa` (Workbox): alles precached, weer en crew-media runtime-gecachet. `HashRouter` zodat het overal werkt (GitHub Pages, subpaden).
+- **PWA** via `vite-plugin-pwa` (Workbox): alles precached, weer en crew-media runtime-gecachet. `HashRouter` zodat het overal werkt, ook op een subpad.
 - **Dexie** (IndexedDB) als lokale database. De UI leest altijd lokaal (`useLiveQuery`), dus de app is direct en werkt offline.
 - **Supabase** (optioneel) voor account, sync, storage, crews en de coach (Edge Function).
 - **Open-Meteo** voor het weer (geen key nodig).
