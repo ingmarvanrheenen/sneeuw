@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   LIMITS,
   actionToTool,
+  apiErrorText,
   buildMessages,
   buildTools,
   checkAction,
@@ -239,5 +240,28 @@ describe('stream', () => {
 
   it('kapotte regels worden overgeslagen', () => {
     expect(decodeEvents('{kapot\n{"t":"done"}\n{"geen":"t"}\n').events).toEqual([{ t: 'done' }])
+  })
+})
+
+describe('fouten van de Claude API', () => {
+  const body = (type: string, message: string) => ({ type: 'error', error: { type, message } })
+
+  it('tegoed op en een verlopen key krijgen een duidelijke uitleg', () => {
+    expect(apiErrorText(400, body('invalid_request_error', 'Your credit balance is too low to access the Anthropic API.'))).toBe(
+      'Het Anthropic-tegoed van de coach is op. Vul het aan in de Anthropic Console.',
+    )
+    expect(apiErrorText(401, body('authentication_error', 'invalid x-api-key'))).toBe(
+      'De Anthropic API-key van de coach klopt niet of is verlopen.',
+    )
+    expect(apiErrorText(529, body('overloaded_error', 'Overloaded'))).toContain('overbelast')
+  })
+
+  it('andere fouten tonen de reden van de API, kort', () => {
+    expect(apiErrorText(400, body('invalid_request_error', 'messages.0: image too small'))).toBe(
+      'Coach heeft een probleem (400): messages.0: image too small',
+    )
+    expect(apiErrorText(400, body('invalid_request_error', 'x'.repeat(500))).length).toBeLessThan(200)
+    expect(apiErrorText(500, null)).toBe('Coach heeft een probleem (500).')
+    expect(apiErrorText(undefined, 'rommel')).toBe('Coach heeft een probleem (?).')
   })
 })

@@ -7,6 +7,7 @@ import { REVIEW_INSTRUCTIONS, SYSTEM_PROMPT } from './prompt.ts'
 import {
   LIMITS,
   STREAM_TYPE,
+  apiErrorText,
   buildMessages,
   buildTools,
   checkAction,
@@ -142,12 +143,7 @@ Deno.serve(async (req) => {
         console.error(e)
         send({
           t: 'error',
-          v:
-            e instanceof Anthropic.RateLimitError
-              ? 'Coach is even overbelast, probeer het zo nog eens.'
-              : e instanceof Anthropic.APIError
-                ? `Coach heeft een probleem (${e.status}).`
-                : 'Coach is even weg, probeer het zo nog eens.',
+          v: e instanceof Anthropic.APIError ? apiErrorText(e.status, e.error) : 'Coach is even weg, probeer het zo nog eens.',
         })
       } finally {
         controller.close()
@@ -221,8 +217,8 @@ async function review(
     return json(200, parsed)
   } catch (e) {
     console.error(e)
-    if (e instanceof Anthropic.RateLimitError) return json(503, { error: 'Coach is even overbelast, probeer het zo nog eens.' })
-    if (e instanceof Anthropic.APIError) return json(502, { error: `Coach heeft een probleem (${e.status}).` })
+    if (e instanceof Anthropic.APIError)
+      return json(e instanceof Anthropic.RateLimitError ? 503 : 502, { error: apiErrorText(e.status, e.error) })
     return json(500, { error: 'Coach is even weg, probeer het zo nog eens.' })
   }
 }

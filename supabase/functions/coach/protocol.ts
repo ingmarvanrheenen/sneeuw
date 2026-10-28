@@ -335,3 +335,18 @@ export function buildMessages(messages: WireMessage[], context: string): ApiMess
 
 /** Meer denkwerk als er naar een foto gekeken moet worden. */
 export const effortFor = (messages: WireMessage[]) => (messages.some((m) => m.image) ? 'medium' : 'low')
+
+/**
+ * Leesbare melding bij een fout van de Claude API. `body` is de geparste foutbody
+ * ({ error: { type, message } }). Tegoed op en een kapotte key krijgen een eigen uitleg,
+ * anders gaat de reden van de API kort mee, zodat je ziet wat er mis is.
+ */
+export function apiErrorText(status: number | undefined, body: unknown): string {
+  const err = (body as { error?: { type?: string; message?: string } } | null)?.error
+  const msg = typeof err?.message === 'string' ? err.message.replace(/\s+/g, ' ').trim() : ''
+  if (/credit balance/i.test(msg)) return 'Het Anthropic-tegoed van de coach is op. Vul het aan in de Anthropic Console.'
+  if (status === 401) return 'De Anthropic API-key van de coach klopt niet of is verlopen.'
+  if (status === 429) return 'Coach is even overbelast, probeer het zo nog eens.'
+  if (status === 529 || err?.type === 'overloaded_error') return 'Claude is even overbelast, probeer het zo nog eens.'
+  return `Coach heeft een probleem (${status ?? '?'})${msg ? `: ${msg.slice(0, 160)}` : '.'}`
+}
