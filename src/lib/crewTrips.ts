@@ -250,3 +250,65 @@ export function computeRecap(days: SharedDay[], names: Record<string, string>): 
     mostTricks: people.length > 1 && mostTricks?.landed.length ? mostTricks : undefined,
   }
 }
+
+// ── Stemronde van de crew-awards ──────────────────────────────────────────────
+
+export type VoteCategory = 'val' | 'held'
+
+export const VOTE_CATEGORIES: { id: VoteCategory; title: string; blurb: string }[] = [
+  { id: 'val', title: 'Val van de trip', blurb: 'De mooiste, hardste of domste val. Op jezelf stemmen kan niet.' },
+  { id: 'held', title: 'Held van de trip', blurb: 'Wie maakte deze trip? Op jezelf stemmen kan niet.' },
+]
+
+export interface Vote {
+  category: VoteCategory
+  voter: string
+  candidate: string
+}
+
+const votesKey = (tripId: string) => `tripVotes:${tripId}`
+
+export function cachedVotes(tripId: string): Promise<Vote[]> {
+  return kvGet<Vote[]>(votesKey(tripId), [])
+}
+
+export async function listVotes(tripId: string): Promise<Vote[]> {
+  const { data, error } = await need().from('crew_trip_votes').select('category, voter, candidate').eq('trip_id', tripId)
+  if (error) throw error
+  const list = (data ?? []) as Vote[]
+  await kvSet(votesKey(tripId), list)
+  return list
+}
+
+/** Stemmen of je stem omzetten (alleen de kandidaat mag veranderen, dus geen upsert). */
+export async function castVote(crewId: string, tripId: string, category: VoteCategory, candidate: string, change: boolean) {
+  const sb = need()
+  const { error } = change
+    ? await sb
+        .from('crew_trip_votes')
+        .update({ candidate })
+        .eq('trip_id', tripId)
+        .eq('category', category)
+        .eq('voter', getCurrentUserId() ?? '')
+    : await sb.from('crew_trip_votes').insert({ trip_id: tripId, crew_id: crewId, category, candidate })
+  if (error) throw error
+}
+
+export async function removeVote(tripId: string, category: VoteCategory) {
+  const { error } = await need()
+    .from('crew_trip_votes')
+    .delete()
+    .eq('trip_id', tripId)
+    .eq('category', category)
+    .eq('voter', getCurrentUserId() ?? '')
+  if (error) throw error
+}
+
+/** Stand van één categorie: stemmen per persoon en wie er (samen) bovenaan staat. */
+export function voteResult(votes: Vote[], category: VoteCategory) {
+  const counts: Record<string, number> = {}
+  for (const v of votes) if (v.category === category) counts[v.candidate] = (counts[v.candidate] ?? 0) + 1
+  const max = Math.max(0, ...Object.values(counts))
+  const leaders = max ? Object.keys(counts).filter((k) => counts[k] === max) : []
+  return { counts, leaders, max, total: Object.values(counts).reduce((a, b) => a + b, 0) }
+}

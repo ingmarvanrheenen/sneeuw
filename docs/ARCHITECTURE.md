@@ -57,6 +57,12 @@ Foto's worden op het toestel verkleind naar max 2048 px (JPEG). Video's gaan doo
 - **Online-first lijsten** (groepslijst, doelen): een lege cache wordt online genegeerd (spinner tot de server antwoordt), en een refresh die liep terwijl jij iets wijzigde, wordt weggegooid zodat hij je net gezette vinkje niet terugdraait.
 - Je crewlijst staat ook lokaal (`kv: crews`), zodat je zonder bereik een dag met je crew kunt delen. De feed ververst stil bij terugkomen, weer online en elke minuut.
 
+## Crew-awards (`src/lib/awards.ts`)
+
+In de trip-recap: awards uit de met de crew gedeelde dagen van die trip (langst op de plank, trickmachine, eerste nieuwe trick, valkampioen, zat erop geplakt, zonnetje van de crew, zwartrijder, poedersnuiver, ibuprofen-award, elke dag erop). Afgeleid en niet opgeslagen, zoals XP. Minstens twee riders, gelijkspel wint samen, en als iedereen gelijk staat is er geen award.
+
+Stemronde in `crew_trip_votes`: "Val van de trip" en "Held van de trip". Eén stem per persoon per categorie, alleen op een crewgenoot en niet op jezelf. Omzetten (alleen `candidate` is aan te passen) en intrekken mogen. De stand zie je pas als je zelf gestemd hebt. RLS-scenario's: `supabase/tests/crew_trip_votes.sh`.
+
 ## S.N.O.W. (`src/lib/snow.ts`)
 
 S.K.A.T.E., maar op de piste, binnen een crew. Wie aan de beurt is zet een trick uit de bijbel neer; landt hij hem, dan doet de rest hem na en wie mist krijgt een letter. Mist de zetter, dan gaat de beurt door. Bij S-N-O-W lig je eruit, en een gelande trick mag niet nog een keer.

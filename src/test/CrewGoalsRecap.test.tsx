@@ -11,6 +11,10 @@ const api = vi.hoisted(() => ({
   setGoalDone: vi.fn(),
   tripDays: vi.fn(),
   crewMembers: vi.fn(),
+  listVotes: vi.fn(),
+  cachedVotes: vi.fn(),
+  castVote: vi.fn(),
+  removeVote: vi.fn(),
 }))
 vi.mock('../lib/crewTrips', async (orig) => ({ ...(await orig<typeof import('../lib/crewTrips')>()), ...api }))
 const push = vi.hoisted(() => ({ notifyCrew: vi.fn() }))
@@ -45,6 +49,10 @@ beforeEach(async () => {
     goal({ id: 'g2', title: 'Samen de eerste lift', created_by: ME }),
   ])
   api.setGoalDone.mockResolvedValue(undefined)
+  api.listVotes.mockResolvedValue([])
+  api.cachedVotes.mockResolvedValue([])
+  api.castVote.mockResolvedValue(undefined)
+  api.removeVote.mockResolvedValue(undefined)
   api.removeGoal.mockResolvedValue(undefined)
 })
 afterEach(() => {
@@ -188,33 +196,85 @@ const shared = (user_id: string, date: string, over: Partial<Session>) => ({
 })
 
 describe('trip-recap', () => {
-  it('totalen, opvallendste en per persoon (met "Jij")', async () => {
-    api.tripDays.mockResolvedValue([
-      shared(ME, '2027-01-16', { hours: 6, falls: 1, landed: ['ollie'] }),
-      shared('daan', '2027-01-16', { hours: 4, falls: 7, landed: [] }),
-    ])
+  const recap = () =>
     render(
       <MemoryRouter>
         <TripRecap tripId="t1" crewId="c1" trip={{ startDate: '2027-01-16', endDate: '2027-01-23' }} />
       </MemoryRouter>,
     )
-    expect(await screen.findByText('Meeste uren op de plank')).toBeTruthy()
-    expect(screen.getByText('Jij · 6 u')).toBeTruthy()
-    expect(screen.getByText('Daan · 7x')).toBeTruthy()
-    expect(screen.getByText('Jij · 1')).toBeTruthy()
+  const award = (title: string) => screen.getByText(title).closest('div.flex') as HTMLElement
+
+  it('totalen, awards en per persoon (met "Jij")', async () => {
+    api.tripDays.mockResolvedValue([
+      shared(ME, '2027-01-16', { hours: 6, falls: 1, landed: ['ollie'] }),
+      shared('daan', '2027-01-16', { hours: 4, falls: 7, landed: [] }),
+    ])
+    recap()
+    expect(await screen.findByRole('heading', { name: 'Awards' })).toBeTruthy()
+    expect(within(award('Langst op de plank')).getByText('Jij')).toBeTruthy()
+    expect(within(award('Langst op de plank')).getByText('6 u')).toBeTruthy()
+    expect(within(award('Valkampioen')).getByText('Daan')).toBeTruthy()
+    expect(within(award('Valkampioen')).getByText('7x')).toBeTruthy()
+    expect(within(award('Trickmachine')).getByText('Jij')).toBeTruthy()
     expect(screen.getByText('1 dag · 1 trick geland')).toBeTruthy()
     expect(screen.getByText(/Geland deze trip: Ollie/)).toBeTruthy()
   })
 
+  it('uren met een komma, zoals in de rest van de app', async () => {
+    api.tripDays.mockResolvedValue([shared(ME, '2027-01-16', { hours: 5.5 }), shared('daan', '2027-01-16', { hours: 4 })])
+    recap()
+    expect(await screen.findByText('5,5 u · 0 val')).toBeTruthy()
+    expect(screen.getByText('9,5')).toBeTruthy()
+  })
+
   it('een persoon opent zijn skipas (jij: je eigen)', async () => {
     api.tripDays.mockResolvedValue([shared(ME, '2027-01-16', { hours: 6 }), shared('daan', '2027-01-16', { hours: 4 })])
-    render(
-      <MemoryRouter>
-        <TripRecap tripId="t1" crewId="c1" trip={{ startDate: '2027-01-16' }} />
-      </MemoryRouter>,
-    )
-    expect((await screen.findByText('Daan')).closest('a')?.getAttribute('href')).toBe('/rider/daan')
-    expect(screen.getByText('Jij').closest('a')?.getAttribute('href')).toBe('/rider/ik')
+    recap()
+    expect((await screen.findByRole('link', { name: /^Daan/ })).getAttribute('href')).toBe('/rider/daan')
+    expect(screen.getByRole('link', { name: /^Jij/ }).getAttribute('href')).toBe('/rider/ik')
+  })
+
+  describe('stemronde', () => {
+    beforeEach(() => {
+      api.tripDays.mockResolvedValue([shared(ME, '2027-01-16', { hours: 6 }), shared('daan', '2027-01-16', { hours: 4 })])
+    })
+
+    it('stand pas zichtbaar na je eigen stem; jezelf staat er niet tussen', async () => {
+      const user = userEvent.setup()
+      api.listVotes.mockResolvedValue([{ category: 'val', voter: 'sem', candidate: 'daan' }])
+      recap()
+      const row = await screen.findByRole('button', { name: /Val van de trip/ })
+      expect(within(row).getByText('Nog niet gestemd')).toBeTruthy()
+      await user.click(row)
+      const sheet = screen.getByRole('dialog', { name: 'Val van de trip' })
+      expect(within(sheet).queryByRole('button', { name: /Ingmar/ })).toBeNull()
+      expect(within(sheet).getByText('De stand zie je zodra je zelf gestemd hebt.')).toBeTruthy()
+      // stemmen op Daan
+      api.listVotes.mockResolvedValue([
+        { category: 'val', voter: 'sem', candidate: 'daan' },
+        { category: 'val', voter: ME, candidate: 'daan' },
+      ])
+      await user.click(within(sheet).getByRole('button', { name: /Daan/ }))
+      expect(api.castVote).toHaveBeenCalledWith('c1', 't1', 'val', 'daan', false)
+      expect(await within(sheet).findByText('Je stemde op Daan.')).toBeTruthy()
+      expect(within(within(sheet).getByRole('button', { name: /Daan/ })).getByText('2')).toBeTruthy()
+      await user.click(within(sheet).getByRole('button', { name: 'Klaar' }))
+      expect(within(screen.getByRole('button', { name: /Val van de trip/ })).getByText('Daan staat bovenaan')).toBeTruthy()
+    })
+
+    it('omzetten en intrekken', async () => {
+      const user = userEvent.setup()
+      api.listVotes.mockResolvedValue([{ category: 'held', voter: ME, candidate: 'daan' }])
+      recap()
+      await user.click(await screen.findByRole('button', { name: /Held van de trip/ }))
+      const sheet = screen.getByRole('dialog', { name: 'Held van de trip' })
+      api.listVotes.mockResolvedValue([{ category: 'held', voter: ME, candidate: 'sem' }])
+      await user.click(within(sheet).getByRole('button', { name: /Sem/ }))
+      expect(api.castVote).toHaveBeenCalledWith('c1', 't1', 'held', 'sem', true)
+      await waitFor(() => expect(within(sheet).getByText('Je stemde op Sem.')).toBeTruthy())
+      await user.click(within(sheet).getByRole('button', { name: /Sem/ }))
+      expect(api.removeVote).toHaveBeenCalledWith('t1', 'held')
+    })
   })
 
   it('nog geen gedeelde dagen: uitleg hoe je hem vult', async () => {
