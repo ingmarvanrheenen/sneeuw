@@ -1,13 +1,25 @@
 // Coach Daddy: AI snowboard-buddy. Deze Edge Function houdt de Anthropic API-key geheim,
-// checkt of je ingelogd bent, bewaakt een daglimiet en streamt het antwoord terug als tekst.
+// checkt of je ingelogd bent, bewaakt een daglimiet en streamt het antwoord terug als NDJSON:
+// tekst, plus knoppen (doel, trick, oefenplan, geheugen) die de coach via tools voorstelt.
 import Anthropic from 'npm:@anthropic-ai/sdk@1.3.0'
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import { REVIEW_INSTRUCTIONS, SYSTEM_PROMPT } from './prompt.ts'
+import {
+  LIMITS,
+  STREAM_TYPE,
+  buildMessages,
+  buildTools,
+  checkAction,
+  checkMessages,
+  checkTricks,
+  effortFor,
+  encodeEvent,
+  toolResult,
+  type CoachEvent,
+} from './protocol.ts'
 
 const MODEL = 'claude-opus-5-5'
 const DAILY_LIMIT = Number(Deno.env.get('COACH_DAILY_LIMIT') ?? '60')
-const MAX_MESSAGES = 40
-const MAX_CHARS = 4000
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
@@ -17,11 +29,6 @@ const cors = {
 
 const json = (status: number, body: unknown) =>
   new Response(JSON.stringify(body), { status, headers: { ...cors, 'Content-Type': 'application/json' } })
-
-interface ChatMessage {
-  role: 'user' | 'assistant'
-  content: string
-}
 
 const anthropic = new Anthropic({ apiKey: Deno.env.get('ANTHROPIC_API_KEY') })
 const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
@@ -38,7 +45,7 @@ Deno.serve(async (req) => {
   if (userError || !user) return json(401, { error: 'Log eerst in' })
 
   // 2. Input checken
-  let body: { mode?: string; messages?: ChatMessage[]; context?: string; day?: string; trickIds?: string[] }
+  let body: { mode?: string; messages?: unknown; context?: string; day?: string; trickIds?: string[]; tricks?: unknown }
   try {
     body = await req.json()
   } catch {
@@ -49,7 +56,7 @@ Deno.serve(async (req) => {
   if ((usage?.messages ?? 0) >= DAILY_LIMIT) {
     return json(429, { error: `Daglimiet van ${DAILY_LIMIT} berichten bereikt. Morgen weer!` })
   }
-  const countUsage = (u: Anthropic.Beta.BetaUsage) =>
+  const countUsage = (u: { input_tokens: number; output_tokens: number; cache_read_input_tokens?: number | null }) =>
     admin.from('coach_usage').upsert({
       user_id: user.id,
       day: today,
@@ -60,70 +67,95 @@ Deno.serve(async (req) => {
 
   if (body.mode === 'review') return review(body, countUsage)
 
-  const messages = (body.messages ?? []).filter(
-    (m): m is ChatMessage =>
-      (m?.role === 'user' || m?.role === 'assistant') && typeof m.content === 'string' && m.content.trim().length > 0,
-  )
-  if (!messages.length || messages[messages.length - 1].role !== 'user') return json(400, { error: 'Geen vraag gevonden' })
-  if (messages.length > MAX_MESSAGES) return json(400, { error: 'Gesprek te lang, begin een nieuw gesprek' })
-  if (messages.some((m) => m.content.length > MAX_CHARS)) return json(400, { error: 'Bericht te lang' })
-  const context = (body.context ?? '').slice(0, 12000)
+  const tricks = checkTricks(body.tricks)
+  const trickIds = tricks.map((t) => t.id)
+  const checked = checkMessages(body.messages, trickIds)
+  if ('error' in checked) return json(400, { error: checked.error })
+  const context = (body.context ?? '').slice(0, LIMITS.context)
 
-  // 4. Gesprek opbouwen. Rider-context zit vast in het eerste bericht zodat de prompt-cache blijft werken.
-  const apiMessages: Anthropic.Beta.BetaMessageParam[] = messages.map((m, i) => {
-    if (i === 0 && m.role === 'user' && context) {
-      return {
-        role: 'user',
-        content: [
-          { type: 'text', text: `<rider_context>\n${context}\n</rider_context>` },
-          { type: 'text', text: m.content },
-        ],
-      }
-    }
-    return { role: m.role, content: m.content }
-  })
-
-  const stream = anthropic.beta.messages.stream({
-    model: MODEL,
-    max_tokens: 8000,
-    betas: ['server-side-fallback-2026-07-01'],
-    fallbacks: 'default',
-    output_config: { effort: 'low' },
-    cache_control: { type: 'ephemeral' },
-    system: [{ type: 'text', text: SYSTEM_PROMPT, cache_control: { type: 'ephemeral' } }],
-    messages: apiMessages,
-  })
+  // 3. Gesprek opbouwen. Tools en systeemprompt zijn per app-versie gelijk, dus die blijven in de cache.
+  const tools = buildTools(tricks) as unknown as Anthropic.Beta.BetaToolUnion[]
+  const messages = buildMessages(checked.messages, context) as unknown as Anthropic.Beta.BetaMessageParam[]
+  const effort = effortFor(checked.messages)
 
   const encoder = new TextEncoder()
   const out = new ReadableStream<Uint8Array>({
     async start(controller) {
+      const send = (e: CoachEvent) => controller.enqueue(encoder.encode(encodeEvent(e)))
+      const total = { input_tokens: 0, output_tokens: 0, cache_read_input_tokens: 0 }
+      let wrote = false
       try {
-        for await (const event of stream) {
-          if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
-            controller.enqueue(encoder.encode(event.delta.text))
+        // De coach mag tekst schrijven, knoppen voorstellen en daarna verder schrijven. De knoppen doen
+        // hier niets: de app laat ze zien en de rider beslist. Max een paar rondes per vraag.
+        for (let round = 0; round < LIMITS.rounds; round++) {
+          const stream = anthropic.beta.messages.stream({
+            model: MODEL,
+            max_tokens: 8000,
+            betas: ['server-side-fallback-2026-07-01'],
+            fallbacks: 'default',
+            output_config: { effort },
+            cache_control: { type: 'ephemeral' },
+            system: [{ type: 'text', text: SYSTEM_PROMPT, cache_control: { type: 'ephemeral' } }],
+            tools,
+            tool_choice: { type: 'auto' },
+            messages,
+          })
+          let fresh = true
+          for await (const event of stream) {
+            if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
+              // nieuwe ronde na een knop: nieuwe alinea
+              send({ t: 'text', v: (fresh && wrote ? '\n\n' : '') + event.delta.text })
+              fresh = false
+              wrote = true
+            }
           }
+          const final = await stream.finalMessage()
+          total.input_tokens += final.usage.input_tokens
+          total.output_tokens += final.usage.output_tokens
+          total.cache_read_input_tokens += final.usage.cache_read_input_tokens ?? 0
+
+          if (final.stop_reason === 'refusal') {
+            send({ t: 'text', v: '\n\nHier kan ik je helaas niet mee helpen. Probeer het anders te vragen.' })
+            break
+          }
+          const uses = final.content.filter((b): b is Anthropic.Beta.BetaToolUseBlock => b.type === 'tool_use')
+          // afgekapt midden in een tool: niet uitvoeren
+          if (final.stop_reason !== 'tool_use' || !uses.length) {
+            if (final.stop_reason === 'max_tokens') send({ t: 'text', v: '\n\n(Antwoord werd te lang en is afgekapt.)' })
+            break
+          }
+          const results = uses.map((u) => {
+            const action = checkAction(u.name, u.input, trickIds)
+            if (action) send({ t: 'action', action })
+            return {
+              type: 'tool_result' as const,
+              tool_use_id: u.id,
+              content: action ? toolResult(action) : 'Deze input klopt niet; er is niets getoond.',
+              is_error: !action,
+            }
+          })
+          messages.push({ role: 'assistant', content: final.content }, { role: 'user', content: results })
         }
-        const final = await stream.finalMessage()
-        if (final.stop_reason === 'refusal') {
-          controller.enqueue(encoder.encode('\n\nHier kan ik je helaas niet mee helpen. Probeer het anders te vragen.'))
-        }
-        await countUsage(final.usage)
+        await countUsage(total)
+        send({ t: 'done' })
       } catch (e) {
         console.error(e)
-        const msg =
-          e instanceof Anthropic.RateLimitError
-            ? 'Coach is even overbelast, probeer het zo nog eens.'
-            : e instanceof Anthropic.APIError
-              ? `Coach heeft een probleem (${e.status}).`
-              : 'Coach is even weg, probeer het zo nog eens.'
-        controller.enqueue(encoder.encode(`\n\nLet op: ${msg}`))
+        send({
+          t: 'error',
+          v:
+            e instanceof Anthropic.RateLimitError
+              ? 'Coach is even overbelast, probeer het zo nog eens.'
+              : e instanceof Anthropic.APIError
+                ? `Coach heeft een probleem (${e.status}).`
+                : 'Coach is even weg, probeer het zo nog eens.',
+        })
       } finally {
         controller.close()
       }
     },
   })
 
-  return new Response(out, { headers: { ...cors, 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-cache' } })
+  return new Response(out, { headers: { ...cors, 'Content-Type': STREAM_TYPE, 'Cache-Control': 'no-cache' } })
 })
 
 // ── Dagreview: één gestructureerd antwoord, zodat de app de voorgestelde trick als doel kan zetten ──

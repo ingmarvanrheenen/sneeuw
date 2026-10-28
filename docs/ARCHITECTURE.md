@@ -88,16 +88,26 @@ service worker (public/push-sw.js) ── toont de melding, tik opent de juiste 
 ## Coach Daddy
 
 ```
-app ── buildContext() ──► samenvatting van je data (stance, level, tricks, laatste dagen, doelen, trip, gear)
+app ── buildContext() ──► samenvatting van je data (stance, level, tricks, laatste dagen, doelen, trip, gear, geheugen)
     ── POST /functions/v1/coach (JWT) ──► Edge Function
-                                            ├─ checkt login + daglimiet (coach_usage)
-                                            ├─ Claude Opus 5.5, effort low, streaming
-                                            ├─ systeemprompt gecachet, context vast in eerste bericht
-                                            └─ server-side fallback bij een weigering
-    ◄── tekst-stream ──
+       { messages (evt. met foto), context,     ├─ checkt login + daglimiet (coach_usage)
+         tricks: [{id, name}] }                 ├─ checkt input (protocol.ts): foto's, knoppen, limieten
+                                                ├─ Claude Opus 5.5, effort low (medium bij een foto), streaming
+                                                ├─ tools/systeemprompt gecachet, context vast in eerste bericht
+                                                ├─ tool-loop: knoppen gaan als event naar de app (max 4 rondes)
+                                                └─ server-side fallback bij een weigering
+    ◄── NDJSON: {t:'text'} {t:'action'} {t:'error'} {t:'done'} ──
 ```
 
 Gesprekken worden lokaal bewaard (laatste 30). De context wordt bij de start van een gesprek vastgezet, zodat de prompt-cache over het hele gesprek werkt.
+
+**Knoppen** (`supabase/functions/coach/protocol.ts`, gedeeld door functie, app en tests). De coach heeft vier tools, allemaal `strict` (geforceerd tool-gebruik kan niet samen met thinking, dus `tool_choice: auto`): `zet_doel` (titel + trick uit de bijbel als `enum`), `toon_trick`, `oefenplan` (dagen met focus en oefeningen) en `onthoud`. Op de server doen ze niets: de functie checkt de input, stuurt een `action`-event naar de app en geeft Claude als resultaat dat de knop er staat. De rider beslist; alleen `onthoud` gaat direct het geheugen in. In een volgend bericht stuurt de app eerdere knoppen mee, en de functie maakt daar weer echte `tool_use` + `tool_result` van.
+
+**Techniek-check**: kies een foto, of een video waarin je met een schuif het moment zoekt. De app tekent dat beeld verkleind (max 1024 px, JPEG) en stuurt het als base64 mee. Alleen de laatste twee foto's van een gesprek gaan mee naar de API; oudere worden een regel tekst. Te openen vanaf de coach, vanuit een clip (`/coach?media=<id>`) en vanuit een trick (`/coach?check=<trickId>`).
+
+**Geheugen** (kv `coach:memory`, max 30, alleen op je toestel): feiten die de coach met `onthoud` opslaat. Zichtbaar en wisbaar onder "Wat de coach van je weet", en mee in de context vanaf het volgende gesprek.
+
+De app leest ook nog gewone tekst als de functie (nog) de oude versie is.
 
 **Dagreview** (`mode: 'review'`): op verzoek vanuit het dagdetail. De app stuurt de rider-context, de dag als tekst (`dayText()`) en de trick-ids die je nog niet geland hebt. De functie vraagt één antwoord met structured outputs (`output_config.format`, JSON-schema): `goed`, `focus`, `oefening`, `trickId` (alleen uit de meegestuurde lijst, als `enum`) en `veiligheid`. De review wordt bij de dag bewaard (`session.review`) en synct mee. De voorgestelde trick zet je met één tik als doel. Een review telt als één coach-bericht voor de daglimiet.
 

@@ -2,6 +2,7 @@
 // van de `coach` Edge Function (de API-key staat alleen op de server).
 import { kvGet, kvSet } from './db'
 import { getAccessToken, getProfile } from './auth'
+import { create } from './repo'
 import { loadProgressInput, computeProgress } from './useProgress'
 import { TRICKS, TRICK_BY_ID } from '../content/tricks'
 import { PISTES, SNOW, WEATHER } from '../content/logOptions'
@@ -9,10 +10,20 @@ import { MOOD_LABELS } from '../design/icons'
 import type { DayReview, Session } from './types'
 import { sessionsSorted } from './repo'
 import { todayISO, uid } from './ids'
+import {
+  LIMITS,
+  STREAM_TYPE,
+  decodeEvents,
+  type CoachAction,
+  type CoachImage,
+  type WireMessage,
+} from '../../supabase/functions/coach/protocol'
 
-export interface CoachMessage {
-  role: 'user' | 'assistant'
-  content: string
+export type { CoachAction, CoachImage, PlanDay } from '../../supabase/functions/coach/protocol'
+
+export interface CoachMessage extends WireMessage {
+  /** indexen van `actions` waar de rider al op getikt heeft */
+  applied?: number[]
 }
 
 export interface Conversation {
@@ -46,9 +57,40 @@ export function newConversation(context: string): Conversation {
   return { id: uid(), title: 'Nieuw gesprek', context, messages: [], createdAt: Date.now() }
 }
 
+// ── Geheugen: blijvende feiten die de coach zelf opslaat (zichtbaar en wisbaar) ──
+
+export interface MemoryItem {
+  id: string
+  text: string
+  createdAt: number
+}
+
+const MEMORY_KEY = 'coach:memory'
+export const MEMORY_MAX = 30
+
+export async function listMemory(): Promise<MemoryItem[]> {
+  return kvGet<MemoryItem[]>(MEMORY_KEY, [])
+}
+
+/** Nieuw feit bovenaan; hetzelfde feit nog eens wordt niet dubbel opgeslagen. */
+export async function addMemory(text: string): Promise<MemoryItem[]> {
+  const all = await listMemory()
+  const t = text.trim()
+  if (!t || all.some((m) => m.text.toLowerCase() === t.toLowerCase())) return all
+  const next = [{ id: uid(), text: t, createdAt: Date.now() }, ...all].slice(0, MEMORY_MAX)
+  await kvSet(MEMORY_KEY, next)
+  return next
+}
+
+export async function removeMemory(id: string): Promise<MemoryItem[]> {
+  const next = (await listMemory()).filter((m) => m.id !== id)
+  await kvSet(MEMORY_KEY, next)
+  return next
+}
+
 /** Samenvatting van de rider voor de coach. Wordt bij de start van een gesprek vastgezet. */
 export async function buildContext(): Promise<string> {
-  const [profile, input] = await Promise.all([getProfile(), loadProgressInput()])
+  const [profile, input, memory] = await Promise.all([getProfile(), loadProgressInput(), listMemory()])
   const p = computeProgress(input)
   const name = (id: string) => TRICK_BY_ID.get(id)?.name ?? id
   const by = (st: string) => input.tricks.filter((t) => t.status === st).map((t) => name(t.trickId))
@@ -87,6 +129,7 @@ export async function buildContext(): Promise<string> {
       : 'Geen trip gepland',
     `Gear: ${input.gear.map((g) => `${g.gearKind} ${g.brand ?? ''} ${g.name} ${g.size ?? ''} (${g.owned})`).join('; ') || '-'}`,
     `Laatste dagen:\n${recent.join('\n') || '- nog niks gelogd'}`,
+    `Wat de coach onthouden heeft:\n${memory.map((m) => `- ${m.text}`).join('\n') || '- nog niks'}`,
   ]
   return lines.join('\n')
 }
@@ -152,18 +195,113 @@ export async function reviewDay(s: Session): Promise<DayReview> {
   return { ...r, trickId: r.trickId && TRICK_BY_ID.has(r.trickId) ? r.trickId : null, createdAt: Date.now() }
 }
 
-export async function streamCoach(conv: Conversation, onText: (chunk: string) => void, signal?: AbortSignal): Promise<string> {
-  const res = await coachRequest({ messages: conv.messages, context: conv.context }, signal)
+/** Alleen wat de server nodig heeft, met alleen de laatste foto's (oudere zijn al besproken). */
+export function toWire(messages: CoachMessage[]): WireMessage[] {
+  const withImage = messages.flatMap((m, i) => (m.image ? [i] : []))
+  const keep = new Set(withImage.slice(-LIMITS.images))
+  return messages.map((m, i) => ({
+    role: m.role,
+    content: m.image && !keep.has(i) ? m.content || '(Hier stuurde ik een foto.)' : m.content,
+    ...(m.image && keep.has(i) ? { image: m.image } : {}),
+    ...(m.actions?.length ? { actions: m.actions } : {}),
+  }))
+}
+
+export interface StreamHandlers {
+  onText: (chunk: string) => void
+  onAction?: (a: CoachAction) => void
+}
+
+/** Stuurt het gesprek naar de coach en leest de stream (tekst en knoppen). */
+export async function streamCoach(
+  conv: Conversation,
+  { onText, onAction }: StreamHandlers,
+  signal?: AbortSignal,
+): Promise<{ text: string; actions: CoachAction[] }> {
+  const res = await coachRequest(
+    { messages: toWire(conv.messages), context: conv.context, tricks: TRICKS.map((t) => ({ id: t.id, name: t.name })) },
+    signal,
+  )
   if (!res.body) throw new CoachError('Coach gaf geen antwoord.')
+  const ndjson = (res.headers.get('Content-Type') ?? '').includes(STREAM_TYPE)
   const reader = res.body.getReader()
   const dec = new TextDecoder()
-  let full = ''
+  let text = ''
+  const actions: CoachAction[] = []
+  let buf = ''
   for (;;) {
     const { value, done } = await reader.read()
+    const chunk = done ? dec.decode() : dec.decode(value, { stream: true })
+    if (!ndjson) {
+      // oude versie van de server: gewone tekst
+      text += chunk
+      if (chunk) onText(chunk)
+    } else {
+      const { events, rest } = decodeEvents(buf + chunk + (done ? '\n' : ''))
+      buf = rest
+      for (const e of events) {
+        if (e.t === 'text') {
+          text += e.v
+          onText(e.v)
+        } else if (e.t === 'action') {
+          actions.push(e.action)
+          onAction?.(e.action)
+        } else if (e.t === 'error') {
+          throw new CoachError(e.v)
+        }
+      }
+    }
     if (done) break
-    const chunk = dec.decode(value, { stream: true })
-    full += chunk
-    onText(chunk)
   }
-  return full
+  return { text, actions }
 }
+
+// ── Knoppen uitvoeren ───────────────────────────────────────────────────────
+
+/** Volgende trip die nog moet komen of bezig is, om doelen aan te hangen. */
+async function upcomingTripId(): Promise<string | undefined> {
+  const today = todayISO()
+  const { trips } = await loadProgressInput()
+  return trips
+    .filter((t) => t.startDate && (t.endDate ?? t.startDate) >= today)
+    .sort((a, b) => (a.startDate ?? '').localeCompare(b.startDate ?? ''))[0]?.id
+}
+
+/** Zet een voorstel van de coach om in doelen. Geeft het aantal nieuwe doelen terug. */
+export async function applyAction(a: CoachAction): Promise<number> {
+  if (a.kind === 'doel') {
+    await create('goal', { title: a.titel, ...(a.trickId && TRICK_BY_ID.has(a.trickId) ? { trickId: a.trickId } : {}), done: false })
+    return 1
+  }
+  if (a.kind === 'plan') {
+    const tripId = await upcomingTripId()
+    for (const d of a.dagen) await create('goal', { title: `${d.dag}: ${d.focus}`, ...(tripId ? { tripId } : {}), done: false })
+    return a.dagen.length
+  }
+  if (a.kind === 'onthoud') {
+    await addMemory(a.feit)
+    return 0
+  }
+  return 0
+}
+
+// ── Foto's voor de techniek-check ─────────────────────────────────────────────
+
+export const IMAGE_MAX = 1024
+
+/** Tekent een foto of videoframe verkleind (max 1024 px) en geeft hem als JPEG voor de coach. */
+export function toCoachImage(src: CanvasImageSource, w: number, h: number): CoachImage {
+  const scale = Math.min(1, IMAGE_MAX / Math.max(w, h))
+  const canvas = document.createElement('canvas')
+  canvas.width = Math.max(1, Math.round(w * scale))
+  canvas.height = Math.max(1, Math.round(h * scale))
+  const ctx = canvas.getContext('2d')
+  if (!ctx) throw new CoachError('Kon de foto niet verwerken.')
+  ctx.drawImage(src, 0, 0, canvas.width, canvas.height)
+  const url = canvas.toDataURL('image/jpeg', 0.82)
+  const data = url.slice(url.indexOf(',') + 1)
+  if (!url.startsWith('data:image/jpeg') || !data) throw new CoachError('Kon de foto niet verwerken.')
+  return { mediaType: 'image/jpeg', data }
+}
+
+export const imageSrc = (img: CoachImage) => `data:${img.mediaType};base64,${img.data}`

@@ -1,23 +1,34 @@
-import { Fragment, useEffect, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { Button, Empty, Page, PageHeader, Sheet, cx } from '../components/ui'
+import { Button, Empty, List, Page, PageHeader, Row, Section, Sheet, cx } from '../components/ui'
+import { ActionCard, MemorySheet, Rich, TechniqueSheet, type TechniquePick } from '../components/CoachParts'
 import { Icon, Spinner } from '../design/icons'
 import { authStore } from '../lib/auth'
 import { hasBackend } from '../lib/supabase'
 import {
+  addMemory,
+  applyAction,
   buildContext,
   CoachError,
   deleteConversation,
+  imageSrc,
   listConversations,
+  listMemory,
   newConversation,
+  removeMemory,
   saveConversation,
   streamCoach,
+  type CoachAction,
+  type CoachImage,
+  type CoachMessage,
   type Conversation,
+  type MemoryItem,
 } from '../lib/coach'
 import { TRICK_BY_ID } from '../content/tricks'
 import { db } from '../lib/db'
 import type { Session } from '../lib/types'
 import { sfx } from '../lib/sounds'
+import { toast } from '../lib/toast'
 
 const STARTERS = [
   'Maak een oefenplan voor mijn trip',
@@ -28,49 +39,12 @@ const STARTERS = [
   'Wat neem ik mee voor mijn eerste keer in de Alpen?',
 ]
 
-/** Piepkleine markdown: **vet**, lijstjes en alinea's. Genoeg voor chat. */
-function Rich({ text }: { text: string }) {
-  const inline = (s: string): ReactNode[] =>
-    s
-      .split(/(\*\*[^*]+\*\*)/g)
-      .map((part, i) =>
-        part.startsWith('**') && part.endsWith('**') ? <strong key={i}>{part.slice(2, -2)}</strong> : <Fragment key={i}>{part}</Fragment>,
-      )
-  const blocks = text.split(/\n{2,}/)
-  return (
-    <>
-      {blocks.map((b, i) => {
-        const lines = b.split('\n')
-        if (lines.every((l) => /^\s*([-*]|\d+\.)\s/.test(l)))
-          return (
-            <ul key={i} className="my-1.5 space-y-1">
-              {lines.map((l, j) => (
-                <li key={j} className="flex gap-2">
-                  <span className="mt-[7px] size-1.5 shrink-0 bg-accent-text" />
-                  <span>{inline(l.replace(/^\s*([-*]|\d+\.)\s/, ''))}</span>
-                </li>
-              ))}
-            </ul>
-          )
-        if (/^#{1,3}\s/.test(b))
-          return (
-            <div key={i} className="mt-2 font-semibold">
-              {inline(b.replace(/^#{1,3}\s/, ''))}
-            </div>
-          )
-        return (
-          <p key={i} className="my-1.5">
-            {lines.map((l, j) => (
-              <Fragment key={j}>
-                {j > 0 && <br />}
-                {inline(l)}
-              </Fragment>
-            ))}
-          </p>
-        )
-      })}
-    </>
-  )
+/** Vraag die bij een techniek-check hoort. */
+export function techniqueQuestion(trickId: string | null, at?: number, extra?: string) {
+  const trick = trickId ? TRICK_BY_ID.get(trickId)?.name : undefined
+  const what = trick ? `mijn ${trick}` : 'mijn techniek'
+  const frame = at != null ? ` Dit is een frame uit een video, op ${at.toFixed(1).replace('.', ',')} s.` : ''
+  return `Techniek-check: kijk naar ${what}.${frame} Wat zie je en wat moet ik anders doen?${extra ? `\n\n${extra}` : ''}`
 }
 
 export default function Coach() {
@@ -79,66 +53,112 @@ export default function Coach() {
   const { user } = authStore.use()
   const [conv, setConv] = useState<Conversation | null>(null)
   const [history, setHistory] = useState<Conversation[]>([])
+  const [memory, setMemory] = useState<MemoryItem[]>([])
   const [input, setInput] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [showHistory, setShowHistory] = useState(false)
+  const [sheet, setSheet] = useState<'history' | 'memory' | 'check' | null>(null)
+  const [check, setCheck] = useState<{ mediaId?: string | null; trickId?: string | null }>({})
   const bottom = useRef<HTMLDivElement>(null)
   const abort = useRef<AbortController | null>(null)
 
   useEffect(() => {
     void (async () => {
       setHistory(await listConversations())
+      setMemory(await listMemory())
       setConv(newConversation(await buildContext()))
-      // Voorinvullen vanuit een trick of dag
+      // Voorinvullen vanuit een trick, een dag of een clip
       const trick = params.get('trick')
       const dag = params.get('dag')
+      const media = params.get('media')
+      const checkTrick = params.get('check')
       if (trick) setInput(`Hoe leer ik de ${TRICK_BY_ID.get(trick)?.name ?? trick}? Wat is voor mij de beste aanpak?`)
       if (dag) {
         const s = (await db.records.get(dag)) as Session | undefined
         if (s) setInput(`Kijk naar mijn dag op ${s.date} in ${s.resortName}. Wat ging goed en waar moet ik de volgende keer op letten?`)
       }
+      if (media || checkTrick) {
+        setCheck({ mediaId: media, trickId: checkTrick })
+        setSheet('check')
+      }
     })()
   }, [params])
 
   useEffect(() => {
-    bottom.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [conv?.messages.length, conv?.messages.at(-1)?.content.length])
+    bottom.current?.scrollIntoView?.({ behavior: 'smooth' })
+  }, [conv?.messages.length, conv?.messages.at(-1)?.content.length, conv?.messages.at(-1)?.actions?.length])
 
-  async function send(text: string) {
-    if (!conv || !text.trim() || busy) return
+  async function startNew() {
+    setError(null)
+    setConv(newConversation(await buildContext()))
+  }
+
+  async function send(text: string, image?: CoachImage) {
+    if (!conv || (!text.trim() && !image) || busy) return
     sfx.tap()
     setError(null)
-    const userMsg = { role: 'user' as const, content: text.trim() }
+    const userMsg: CoachMessage = { role: 'user', content: text.trim(), ...(image ? { image } : {}) }
     let current: Conversation = {
       ...conv,
-      title: conv.messages.length ? conv.title : text.trim().slice(0, 48),
+      title: conv.messages.length ? conv.title : (image ? 'Techniek-check' : text.trim()).slice(0, 48),
       messages: [...conv.messages, userMsg],
     }
-    setConv({ ...current, messages: [...current.messages, { role: 'assistant', content: '' }] })
+    let answer: CoachMessage = { role: 'assistant', content: '', actions: [], applied: [] }
+    const show = () => setConv({ ...current, messages: [...current.messages, answer] })
+    show()
     setInput('')
     setBusy(true)
     abort.current = new AbortController()
-    let answer = ''
     try {
       await streamCoach(
         current,
-        (chunk) => {
-          answer += chunk
-          setConv({ ...current, messages: [...current.messages, { role: 'assistant', content: answer }] })
+        {
+          onText: (chunk) => {
+            answer = { ...answer, content: answer.content + chunk }
+            show()
+          },
+          onAction: (a) => {
+            const actions = [...(answer.actions ?? []), a]
+            // onthouden gebeurt meteen; het staat in "Wat de coach van je weet" en is daar te wissen
+            if (a.kind === 'onthoud') void addMemory(a.feit).then(setMemory)
+            answer = {
+              ...answer,
+              actions,
+              applied: a.kind === 'onthoud' ? [...(answer.applied ?? []), actions.length - 1] : answer.applied,
+            }
+            show()
+          },
         },
         abort.current.signal,
       )
-      current = { ...current, messages: [...current.messages, { role: 'assistant', content: answer }] }
+      current = { ...current, messages: [...current.messages, answer] }
       setConv(current)
       await saveConversation(current)
       setHistory(await listConversations())
     } catch (e) {
+      // wat er al binnen was blijft staan
+      if (answer.content || answer.actions?.length) current = { ...current, messages: [...current.messages, answer] }
       setConv(current)
       if ((e as Error).name !== 'AbortError') setError(e instanceof CoachError ? e.message : 'Verbinding mislukt. Probeer het nog eens.')
     } finally {
       setBusy(false)
     }
+  }
+
+  async function apply(msgIndex: number, actionIndex: number, a: CoachAction) {
+    if (!conv) return
+    const n = await applyAction(a)
+    sfx.tap()
+    toast({ title: n === 1 ? 'Doel gezet' : `${n} doelen gezet`, body: 'Staat bij je doelen.', tone: 'success' })
+    const messages = conv.messages.map((m, i) => (i === msgIndex ? { ...m, applied: [...(m.applied ?? []), actionIndex] } : m))
+    const next = { ...conv, messages }
+    setConv(next)
+    await saveConversation(next)
+  }
+
+  function onCheck(p: TechniquePick) {
+    setSheet(null)
+    void send(techniqueQuestion(p.trickId, p.at, input.trim() || undefined), p.image)
   }
 
   const ready = hasBackend && !!user
@@ -154,15 +174,15 @@ export default function Coach() {
             ready && (
               <>
                 <button
-                  aria-label="Geschiedenis"
-                  onClick={() => setShowHistory(true)}
+                  aria-label="Eerdere gesprekken"
+                  onClick={() => setSheet('history')}
                   className="grid size-9 place-items-center rounded-full border hairline"
                 >
                   <Icon name="clock" size={16} />
                 </button>
                 <button
                   aria-label="Nieuw gesprek"
-                  onClick={async () => setConv(newConversation(await buildContext()))}
+                  onClick={() => void startNew()}
                   className="grid size-9 place-items-center rounded-full border hairline"
                 >
                   <Icon name="plus" size={16} />
@@ -183,43 +203,63 @@ export default function Coach() {
             }
             action={hasBackend ? <Button onClick={() => nav('/instellingen')}>Inloggen</Button> : undefined}
           />
-        ) : !conv?.messages.length ? (
-          <div>
-            <div className="card p-4">
-              <div className="flex items-center gap-3">
-                <div className="grid size-11 place-items-center rounded-2xl bg-accent text-accent-ink">
-                  <Icon name="snowflake" size={24} />
-                </div>
-                <div>
-                  <div className="font-semibold">Yo, ik ben je coach.</div>
-                  <div className="text-sm text-muted">Ik ken je logboek, je tricks en je doelen. Vraag maar raak.</div>
-                </div>
-              </div>
-            </div>
-            <div className="label mb-2 mt-6">Probeer</div>
-            <div className="card divide-y divide-[var(--line)] overflow-hidden">
-              {STARTERS.map((s) => (
-                <button
-                  key={s}
-                  onClick={() => send(s)}
-                  className="flex w-full items-center justify-between px-4 py-3.5 text-left active:bg-surface-2 text-sm"
-                >
-                  {s}
-                  <Icon name="arrow" size={16} className="text-muted" />
-                </button>
-              ))}
-            </div>
+        ) : !conv ? (
+          <div className="grid place-items-center py-16 text-muted">
+            <Spinner size={20} />
           </div>
+        ) : !conv.messages.length ? (
+          <>
+            <Section title="Techniek-check" className="mt-0">
+              <List>
+                <Row
+                  icon="camera"
+                  title="Laat de coach meekijken"
+                  detail="Foto of video: wat hij ziet en wat beter kan"
+                  onClick={() => {
+                    setCheck({})
+                    setSheet('check')
+                  }}
+                />
+              </List>
+            </Section>
+            <Section title="Vraag maar raak">
+              <List>
+                {STARTERS.map((s) => (
+                  <Row key={s} title={<span className="block whitespace-normal">{s}</span>} onClick={() => void send(s)} />
+                ))}
+              </List>
+            </Section>
+            <Section title="Wat de coach van je weet">
+              <List>
+                <Row
+                  icon="sparkle"
+                  title="Geheugen"
+                  detail={memory.length ? memory[0].text : 'Wat je vertelt over blessures, je board of je doelen'}
+                  value={memory.length || undefined}
+                  onClick={() => setSheet('memory')}
+                />
+              </List>
+            </Section>
+            <p className="mt-6 text-center text-[13px] text-muted">AI kan fouten maken. Bij pijn of twijfel: check bij een pro.</p>
+          </>
         ) : (
           <div className="space-y-3">
             {conv.messages.map((m, i) =>
               m.role === 'user' ? (
-                <div key={i} className="ml-10 rounded-2xl rounded-br-sm bg-accent px-4 py-2.5 text-[15px] text-accent-ink">
-                  {m.content}
+                <div key={i} className="ml-10 overflow-hidden rounded-2xl rounded-br-sm bg-accent text-[15px] text-accent-ink">
+                  {m.image && <img src={imageSrc(m.image)} alt="Jouw foto voor de coach" className="max-h-64 w-full object-cover" />}
+                  {m.content && <div className="whitespace-pre-line px-4 py-2.5">{m.content}</div>}
                 </div>
               ) : (
-                <div key={i} className="mr-6 rounded-2xl rounded-bl-sm border hairline bg-surface px-4 py-2.5 text-[15px] leading-relaxed">
-                  {m.content ? <Rich text={m.content} /> : <Spinner size={16} />}
+                <div key={i} className="mr-6 space-y-2">
+                  {(m.content || !m.actions?.length) && (
+                    <div className="rounded-2xl rounded-bl-sm border hairline bg-surface px-4 py-2.5 text-[15px] leading-relaxed">
+                      {m.content ? <Rich text={m.content} /> : <Spinner size={16} />}
+                    </div>
+                  )}
+                  {m.actions?.map((a, j) => (
+                    <ActionCard key={j} action={a} applied={!!m.applied?.includes(j)} onApply={() => void apply(i, j, a)} />
+                  ))}
                 </div>
               ),
             )}
@@ -234,7 +274,7 @@ export default function Coach() {
       </Page>
 
       {ready && (
-        <div className="pb-safe fixed inset-x-0 bottom-0 z-30 border-t hairline bg-bg/90 px-4 pt-3 backdrop-blur-md">
+        <div className="pb-safe fixed inset-x-0 bottom-0 z-30 border-t hairline bg-bg/90 px-4 py-3 backdrop-blur-md">
           <form
             className="mx-auto flex max-w-xl items-end gap-2"
             onSubmit={(e) => {
@@ -242,12 +282,25 @@ export default function Coach() {
               void send(input)
             }}
           >
+            <button
+              type="button"
+              aria-label="Techniek-check met foto of video"
+              disabled={busy}
+              onClick={() => {
+                setCheck({})
+                setSheet('check')
+              }}
+              className="grid size-12 shrink-0 place-items-center rounded-full bg-surface-2 text-text disabled:opacity-40"
+            >
+              <Icon name="camera" size={20} />
+            </button>
             <textarea
               value={input}
               onChange={(e) => setInput(e.target.value)}
               rows={Math.min(4, Math.max(1, input.split('\n').length))}
               placeholder="Vraag Coach Daddy…"
-              className="max-h-32 flex-1 resize-none rounded-3xl border hairline bg-surface px-4 py-3 outline-none focus:border-accent"
+              aria-label="Bericht aan de coach"
+              className="max-h-32 min-w-0 flex-1 resize-none rounded-3xl border hairline bg-surface px-4 py-3 text-base outline-none focus:border-accent"
             />
             {busy ? (
               <button
@@ -272,42 +325,56 @@ export default function Coach() {
               </button>
             )}
           </form>
-          <p className="label mx-auto mt-1.5 max-w-xl text-center !text-[9px]">
-            AI kan fouten maken. Bij pijn of twijfel: check bij een pro.
-          </p>
         </div>
       )}
 
-      <Sheet open={showHistory} onClose={() => setShowHistory(false)} title="Eerdere gesprekken">
-        {!history.length && <p className="pb-6 text-sm text-muted">Nog geen gesprekken.</p>}
-        <div className="space-y-2 pb-6">
-          {history.map((c) => (
-            <div key={c.id} className="card flex items-center gap-2 p-3">
-              <button
-                className="min-w-0 flex-1 text-left"
-                onClick={() => {
-                  setConv(c)
-                  setShowHistory(false)
-                }}
-              >
-                <div className="truncate text-sm font-medium">{c.title}</div>
-                <div className="label">
-                  {new Date(c.createdAt).toLocaleDateString('nl-NL')} · {c.messages.length} berichten
-                </div>
-              </button>
-              <button
-                aria-label="Verwijderen"
-                onClick={async () => {
-                  await deleteConversation(c.id)
-                  setHistory(await listConversations())
-                }}
-                className="grid size-9 place-items-center text-muted"
-              >
-                <Icon name="trash" size={16} />
-              </button>
-            </div>
-          ))}
-        </div>
+      <TechniqueSheet
+        open={sheet === 'check'}
+        onClose={() => setSheet(null)}
+        onPick={onCheck}
+        mediaId={check.mediaId}
+        trickId={check.trickId}
+      />
+
+      <MemorySheet
+        open={sheet === 'memory'}
+        onClose={() => setSheet(null)}
+        items={memory}
+        onRemove={async (id) => setMemory(await removeMemory(id))}
+      />
+
+      <Sheet open={sheet === 'history'} onClose={() => setSheet(null)} title="Eerdere gesprekken">
+        {!history.length ? (
+          <p className="pb-6 text-[15px] text-muted">Nog geen gesprekken.</p>
+        ) : (
+          <List className="mb-6">
+            {history.map((c) => (
+              <div key={c.id} className="flex items-center">
+                <Row
+                  className="flex-1"
+                  title={c.title}
+                  detail={`${new Date(c.createdAt).toLocaleDateString('nl-NL')} · ${c.messages.length} berichten`}
+                  chevron={false}
+                  onClick={() => {
+                    setConv(c)
+                    setError(null)
+                    setSheet(null)
+                  }}
+                />
+                <button
+                  aria-label={`Verwijder ${c.title}`}
+                  onClick={async () => {
+                    await deleteConversation(c.id)
+                    setHistory(await listConversations())
+                  }}
+                  className="grid size-11 shrink-0 place-items-center text-muted active:opacity-60"
+                >
+                  <Icon name="trash" size={18} />
+                </button>
+              </div>
+            ))}
+          </List>
+        )}
       </Sheet>
     </div>
   )

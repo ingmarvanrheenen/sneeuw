@@ -18,6 +18,8 @@ import { setCurrentUserId } from '../lib/auth-state'
 import { db, kvSet, type BlobRow } from '../lib/db'
 import { create, listKind, remove, restore } from '../lib/repo'
 import { plural } from '../lib/format'
+import { MediaViewer } from '../components/Media'
+import type { MediaMeta } from '../lib/types'
 import type { User } from '@supabase/supabase-js'
 
 const inRouter = (ui: React.ReactNode) => render(<MemoryRouter>{ui}</MemoryRouter>)
@@ -158,5 +160,20 @@ describe('Field', () => {
     expect(screen.getByRole('button', { name: 'Ollie' })).toBeTruthy()
     await userEvent.setup().click(screen.getByText('Kies er een'))
     expect(onClick).not.toHaveBeenCalled()
+  })
+})
+
+describe('media-viewer', () => {
+  const clip = (userId: string) =>
+    ({ id: 'm1', kind: 'media', type: 'image', mime: 'image/jpeg', userId, createdAt: 0, updatedAt: 0 }) as MediaMeta
+
+  it('bij je eigen clip een knop naar de techniek-check van de coach', () => {
+    inRouter(<MediaViewer m={clip('me')} onClose={() => {}} />)
+    expect(screen.getByRole('link', { name: /Check techniek/ }).getAttribute('href')).toBe('/coach?media=m1')
+  })
+
+  it('niet bij de clip van een ander', () => {
+    inRouter(<MediaViewer m={clip('daan')} onClose={() => {}} />)
+    expect(screen.queryByRole('link', { name: /Check techniek/ })).toBeNull()
   })
 })

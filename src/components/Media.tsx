@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { Icon } from '../design/icons'
+import { getCurrentUserId } from '../lib/auth-state'
 import { mediaUrl } from '../lib/sync'
 import { addMediaFiles } from '../lib/media'
 import { remove } from '../lib/repo'
@@ -57,9 +59,20 @@ export function MediaViewer({ m, onClose, onDelete }: { m: MediaMeta | null; onC
         ) : (
           <span />
         )}
-        <button aria-label="Sluiten" onClick={onClose} className="grid size-10 place-items-center rounded-full bg-white/10 text-white">
-          <Icon name="close" size={18} />
-        </button>
+        <div className="flex gap-2">
+          {(!m.userId || m.userId === getCurrentUserId()) && (
+            <Link
+              to={`/coach?media=${m.id}`}
+              className="flex h-10 items-center gap-1.5 rounded-full bg-white/10 px-3.5 text-[15px] font-medium text-white"
+            >
+              <Icon name="chat" size={16} />
+              Check techniek
+            </Link>
+          )}
+          <button aria-label="Sluiten" onClick={onClose} className="grid size-10 place-items-center rounded-full bg-white/10 text-white">
+            <Icon name="close" size={18} />
+          </button>
+        </div>
       </div>
       <div className="flex flex-1 items-center justify-center" onClick={(e) => e.stopPropagation()}>
         {!url ? (

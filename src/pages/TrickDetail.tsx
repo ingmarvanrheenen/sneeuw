@@ -163,6 +163,7 @@ export default function TrickDetail() {
           onClick={goal || landedSet.has(trick.id) ? undefined : addGoal}
         />
         <Row icon="chat" title="Vraag Coach Daddy hierover" to={`/coach?trick=${trick.id}`} />
+        <Row icon="camera" title="Laat de coach je techniek checken" detail="Met een foto of video" to={`/coach?check=${trick.id}`} />
         <Row
           icon="video"
           title={
