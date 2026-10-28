@@ -117,6 +117,7 @@ export default function Home() {
       <QuickLog open={quick} onClose={() => setQuick(false)} />
 
       <List className="mt-3">
+        <Row icon="replay" title="Trick-roulette" detail="Weet je niet wat je moet oefenen?" to="/tricks?roulette=1" />
         <Row icon="chat" title="Coach Daddy" detail="Vraag om tips of een oefenplan" to="/coach" />
         {nextTrip && (
           <Row

@@ -5,6 +5,7 @@ import { Icon } from '../design/icons'
 import { TRACKS, TRICKS, TRICK_BY_ID, type Track } from '../content/tricks'
 import { TERMS, TERM_CATS, type TermCat } from '../content/terms'
 import { useKind } from '../lib/repo'
+import { RouletteSheet } from '../components/Roulette'
 import type { TrickStatus } from '../lib/types'
 
 export function StatusDot({ status }: { status?: TrickStatus }) {
@@ -147,16 +148,34 @@ function Dictionary() {
 
 export default function Tricks() {
   const nav = useNavigate()
+  const [params, setParams] = useSearchParams()
   const [tab, setTab] = useState<'tree' | 'dict'>('tree')
+  // ?roulette=1 (vanaf Home) opent de roulette meteen
+  const [roulette, setRoulette] = useState(params.get('roulette') === '1')
   return (
     <Page>
       <PageHeader
         title="Bijbel"
         right={
-          <Button size="sm" variant="ghost" icon={<Icon name="quiz" size={16} />} onClick={() => nav('/quiz')}>
-            Quiz
-          </Button>
+          <>
+            <Button size="sm" variant="ghost" icon={<Icon name="replay" size={16} />} onClick={() => setRoulette(true)}>
+              Roulette
+            </Button>
+            <Button size="sm" variant="ghost" icon={<Icon name="quiz" size={16} />} onClick={() => nav('/quiz')}>
+              Quiz
+            </Button>
+          </>
         }
+      />
+      <RouletteSheet
+        open={roulette}
+        onClose={() => {
+          setRoulette(false)
+          if (params.has('roulette')) {
+            params.delete('roulette')
+            setParams(params, { replace: true })
+          }
+        }}
       />
       <Segmented
         value={tab}
