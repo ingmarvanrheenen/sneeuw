@@ -26,6 +26,8 @@ import {
   setGoalDone,
   tripDays,
   cachedGoals,
+  mediaOnTrip,
+  tripMedia,
 } from '../lib/crewTrips'
 import { EMPTY_DRAFT } from '../lib/sessions'
 import type { Session } from '../lib/types'
@@ -206,5 +208,48 @@ describe('trip-recap', () => {
 
   it('lege trip', () => {
     expect(computeRecap([], {})).toMatchObject({ days: 0, hours: 0, falls: 0, landed: [], people: [] })
+  })
+})
+
+describe('trip-clips (stemronde)', () => {
+  const trip = { startDate: '2027-01-16', endDate: '2027-01-18' }
+  const at = (date: string, hour = 12) => new Date(`${date}T${String(hour).padStart(2, '0')}:00:00`).getTime()
+  const media = (id: string, userId: string, over: Record<string, unknown> = {}) =>
+    ({ id, userId, kind: 'media', type: 'video', mime: 'video/mp4', createdAt: at('2027-01-17'), updatedAt: 0, ...over }) as never
+
+  it('aan een dag van de trip gekoppeld, of tijdens de trip gemaakt; nieuwste eerst', () => {
+    const days = [day('daan', '2027-01-16')]
+    const list = mediaOnTrip(
+      [
+        media('aan-dag', 'daan', { sessionId: '2027-01-16daan', createdAt: at('2027-02-01') }), // later toegevoegd, hoort bij een tripdag
+        media('tijdens', 'daan', { createdAt: at('2027-01-18', 20) }),
+        media('ervoor', 'daan', { createdAt: at('2027-01-15') }),
+        media('erna', 'sem', { createdAt: at('2027-01-19') }),
+        media('andere-dag', 'sem', { sessionId: 'oude-dag', createdAt: at('2027-01-17') }),
+      ],
+      days,
+      trip,
+    )
+    expect(list.map((m) => (m as { id: string }).id)).toEqual(['aan-dag', 'tijdens'])
+  })
+
+  it('haalt de met de crew gedeelde media op en filtert op de trip', async () => {
+    fake().respond(() => ({
+      data: [
+        { user_id: 'daan', data: media('m1', 'daan') },
+        { user_id: 'sem', data: media('m2', 'sem', { createdAt: at('2026-12-01') }) },
+      ],
+    }))
+    const list = await tripMedia('c1', trip, [])
+    expect(list.map((m) => m.id)).toEqual(['m1'])
+    const call = fake().calls[0]
+    expect(call.filters).toContainEqual(['eq', 'kind', 'media'])
+    expect(call.filters).toContainEqual(['eq', 'crew_id', 'c1'])
+    expect(call.filters).toContainEqual(['eq', 'deleted', false])
+  })
+
+  it('media zonder eigenaar in de data krijgt de eigenaar van de rij', async () => {
+    fake().respond(() => ({ data: [{ user_id: 'daan', data: media('m1', null as never) }] }))
+    expect((await tripMedia('c1', trip, []))[0].userId).toBe('daan')
   })
 })

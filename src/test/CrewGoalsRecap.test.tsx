@@ -10,6 +10,7 @@ const api = vi.hoisted(() => ({
   removeGoal: vi.fn(),
   setGoalDone: vi.fn(),
   tripDays: vi.fn(),
+  tripMedia: vi.fn(),
   crewMembers: vi.fn(),
   listVotes: vi.fn(),
   cachedVotes: vi.fn(),
@@ -19,6 +20,7 @@ const api = vi.hoisted(() => ({
 vi.mock('../lib/crewTrips', async (orig) => ({ ...(await orig<typeof import('../lib/crewTrips')>()), ...api }))
 const push = vi.hoisted(() => ({ notifyCrew: vi.fn() }))
 vi.mock('../lib/push', () => push)
+vi.mock('../lib/sync', async (orig) => ({ ...(await orig<typeof import('../lib/sync')>()), mediaUrl: async () => 'blob:clip' }))
 vi.mock('../lib/crew', async (orig) => ({ ...(await orig<typeof import('../lib/crew')>()), crewMembers: api.crewMembers }))
 
 import { CrewGoals } from '../components/CrewGoals'
@@ -54,6 +56,7 @@ beforeEach(async () => {
   api.castVote.mockResolvedValue(undefined)
   api.removeVote.mockResolvedValue(undefined)
   api.removeGoal.mockResolvedValue(undefined)
+  api.tripMedia.mockResolvedValue([])
 })
 afterEach(() => {
   cleanup()
@@ -260,6 +263,45 @@ describe('trip-recap', () => {
       expect(within(within(sheet).getByRole('button', { name: /Daan/ })).getByText('2')).toBeTruthy()
       await user.click(within(sheet).getByRole('button', { name: 'Klaar' }))
       expect(within(screen.getByRole('button', { name: /Val van de trip/ })).getByText('Daan staat bovenaan')).toBeTruthy()
+    })
+
+    it('clips van de trip onder elke crewgenoot; tikken opent de clip, en stemt niet', async () => {
+      const user = userEvent.setup()
+      const clip = (id: string, userId: string) => ({
+        id,
+        userId,
+        kind: 'media',
+        type: 'video',
+        mime: 'video/mp4',
+        createdAt: 1,
+        updatedAt: 1,
+      })
+      api.tripMedia.mockResolvedValue([clip('m1', 'daan'), clip('m2', 'daan')])
+      recap()
+      await user.click(await screen.findByRole('button', { name: /Val van de trip/ }))
+      const sheet = screen.getByRole('dialog', { name: 'Val van de trip' })
+      expect(within(sheet).getByText(/Kijk de clips nog even terug/)).toBeTruthy()
+      const clips = within(sheet).getByLabelText('Clips van Daan')
+      expect(within(clips).getAllByRole('button')).toHaveLength(2)
+      expect(within(sheet).queryByLabelText('Clips van Sem')).toBeNull()
+      expect(api.tripMedia).toHaveBeenCalledWith('c1', { startDate: '2027-01-16', endDate: '2027-01-23' }, expect.any(Array))
+      await user.click(within(clips).getAllByRole('button')[0])
+      const video = await waitFor(() => {
+        const v = document.querySelector('video')
+        if (!v) throw new Error('nog geen video')
+        return v
+      })
+      expect(video.getAttribute('src')).toBe('blob:clip')
+      expect(api.castVote).not.toHaveBeenCalled()
+      await user.click(screen.getByRole('button', { name: 'Sluiten' }))
+      expect(document.querySelector('video')).toBeNull()
+      expect(screen.getByRole('dialog', { name: 'Val van de trip' })).toBeTruthy()
+    })
+
+    it('clips laden lukt niet: de recap en de stemronde staan er gewoon', async () => {
+      api.tripMedia.mockRejectedValue(new Error('stuk'))
+      recap()
+      expect(await screen.findByRole('button', { name: /Val van de trip/ })).toBeTruthy()
     })
 
     it('omzetten en intrekken', async () => {

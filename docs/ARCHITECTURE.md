@@ -61,7 +61,7 @@ Foto's worden op het toestel verkleind naar max 2048 px (JPEG). Video's gaan doo
 
 In de trip-recap: awards uit de met de crew gedeelde dagen van die trip (langst op de plank, trickmachine, eerste nieuwe trick, valkampioen, zat erop geplakt, zonnetje van de crew, zwartrijder, poedersnuiver, ibuprofen-award, elke dag erop). Afgeleid en niet opgeslagen, zoals XP. Minstens twee riders, gelijkspel wint samen, en als iedereen gelijk staat is er geen award.
 
-Stemronde in `crew_trip_votes`: "Val van de trip" en "Held van de trip". Eén stem per persoon per categorie, alleen op een crewgenoot en niet op jezelf. Omzetten (alleen `candidate` is aan te passen) en intrekken mogen. De stand zie je pas als je zelf gestemd hebt. RLS-scenario's: `supabase/tests/crew_trip_votes.sh`.
+Stemronde in `crew_trip_votes`: "Val van de trip" en "Held van de trip". Eén stem per persoon per categorie, alleen op een crewgenoot en niet op jezelf. Omzetten (alleen `candidate` is aan te passen) en intrekken mogen. De stand zie je pas als je zelf gestemd hebt. Onder elke crewgenoot staan hun met de crew gedeelde foto's en clips van de trip (`tripMedia`: gekoppeld aan een gedeelde dag van de trip, of tijdens de trip gemaakt); tikken opent de clip, stemmen doe je op de naam. Lukt het laden van de clips niet, dan werkt de stemronde gewoon. RLS-scenario's: `supabase/tests/crew_trip_votes.sh`.
 
 ## Seizoensladder (`src/lib/ladder.ts`)
 

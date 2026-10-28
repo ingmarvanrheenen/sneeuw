@@ -5,7 +5,8 @@
 import { supabase } from './supabase'
 import { kvGet, kvSet } from './db'
 import { getCurrentUserId } from './auth-state'
-import type { Session, Trip } from './types'
+import { todayISO } from './ids'
+import type { MediaMeta, Session, Trip } from './types'
 
 export interface CrewTripItem {
   id: string
@@ -199,6 +200,36 @@ export async function tripDays(crewId: string, trip: Pick<Trip, 'startDate' | 'e
   if (error) throw error
   const end = trip.endDate ?? trip.startDate
   return ((data ?? []) as SharedDay[]).filter((d) => d.data.date >= trip.startDate! && d.data.date <= end)
+}
+
+/**
+ * Foto's en clips van de trip: gekoppeld aan een gedeelde dag van de trip, of tijdens de trip gemaakt.
+ * Nieuwste eerst. Voor de stemronde: "Val van de trip" met bewijs.
+ */
+export function mediaOnTrip(media: MediaMeta[], days: SharedDay[], trip: Pick<Trip, 'startDate' | 'endDate'>): MediaMeta[] {
+  if (!trip.startDate) return []
+  const end = trip.endDate ?? trip.startDate
+  const dayIds = new Set(days.map((d) => d.data.id))
+  return media
+    .filter((m) => {
+      if (m.sessionId) return dayIds.has(m.sessionId)
+      const date = todayISO(new Date(m.createdAt))
+      return date >= trip.startDate! && date <= end
+    })
+    .sort((a, b) => b.createdAt - a.createdAt)
+}
+
+/** Met de crew gedeelde media, gefilterd op de trip (zie `mediaOnTrip`). */
+export async function tripMedia(crewId: string, trip: Pick<Trip, 'startDate' | 'endDate'>, days: SharedDay[]): Promise<MediaMeta[]> {
+  const { data, error } = await need()
+    .from('records')
+    .select('user_id, data')
+    .eq('kind', 'media')
+    .eq('crew_id', crewId)
+    .eq('deleted', false)
+  if (error) throw error
+  const media = ((data ?? []) as { user_id: string; data: MediaMeta }[]).map((r) => ({ ...r.data, userId: r.data.userId ?? r.user_id }))
+  return mediaOnTrip(media, days, trip)
 }
 
 export interface RecapPerson {
