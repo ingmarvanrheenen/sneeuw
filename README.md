@@ -81,7 +81,7 @@ Over de kosten: de coach gebruikt Claude Opus 5.5 met `effort: low` (snel en zui
 
 **Vercel / Netlify**: importeer de repo, build command `npm run build`, output `dist`, en zet de twee `VITE_SUPABASE_*` variabelen. Gebruik je de Vercel-Supabase-integratie, dan hoeft dat niet: de build pakt ook `NEXT_PUBLIC_SUPABASE_URL` / `SUPABASE_ANON_KEY` (en de publishable-varianten) op. De service-role key wordt nooit in de app gebakken.
 
-**GitHub Pages**: de workflow `.github/workflows/pages.yml` bouwt en publiceert bij elke push naar `main`. Zet in de repo-instellingen _Pages → Source_ op _GitHub Actions_ en voeg (optioneel) de secrets `VITE_SUPABASE_URL` en `VITE_SUPABASE_ANON_KEY` toe.
+De live app draait op Vercel en volgt `main`: elke push of merge naar `main` gaat live, andere branches worden een preview. Draait de app op een subpad (bijv. `/sneeuw/`), zet dan `BASE_PATH` bij het bouwen.
 
 ### Op je iPhone zetten
 

@@ -6,7 +6,7 @@ import { VitePWA } from 'vite-plugin-pwa'
 import pkg from './package.json' with { type: 'json' }
 import { pickSupabaseKey } from './src/lib/supabaseKey'
 
-// BASE_PATH is gezet door de GitHub Pages workflow (bijv. "/sneeuw/").
+// BASE_PATH: alleen nodig als de app op een subpad draait (bijv. "/sneeuw/").
 const base = process.env.BASE_PATH ?? '/'
 
 // Supabase-config accepteert ook de namen die de Vercel-Supabase-integratie zet.
