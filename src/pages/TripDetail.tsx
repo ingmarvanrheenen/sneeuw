@@ -4,6 +4,7 @@ import { Button, List, Page, PageHeader, Progress, Row, Section, Stat, Toggle, c
 import { GroupList } from '../components/GroupList'
 import { CrewGoals } from '../components/CrewGoals'
 import { TripRecap } from '../components/TripRecap'
+import { TripBingo } from '../components/TripBingo'
 import { todayISO, uid } from '../lib/ids'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { kvGet } from '../lib/db'
@@ -64,6 +65,7 @@ function CrewShare({ trip }: { trip: Trip }) {
       {shared && (
         <>
           {trip.startDate && trip.startDate <= todayISO() && <TripRecap tripId={trip.id} crewId={shared.id} trip={trip} />}
+          <TripBingo tripId={trip.id} crewId={shared.id} />
           <CrewGoals tripId={trip.id} crewId={shared.id} ownerId={trip.userId ?? user.id} ready={ready} />
           <GroupList tripId={trip.id} crewId={shared.id} ownerId={trip.userId ?? user.id} ready={ready} />
         </>

@@ -63,6 +63,10 @@ In de trip-recap: awards uit de met de crew gedeelde dagen van die trip (langst 
 
 Stemronde in `crew_trip_votes`: "Val van de trip" en "Held van de trip". Eén stem per persoon per categorie, alleen op een crewgenoot en niet op jezelf. Omzetten (alleen `candidate` is aan te passen) en intrekken mogen. De stand zie je pas als je zelf gestemd hebt. RLS-scenario's: `supabase/tests/crew_trip_votes.sh`.
 
+## Trip-bingo (`src/lib/bingo.ts`)
+
+Op de trippagina van een crew-trip. Iedereen heeft een eigen kaart van 4×4 vakjes uit `src/content/bingo.ts`. De kaart volgt uit trip + speler (seeded shuffle), dus elke telefoon ziet dezelfde kaart zonder dat hij opgeslagen wordt. Alleen de afgevinkte vakjes staan in `crew_trip_bingo`, met tijdstip. Wie bingo heeft (rij, kolom of diagonaal vol) en wie als eerste een lijn vol had, rekent `bingoStand()` uit. Iedereen vinkt alleen zijn eigen kaart af; tijdstippen zijn niet aan te passen. RLS-scenario's: `supabase/tests/crew_trip_bingo.sh`.
+
 ## S.N.O.W. (`src/lib/snow.ts`)
 
 S.K.A.T.E., maar op de piste, binnen een crew. Wie aan de beurt is zet een trick uit de bijbel neer; landt hij hem, dan doet de rest hem na en wie mist krijgt een letter. Mist de zetter, dan gaat de beurt door. Bij S-N-O-W lig je eruit, en een gelande trick mag niet nog een keer.
