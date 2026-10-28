@@ -4,7 +4,8 @@ import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Button, Chip, List, Sheet, Stepper, Toggle, cx } from './ui'
 import { ResortPicker } from './Pickers'
-import { Icon, Mood, MOOD_LABELS } from '../design/icons'
+import { Icon, MOOD_LABELS } from '../design/icons'
+import { MoodPick } from '../design/Stickers'
 import { useKind } from '../lib/repo'
 import { uid } from '../lib/ids'
 import { fmtDate } from '../lib/format'
@@ -88,12 +89,14 @@ export function QuickLog({ open, onClose }: { open: boolean; onClose: () => void
                 aria-pressed={d.mood === v}
                 onClick={() => set('mood', v)}
                 className={cx(
-                  'flex h-[72px] flex-col items-center justify-center gap-1 rounded-[8px] transition-colors duration-150',
-                  d.mood === v ? 'bg-accent text-accent-ink' : 'bg-surface text-muted',
+                  'flex h-[76px] flex-col items-center justify-center gap-1 rounded-[8px] border transition-colors duration-150',
+                  d.mood === v ? 'border-text bg-accent-soft text-text' : 'hairline bg-surface text-muted',
                 )}
               >
-                <Mood value={v} size={30} />
-                <span className="text-[11px] font-medium">{MOOD_LABELS[v - 1]}</span>
+                <MoodPick value={v} on={d.mood === v} size={36} />
+                <span className={cx('text-[11px]', d.mood === v ? 'font-extrabold uppercase tracking-[0.06em]' : 'font-medium')}>
+                  {MOOD_LABELS[v - 1]}
+                </span>
               </button>
             ))}
           </div>

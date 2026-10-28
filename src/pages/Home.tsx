@@ -203,7 +203,7 @@ export default function Home() {
             {recent.map((s) => (
               <Row
                 key={s.id}
-                icon={<Mood value={s.mood} size={24} className="shrink-0 text-accent-text" />}
+                icon={<Mood value={s.mood} size={32} className="shrink-0" />}
                 title={s.resortName || 'Onbekend'}
                 detail={fmtDate(s.date)}
                 value={`${s.hours}u · ${s.falls} val`}

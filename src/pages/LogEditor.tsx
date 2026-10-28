@@ -2,7 +2,8 @@ import { useEffect, useMemo, useState } from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { Button, Chip, Field, Page, PageHeader, Section, Stepper, cx, inputCls } from '../components/ui'
-import { Icon, Mood, MOOD_LABELS } from '../design/icons'
+import { Icon, MOOD_LABELS } from '../design/icons'
+import { MoodPick } from '../design/Stickers'
 import { ResortPicker, TrickPicker } from '../components/Pickers'
 import { MediaAddButton, MediaGrid } from '../components/Media'
 import { remove, useKind, useRecord } from '../lib/repo'
@@ -160,13 +161,16 @@ export default function LogEditor() {
               key={v}
               type="button"
               onClick={() => set('mood', v)}
+              aria-pressed={d.mood === v}
               className={cx(
                 'flex flex-1 flex-col items-center gap-1 rounded-[6px] py-2 transition',
-                d.mood === v ? 'bg-accent text-accent-ink' : 'text-muted',
+                d.mood === v ? 'bg-accent-soft text-text' : 'text-muted',
               )}
             >
-              <Mood value={v} size={28} />
-              <span className="text-[10px] font-medium">{MOOD_LABELS[v - 1]}</span>
+              <MoodPick value={v} on={d.mood === v} size={34} />
+              <span className={cx('text-[10px]', d.mood === v ? 'font-extrabold uppercase tracking-[0.06em]' : 'font-medium')}>
+                {MOOD_LABELS[v - 1]}
+              </span>
             </button>
           ))}
         </div>

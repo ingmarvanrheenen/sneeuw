@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, type CSSProperties } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { Button, Card, Page, PageHeader, Section, Stat, Sheet, StatGroup } from '../components/ui'
@@ -52,7 +52,10 @@ export default function LogDetail() {
       />
 
       <Card className="flex items-center gap-4">
-        <Mood value={s.mood} size={44} className="text-accent-text" />
+        {/* je stemming als sticker, erop geklapt */}
+        <span className="slap shrink-0" style={{ '--tilt': '-6deg', '--delay': '150ms' } as CSSProperties}>
+          <Mood value={s.mood} size={68} />
+        </span>
         <div className="min-w-0 flex-1">
           <div className="label">{MOOD_LABELS[s.mood - 1]}</div>
           {s.highlight ? (

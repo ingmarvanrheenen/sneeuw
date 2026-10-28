@@ -81,7 +81,7 @@ export default function LogList() {
                       </div>
                     </div>
                     {s.mediaIds.length > 0 && <Icon name="image" size={16} className="text-muted" />}
-                    <Mood value={s.mood} className="text-accent-text" />
+                    <Mood value={s.mood} size={34} />
                   </button>
                 )
               })}
