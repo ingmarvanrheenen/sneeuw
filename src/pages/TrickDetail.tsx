@@ -4,6 +4,8 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { List, Page, PageHeader, Row, Section, Segmented, cx, inputCls, LevelDots } from '../components/ui'
 import { Icon, Spinner } from '../design/icons'
 import { MediaAddButton, MediaGrid } from '../components/Media'
+import { ThenNowCard } from '../components/ThenNow'
+import { thenAndNow } from '../lib/thenNow'
 import { TRACKS, TRICK_BY_ID, trickXP, unlocks, ytUrl } from '../content/tricks'
 import { create, getTrickProgress, setTrickStatus, update, useKind } from '../lib/repo'
 import { db } from '../lib/db'
@@ -38,6 +40,7 @@ export default function TrickDetail() {
     async () => (await db.records.where('trickId').equals(id).toArray()).filter((r) => r.kind === 'media' && !r.deleted) as MediaMeta[],
     [id],
   )
+  const tn = media && trick ? thenAndNow(media, trick.id) : null
   const [note, setNote] = useState('')
   useEffect(() => {
     setNote(progress?.note ?? '')
@@ -177,6 +180,11 @@ export default function TrickDetail() {
       </List>
 
       <Section title="Kluis: jouw clips">
+        {tn && (
+          <div className="mb-3">
+            <ThenNowCard tn={tn} />
+          </div>
+        )}
         <MediaGrid items={media ?? []} editable />
         <div className="mt-2">
           <MediaAddButton link={{ trickId: trick.id }} onAdded={addMedia} label="Clip toevoegen" />

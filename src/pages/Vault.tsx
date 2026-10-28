@@ -4,6 +4,8 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { Chip, Empty, Page, PageHeader, Progress, LevelDots } from '../components/ui'
 import { Icon } from '../design/icons'
 import { MediaThumb } from '../components/Media'
+import { ThenNowCard } from '../components/ThenNow'
+import { allThenAndNow } from '../lib/thenNow'
 import { useKind } from '../lib/repo'
 import { db } from '../lib/db'
 import { TRACKS, TRICKS, TRICK_BY_ID, type Track } from '../content/tricks'
@@ -24,6 +26,7 @@ export default function Vault() {
         .sort((a, b) => (b.firstLandedAt ?? '').localeCompare(a.firstLandedAt ?? '')),
     [progress],
   )
+  const compare = useMemo(() => allThenAndNow(media ?? []), [media])
   const shown = landed.filter((p) => track === 'alle' || TRICK_BY_ID.get(p.trickId)!.track === track)
 
   return (
@@ -33,6 +36,19 @@ export default function Vault() {
         <span className="font-semibold text-text">{landed.length}</span> van {TRICKS.length} tricks geland
       </p>
       <Progress value={landed.length / TRICKS.length} className="mt-2" />
+      {compare.length > 0 && (
+        <section className="mt-6">
+          <h2 className="mb-1 text-[20px] font-semibold tracking-tight">Toen en nu</h2>
+          <p className="mb-3 text-[15px] text-muted">Je eerste clip naast je laatste. Kijk hoeveel je vooruit bent gegaan.</p>
+          <div className="no-scrollbar -mx-4 flex snap-x gap-3 overflow-x-auto px-4 pb-1">
+            {compare.map((tn) => (
+              <div key={tn.trickId} className="w-[78%] max-w-xs shrink-0 snap-start">
+                <ThenNowCard tn={tn} showName />
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
       <div className="no-scrollbar -mx-4 mt-4 flex gap-2 overflow-x-auto px-4">
         <Chip active={track === 'alle'} onClick={() => setTrack('alle')}>
           Alles
