@@ -10,7 +10,7 @@ export interface PushMessage {
   tag: string
 }
 
-export type Pref = 'crew_days' | 'goals' | 'reminder' | 'pow'
+export type Pref = 'crew_days' | 'goals' | 'reminder' | 'pow' | 'challenge'
 
 export interface SubRow {
   id: string
@@ -42,6 +42,8 @@ export interface Store {
   tripsAndDays(userIds: string[]): Promise<Pick<RecordRow, 'user_id' | 'kind' | 'data'>[]>
   /** sneeuwverwachting per dag voor een resort uit de app, of null als het resort onbekend is of het weer niet lukt */
   forecast(resortId: string): Promise<SnowDay[] | null>
+  /** heeft deze user de dagopdracht van die dag al afgevinkt */
+  challengeDone(userId: string, date: string): Promise<boolean>
   /** true als deze sleutel nog niet gebruikt is (en legt hem vast): elke melding maar één keer */
   once(key: string): Promise<boolean>
   removeSubscription(id: string): Promise<void>
@@ -110,6 +112,24 @@ export function reminderMessage(resortName?: string): PushMessage {
     url: '#/log/nieuw',
     tag: 'reminder',
   }
+}
+
+export function challengeMessage(resortName?: string): PushMessage {
+  return {
+    title: 'Dagopdracht van vandaag',
+    body: `Je opdracht voor ${resortName || 'vandaag'} staat klaar. Gedaan is +15 XP.`,
+    url: '#/',
+    tag: 'dagopdracht',
+  }
+}
+
+/** De trip waar je vandaag op zit (begin en eind tellen mee). */
+function tripOn(rows: Pick<RecordRow, 'user_id' | 'kind' | 'data'>[], userId: string, today: string) {
+  return rows.find((r) => {
+    if (r.user_id !== userId || r.kind !== 'trip' || !r.data.startDate) return false
+    const start = String(r.data.startDate)
+    return start <= today && String(r.data.endDate ?? start) >= today
+  })
 }
 
 const WEEKDAY = ['zo', 'ma', 'di', 'wo', 'do', 'vr', 'za']
@@ -233,14 +253,32 @@ export function createHandlers(store: Store, send: Send, now: () => Date = () =>
     for (const u of users) {
       const mine = subs.filter((s) => s.user_id === u)
       const today = localParts(at, mine[0].tz).date
-      const trip = rows.find((r) => {
-        if (r.user_id !== u || r.kind !== 'trip' || !r.data.startDate) return false
-        const start = String(r.data.startDate)
-        return start <= today && String(r.data.endDate ?? start) >= today
-      })
+      const trip = tripOn(rows, u, today)
       const logged = rows.some((r) => r.user_id === u && r.kind === 'session' && r.data.date === today)
       if (!trip || logged || !(await store.once(`reminder:${u}:${today}`))) continue
       const msg = reminderMessage(trip.data.resortName ? String(trip.data.resortName) : undefined)
+      sent += await deliver(mine, () => msg)
+    }
+    return { status: 200, sent }
+  }
+
+  /**
+   * Elk uur via pg_cron (zelfde aanroep als de herinnering): om 9:00 lokaal tijdens een trip een duwtje voor de
+   * dagopdracht, als je hem nog niet afvinkte. De opdracht zelf kiest de app (die kent je tricks), dus die noemen we niet.
+   */
+  async function runChallenges(): Promise<Result> {
+    const at = now()
+    const subs = (await store.subscriptions('challenge')).filter((s) => localParts(at, s.tz).hour === 9)
+    if (!subs.length) return { status: 200, sent: 0 }
+    const users = [...new Set(subs.map((s) => s.user_id))]
+    const rows = await store.tripsAndDays(users)
+    let sent = 0
+    for (const u of users) {
+      const mine = subs.filter((s) => s.user_id === u)
+      const today = localParts(at, mine[0].tz).date
+      const trip = tripOn(rows, u, today)
+      if (!trip || (await store.challengeDone(u, today)) || !(await store.once(`challenge:${u}:${today}`))) continue
+      const msg = challengeMessage(trip.data.resortName ? String(trip.data.resortName) : undefined)
       sent += await deliver(mine, () => msg)
     }
     return { status: 200, sent }
@@ -298,5 +336,5 @@ export function createHandlers(store: Store, send: Send, now: () => Date = () =>
     return { status: 200, sent: await deliver(subs, () => msg) }
   }
 
-  return { onDay, onGoal, runReminders, runPow, onTest }
+  return { onDay, onGoal, runReminders, runChallenges, runPow, onTest }
 }

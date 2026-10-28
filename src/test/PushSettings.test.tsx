@@ -19,7 +19,7 @@ import { PushNudge, PushSettings } from '../components/PushSettings'
 import { db } from '../lib/db'
 import { toastStore } from '../lib/toast'
 
-const PREFS = { crew_days: true, goals: true, reminder: true, pow: true }
+const PREFS = { crew_days: true, goals: true, reminder: true, pow: true, challenge: true }
 const switchFor = (name: string) => screen.getByRole('switch', { name: new RegExp(name) })
 
 beforeEach(async () => {
@@ -91,6 +91,16 @@ describe('meldingen in Instellingen', () => {
     expect(screen.getByText(/15 cm of meer verse sneeuw/)).toBeTruthy()
     await user.click(sw)
     expect(api.setPushPref).toHaveBeenCalledWith('pow', false)
+  })
+
+  it('dagopdracht: eigen schakelaar met uitleg', async () => {
+    const user = userEvent.setup()
+    api.getPushState.mockResolvedValue({ status: 'on', prefs: PREFS })
+    render(<PushSettings />)
+    const sw = await screen.findByRole('switch', { name: /Dagopdracht/ })
+    expect(screen.getByText(/Om 9:00 tijdens een trip/)).toBeTruthy()
+    await user.click(sw)
+    expect(api.setPushPref).toHaveBeenCalledWith('challenge', false)
   })
 
   it('helemaal uit', async () => {

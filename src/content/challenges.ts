@@ -35,7 +35,7 @@ export const CHALLENGES: Challenge[] = [
   { id: 'tien-bochten', text: 'Tien gekoppelde bochten achter elkaar zonder te vallen', level: 2, needs: ['gekoppelde-bochten'] },
   { id: 'blauw-zonder-stop', text: 'Een hele blauwe piste zonder te stoppen', level: 2, needs: ['gekoppelde-bochten'] },
   { id: 'nieuwe-piste', text: 'Rij een piste die je nog nooit gereden hebt', level: 2 },
-  { id: 'achter-maat', text: 'Volg een maat een hele afdaling lang in zijn spoor', level: 2, needs: ['gekoppelde-bochten'] },
+  { id: 'achter-maat', text: 'Volg een maat een hele afdaling lang in hetzelfde spoor', level: 2, needs: ['gekoppelde-bochten'] },
   // ── 3: rood, switch, eerste tricks ─────────────────────────────────────────
   { id: 'rood-zonder-val', text: 'Een rode piste van boven tot beneden zonder te vallen', level: 3, needs: ['gekoppelde-bochten'] },
   { id: 'switch-blauw', text: 'Een hele blauwe piste switch', level: 3, needs: ['switch'] },

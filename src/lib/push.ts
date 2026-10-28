@@ -4,7 +4,7 @@
 import { supabase } from './supabase'
 import { isIOS, isStandalone } from './pwa'
 
-export type PushPref = 'crew_days' | 'goals' | 'reminder' | 'pow'
+export type PushPref = 'crew_days' | 'goals' | 'reminder' | 'pow' | 'challenge'
 export type PushPrefs = Record<PushPref, boolean>
 export type PushStatus = 'unsupported' | 'install' | 'denied' | 'off' | 'on'
 
@@ -23,6 +23,12 @@ export function pushAvailability(): 'ok' | 'install' | 'unsupported' {
   return isIOS() && !isStandalone() ? 'install' : 'unsupported'
 }
 
+/** Voorkeuren uit een rij; een soort die (nog) niet in de rij staat, staat aan, net als de standaard in de database. */
+function toPrefs(row: Partial<Record<PushPref, boolean>>): PushPrefs {
+  const on = (p: PushPref) => row[p] ?? true
+  return { crew_days: on('crew_days'), goals: on('goals'), reminder: on('reminder'), pow: on('pow'), challenge: on('challenge') }
+}
+
 async function currentSubscription(): Promise<PushSubscription | null> {
   const reg = await navigator.serviceWorker.getRegistration()
   return (await reg?.pushManager.getSubscription()) ?? null
@@ -34,13 +40,10 @@ export async function getPushState(): Promise<{ status: PushStatus; prefs?: Push
   if (Notification.permission === 'denied') return { status: 'denied' }
   const sub = await currentSubscription()
   if (!sub) return { status: 'off' }
-  const { data } = await supabase
-    .from('push_subscriptions')
-    .select('crew_days, goals, reminder, pow')
-    .eq('endpoint', sub.endpoint)
-    .maybeSingle()
+  // alles, zodat een nieuwe soort die nog niet in de database staat de rest niet breekt
+  const { data } = await supabase.from('push_subscriptions').select('*').eq('endpoint', sub.endpoint).maybeSingle()
   // staat de telefoon nog op een ander account (of is hij opgeruimd): dan voor jou uit
-  return data ? { status: 'on', prefs: data as PushPrefs } : { status: 'off' }
+  return data ? { status: 'on', prefs: toPrefs(data) } : { status: 'off' }
 }
 
 function toKey(b64u: string): Uint8Array<ArrayBuffer> {
@@ -69,8 +72,7 @@ export async function enablePush(): Promise<PushPrefs> {
     p_tz: Intl.DateTimeFormat().resolvedOptions().timeZone ?? '',
   })
   if (error) throw error
-  const row = data as PushPrefs
-  return { crew_days: row.crew_days, goals: row.goals, reminder: row.reminder, pow: row.pow ?? true }
+  return toPrefs(data as Partial<PushPrefs>)
 }
 
 export async function setPushPref(pref: PushPref, on: boolean) {

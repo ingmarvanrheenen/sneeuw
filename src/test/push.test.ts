@@ -84,9 +84,21 @@ describe('status', () => {
   it('abonnement op de server: aan, met voorkeuren', async () => {
     phone()
     existing = { endpoint: ENDPOINT, toJSON: () => ({}), unsubscribe: vi.fn() }
-    fake().respond(() => ({ data: { crew_days: true, goals: false, reminder: true } }))
-    expect(await getPushState()).toEqual({ status: 'on', prefs: { crew_days: true, goals: false, reminder: true } })
+    fake().respond(() => ({ data: { crew_days: true, goals: false, reminder: true, pow: false, challenge: true, p256dh: 'P' } }))
+    expect(await getPushState()).toEqual({
+      status: 'on',
+      prefs: { crew_days: true, goals: false, reminder: true, pow: false, challenge: true },
+    })
     expect(fake().calls[0].filters).toEqual([['eq', 'endpoint', ENDPOINT]])
+  })
+  it('nieuwe soort die nog niet in de database staat: staat aan, en de rest werkt gewoon', async () => {
+    phone()
+    existing = { endpoint: ENDPOINT, toJSON: () => ({}), unsubscribe: vi.fn() }
+    fake().respond(() => ({ data: { crew_days: false, goals: true, reminder: true } }))
+    expect(await getPushState()).toEqual({
+      status: 'on',
+      prefs: { crew_days: false, goals: true, reminder: true, pow: true, challenge: true },
+    })
   })
   it('telefoon hangt nog aan een ander account: voor jou uit', async () => {
     phone()
@@ -100,7 +112,7 @@ describe('aanzetten', () => {
   it('vraagt eerst toestemming, abonneert met de server-key en slaat op met je tijdzone', async () => {
     phone()
     fake().respond((c) => (c.op === 'rpc' ? { data: { crew_days: true, goals: true, reminder: true, pow: false } } : {}))
-    expect(await enablePush()).toEqual({ crew_days: true, goals: true, reminder: true, pow: false })
+    expect(await enablePush()).toEqual({ crew_days: true, goals: true, reminder: true, pow: false, challenge: true })
     expect(requestPermission.mock.invocationCallOrder[0]).toBeLessThan(fetchMock.mock.invocationCallOrder[0])
     expect(subscribe).toHaveBeenCalledWith({ userVisibleOnly: true, applicationServerKey: expect.any(Uint8Array) })
     const rpc = fake().calls.find((c) => c.op === 'rpc')!

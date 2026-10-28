@@ -1,4 +1,4 @@
-// Seizoensladder: het crew-klassement per seizoen, uit de seizoens-XP die iedereen met zijn stats synct.
+// Seizoensladder: het crew-klassement per seizoen, uit de seizoens-XP die iedereen met de eigen stats synct.
 // Afgeleid, niets opgeslagen. Het podium van vorig seizoen staat als medaille op de skipas.
 import { seasonOf } from './format'
 import { todayISO } from './ids'
@@ -45,7 +45,7 @@ export interface Podium {
   of: number
 }
 
-/** Podiumplekken van een rider in een seizoen, in alle crews waar je samen in zit. Pas vanaf 2 man. */
+/** Podiumplekken van een rider in een seizoen, in alle crews waar je samen in zit. Pas vanaf twee riders. */
 export function podiums(riderId: string, crews: { id: string; name: string; members: CrewMember[] }[], season: string): Podium[] {
   const out: Podium[] = []
   for (const c of crews) {

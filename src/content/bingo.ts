@@ -1,4 +1,4 @@
-// Trip-bingo: dingen die op elke wintersport gebeuren. Elke speler krijgt er 16 van op zijn kaart.
+// Trip-bingo: dingen die op elke wintersport gebeuren. Elke speler krijgt er 16 van op de eigen kaart.
 // Kort houden: een vakje is ±1/4 van een telefoonscherm breed. Lange woorden krijgen een zacht afbreekstreepje (\u00ad). Ids nooit hergebruiken (afgevinkte vakjes staan op id).
 
 export interface BingoSquare {

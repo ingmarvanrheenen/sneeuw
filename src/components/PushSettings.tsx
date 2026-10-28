@@ -21,6 +21,7 @@ const KINDS: { pref: PushPref; label: string; sub: string }[] = [
   { pref: 'crew_days', label: 'Crew deelt een dag', sub: 'Waar ze waren en wat ze landden' },
   { pref: 'goals', label: 'Crew-doelen', sub: 'Als iemand een doel haalt dat jij nog moet halen' },
   { pref: 'reminder', label: 'Log je dag', sub: 'Om 17:00 tijdens een trip, als je nog niks logde' },
+  { pref: 'challenge', label: 'Dagopdracht', sub: 'Om 9:00 tijdens een trip, als je hem nog niet gedaan hebt' },
   { pref: 'pow', label: 'Pow-alarm', sub: 'Om 18:00 als er 15 cm of meer verse sneeuw komt bij je volgende trip' },
 ]
 

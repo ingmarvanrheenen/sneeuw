@@ -3,7 +3,7 @@
 // - POST {event:'day'|'goal', id}  na een gedeelde dag of afgevinkt crew-doel (ingelogd)
 // - POST {event:'test'}            testmelding naar je eigen telefoon (ingelogd)
 // - POST {task:'reminder'}         elk uur via pg_cron (supabase/cron/push_reminder.sql): de "Log je dag"-
-//                                  herinnering (17:00 lokaal) en het pow-alarm (18:00 lokaal). Elke melding gaat
+//                                  herinnering (17:00 lokaal), de dagopdracht (9:00) en het pow-alarm (18:00). Elke melding gaat
 //                                  maar één keer (push_log), dus open is veilig.
 // Deploy met --no-verify-jwt: inloggen checken we hier zelf, zodat pg_cron zonder key kan aanroepen.
 import { createClient } from 'npm:@supabase/supabase-js@2'
@@ -84,6 +84,10 @@ const store: Store = {
     const time = json.daily?.time ?? []
     return time.map((date, i): SnowDay => ({ date, snowCm: json.daily?.snowfall_sum?.[i] ?? 0 }))
   },
+  async challengeDone(userId, date) {
+    const { data } = await admin.from('daily_challenges').select('user_id').eq('user_id', userId).eq('date', date).maybeSingle()
+    return !!data
+  },
   async once(key) {
     const { error } = await admin.from('push_log').insert({ key })
     return !error
@@ -96,7 +100,7 @@ const store: Store = {
 const h = createHandlers(store, async (sub, msg) => {
   const r = await sendPush(sub, JSON.stringify(msg), vapid, {
     topic: msg.tag,
-    urgency: msg.tag === 'reminder' || msg.tag.startsWith('pow-') ? 'normal' : 'low',
+    urgency: msg.tag === 'reminder' || msg.tag === 'dagopdracht' || msg.tag.startsWith('pow-') ? 'normal' : 'low',
   })
   if (!r.ok && !r.gone) console.error('push mislukt', r.status, new URL(sub.endpoint).host)
   return r
@@ -116,8 +120,9 @@ Deno.serve(async (req) => {
   }
   try {
     if (body.task === 'reminder') {
-      const [reminder, pow] = await Promise.all([h.runReminders(), h.runPow()])
-      return json(200, { status: 200, sent: reminder.sent + pow.sent, reminder: reminder.sent, pow: pow.sent })
+      const [reminder, challenge, pow] = await Promise.all([h.runReminders(), h.runChallenges(), h.runPow()])
+      const sent = reminder.sent + challenge.sent + pow.sent
+      return json(200, { status: 200, sent, reminder: reminder.sent, challenge: challenge.sent, pow: pow.sent })
     }
 
     const token = req.headers.get('Authorization')?.replace('Bearer ', '')

@@ -19,6 +19,7 @@ let used: Set<string>
 let removed: string[]
 let forecasts: Record<string, SnowDay[] | null>
 let forecastCalls: string[]
+let challenges: { user_id: string; date: string }[]
 const NOW = new Date('2027-01-17T16:10:00Z') // 17:10 in Amsterdam (wintertijd)
 
 const sub = (user_id: string, over: Partial<SubRow & Record<Pref, boolean>> = {}) => ({
@@ -32,6 +33,7 @@ const sub = (user_id: string, over: Partial<SubRow & Record<Pref, boolean>> = {}
   goals: true,
   reminder: true,
   pow: true,
+  challenge: true,
   ...over,
 })
 const day = (id: string, user_id: string, data: Record<string, unknown>, over: Partial<RecordRow> = {}): RecordRow => ({
@@ -57,6 +59,7 @@ const store: Store = {
     forecastCalls.push(id)
     return forecasts[id] ?? null
   },
+  challengeDone: async (u, date) => challenges.some((c) => c.user_id === u && c.date === date),
   once: async (k) => !used.has(k) && !!used.add(k),
   removeSubscription: async (id) => void removed.push(id),
 }
@@ -82,6 +85,7 @@ beforeEach(() => {
   removed = []
   forecasts = {}
   forecastCalls = []
+  challenges = []
   send.mockReset().mockResolvedValue({ ok: true, gone: false })
 })
 
@@ -294,5 +298,45 @@ describe('pow-alarm', () => {
     await powH.runPow()
     // 21 januari 2027 is een donderdag
     expect(lastMsg().body).toBe('Morgen 12 cm, do 9 cm. Zet je wekker voor de eerste lift.')
+  })
+})
+
+describe('dagopdracht-duwtje', () => {
+  // 8:10 UTC = 9:10 in Amsterdam
+  const morning = createHandlers(store, send, () => new Date('2027-01-17T08:10:00Z'))
+
+  it('om 9:00 lokaal tijdens een trip, als je hem nog niet deed', async () => {
+    expect(await morning.runChallenges()).toEqual({ status: 200, sent: 1 })
+    expect(sentTo()).toEqual(['daan']) // alleen daan zit nu op trip
+    expect(lastMsg()).toEqual({
+      title: 'Dagopdracht van vandaag',
+      body: 'Je opdracht voor Val Thorens staat klaar. Gedaan is +15 XP.',
+      url: '#/',
+      tag: 'dagopdracht',
+    })
+  })
+
+  it('niet als je hem al afvinkte, niet met de voorkeur uit, niet om een ander uur, en maar één keer per dag', async () => {
+    challenges = [{ user_id: 'daan', date: '2027-01-17' }]
+    expect(await morning.runChallenges()).toMatchObject({ sent: 0 })
+    challenges = [{ user_id: 'daan', date: '2027-01-16' }] // gisteren telt niet
+    subs = [sub('daan', { challenge: false })]
+    expect(await morning.runChallenges()).toMatchObject({ sent: 0 })
+    subs = [sub('daan', { tz: 'America/New_York' })]
+    expect(await morning.runChallenges()).toMatchObject({ sent: 0 })
+    subs = [sub('daan')]
+    expect(await morning.runChallenges()).toMatchObject({ sent: 1 })
+    expect(await morning.runChallenges()).toMatchObject({ sent: 0 })
+  })
+
+  it('zonder trip of buiten de trip: geen duwtje', async () => {
+    records[0].data = { startDate: '2027-01-18', endDate: '2027-01-25' }
+    expect(await morning.runChallenges()).toMatchObject({ sent: 0 })
+  })
+
+  it('trip zonder resortnaam: algemene tekst', async () => {
+    records[0].data = { startDate: '2027-01-16', endDate: '2027-01-23' }
+    await morning.runChallenges()
+    expect(lastMsg().body).toBe('Je opdracht voor vandaag staat klaar. Gedaan is +15 XP.')
   })
 })
