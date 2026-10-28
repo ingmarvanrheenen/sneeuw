@@ -64,3 +64,16 @@ describe('medaille', () => {
     expect(m.querySelectorAll('svg').length).toBeGreaterThanOrEqual(3)
   })
 })
+
+describe('badgepagina in poster-stijl', () => {
+  it('je level als poster, en een gehaalde badge klapt erop als sticker; een open badge niet', async () => {
+    await create('session', { ...EMPTY_DRAFT, date: '2027-01-10', resortName: 'Tignes', hours: 4, falls: 2, mood: 4 })
+    show()
+    expect(await screen.findByRole('group', { name: /^Level \d+, .+ XP$/ })).toBeTruthy()
+    const first = BADGES.find((b) => b.id === 'dag-1')!
+    const card = (await screen.findByText(first.name)).closest('.card') as HTMLElement
+    expect(card.querySelector('.slap')).toBeTruthy()
+    const open = BADGES.filter((b) => !b.rare).at(-1)!
+    expect((screen.getByText(open.name).closest('.card') as HTMLElement).querySelector('.slap')).toBeNull()
+  })
+})

@@ -1,6 +1,6 @@
 // Trip-bingo op de trippagina: je eigen kaart om af te vinken, de stand van de crew, en de kaart van een maat.
 import { useCallback, useEffect, useState } from 'react'
-import { List, Row, Sheet, cx } from './ui'
+import { Heading, List, Row, Sheet, cx } from './ui'
 import { Icon } from '../design/icons'
 import { crewMembers, type CrewMember } from '../lib/crew'
 import { bingoPlayer, bingoStand, cachedTicks, listTicks, setTick, type BingoPlayer, type BingoTick } from '../lib/bingo'
@@ -24,7 +24,7 @@ function Card({ player, onTap, label }: { player: BingoPlayer; onTap?: (id: stri
             disabled={!onTap}
             onClick={() => onTap?.(sq.id, !on)}
             className={cx(
-              'flex aspect-square items-center justify-center rounded-xl p-1 text-center text-[11px] font-medium leading-tight transition-colors duration-150 hyphens-auto',
+              'flex aspect-square items-center justify-center rounded-[6px] p-1 text-center text-[11px] font-medium leading-tight transition-colors duration-150 hyphens-auto',
               on ? (line ? 'bg-accent text-accent-ink' : 'bg-accent-soft text-accent-text') : 'bg-surface text-text',
               onTap && 'active:opacity-70',
             )}
@@ -97,7 +97,7 @@ export function TripBingo({ tripId, crewId }: { tripId: string; crewId: string }
 
   return (
     <section className="mt-8">
-      <h2 className="mb-1 text-[20px] font-semibold tracking-tight">Trip-bingo</h2>
+      <Heading className="mb-1">Trip-bingo</Heading>
       <p className="mb-3 text-[15px] text-muted">
         {stand.first
           ? `${name(stand.first)} had als eerste bingo.`

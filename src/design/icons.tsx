@@ -1,6 +1,7 @@
 // Sneeuw Daddy icon set.
 // Regels: 24×24 grid, stroke 1.8, vierkante uiteinden (square caps), scherpe hoeken (miter joins),
 // geen vulling tenzij het icoon "solid" is. Nooit emoji gebruiken; voeg hier een icoon toe.
+import { MoodSticker } from './Stickers'
 import type { SVGProps } from 'react'
 
 const P = {
@@ -137,9 +138,16 @@ export function Spinner({ size = 16 }: { size?: number }) {
 }
 
 /** Mood 1–5 als eigen gezichtje. */
+/** Stemming 1-5: de sticker uit Stickers.tsx. De lijn-iconen `mood1`-`mood5` blijven voor de share-kaart (canvas). */
 export function Mood({ value, size = 26, className }: { value: number; size?: number; className?: string }) {
-  const v = Math.max(1, Math.min(5, Math.round(value))) as 1 | 2 | 3 | 4 | 5
-  return <Icon name={`mood${v}`} size={size} className={className} />
+  return (
+    <MoodSticker
+      value={value}
+      size={size}
+      label={MOOD_LABELS[Math.max(1, Math.min(5, Math.round(value || 3))) - 1]}
+      className={className}
+    />
+  )
 }
 
 export const MOOD_LABELS = ['Kapot', 'Meh', 'Prima', 'Chill', 'Episch'] as const

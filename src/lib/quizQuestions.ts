@@ -83,11 +83,17 @@ export function quizRound(rng: Rng = Math.random): QuizQuestion[] {
     const q = prereq(rng)
     if (q) qs.push(q)
   }
-  // geen dubbele vragen in één ronde
+  // geen dubbele vragen in één ronde; viel er een af (dubbel, of geen voorkennis-vraag), dan aanvullen tot 10
   const seen = new Set<string>()
-  return shuffle(qs, rng)
-    .filter((q) => !seen.has(q.prompt + q.answer) && !!seen.add(q.prompt + q.answer))
-    .slice(0, 10)
+  const unique = qs.filter((q) => !seen.has(q.prompt + q.answer) && !!seen.add(q.prompt + q.answer))
+  for (let tries = 0; unique.length < 10 && tries < 200; tries++) {
+    const q = textQuestion(rng)
+    if (!seen.has(q.prompt + q.answer)) {
+      seen.add(q.prompt + q.answer)
+      unique.push(q)
+    }
+  }
+  return shuffle(unique, rng).slice(0, 10)
 }
 
 /** Eén korte tekstvraag (zonder animatie), voor in de lift. */

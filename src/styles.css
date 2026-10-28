@@ -2,75 +2,107 @@
 @import '@fontsource-variable/archivo/wdth.css';
 
 /* ── Design tokens ────────────────────────────────────────────────────────
-   Gebruiksscène: buiten op de berg (fel sneeuwlicht) en 's avonds in het huisje.
-   Daarom zijn licht en donker allebei eersteklas. UI in het systeemfont (SF Pro op iPhone),
-   Archivo smal en zwaar alleen voor titels en grote getallen, als een workwear-label.
-   Eén groene tint, alleen voor acties, selectie en voortgang. */
+   Park-stijl: poster, stickers en tape, zoals een snowboardmerk. Licht is gebroken wit met zwart en lime,
+   donker is echt zwart met neon-lime. Oranje (hot) is de tweede kleur: harde schaduwen, stempels, slams.
+   UI in het systeemfont, Archivo smal en zwaar in hoofdletters voor titels en grote getallen. */
 :root {
-  --bg: #f3f5f2;
+  --bg: #f1f0ea;
   --surface: #ffffff;
-  --surface-2: #e8ece7;
-  --line: #d7ddd6;
-  --text: #0f1410;
-  --muted: #576157;
-  --accent: #1f7a3d;
-  --accent-ink: #ffffff;
-  --accent-text: #1c6f37;
-  --accent-soft: rgba(31, 122, 61, 0.1);
+  --surface-2: #e5e4dd;
+  --line: #d3d2ca;
+  --text: #0d0d0f;
+  --muted: #5a5a56;
+  --accent: #0d0d0f;
+  --accent-ink: #d7ff3c;
+  --accent-text: #c23d0a;
+  --accent-soft: rgba(196, 238, 20, 0.3);
+  --hot: #ff5b22;
+  --hot-ink: #0d0d0f;
+  --hot-text: #c23d0a;
+  --block: #0d0d0f;
+  --block-ink: #d7ff3c;
+  --sticker: #d7ff3c;
+  --tab: #0d0d0f;
+  --tab-ink: #0d0d0f;
+  --tab-muted: #8d8d88;
+  --tab-pill: #d7ff3c;
+  --tape: rgba(215, 255, 60, 0.92);
   --warn: #9a5a00;
   --danger: #b4321f;
   --heel: #1767b0;
   --toe: #b8561b;
   --skin: #c99a78;
-  --jacket: #1f7a3d;
-  --pants: #2a312b;
-  --scrim: rgba(15, 20, 16, 0.45);
+  --jacket: #ff5b22;
+  --pants: #2a2a2e;
+  --scrim: rgba(13, 13, 15, 0.5);
   color-scheme: light;
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
-    --bg: #0d100e;
-    --surface: #151916;
-    --surface-2: #1e231f;
-    --line: #2a312b;
-    --text: #edf1eb;
-    --muted: #98a297;
-    --accent: #73cf80;
-    --accent-ink: #09120b;
-    --accent-text: #7fd78b;
-    --accent-soft: rgba(115, 207, 128, 0.12);
-    --warn: #e8a64a;
-    --danger: #f07b66;
+    --bg: #0d0d0f;
+    --surface: #18181b;
+    --surface-2: #232327;
+    --line: #2e2e33;
+    --text: #f5f5ef;
+    --muted: #9d9d97;
+    --accent: #d7ff3c;
+    --accent-ink: #0d0d0f;
+    --accent-text: #d7ff3c;
+    --accent-soft: rgba(215, 255, 60, 0.13);
+    --hot: #ff5b22;
+    --hot-ink: #0d0d0f;
+    --hot-text: #ff7a4a;
+    --block: #d7ff3c;
+    --block-ink: #0d0d0f;
+    --sticker: #ff5b22;
+    --tab: #18181b;
+    --tab-ink: #0d0d0f;
+    --tab-muted: #8d8d88;
+    --tab-pill: #d7ff3c;
+    --tape: rgba(255, 255, 255, 0.55);
+    --warn: #ffb547;
+    --danger: #ff6b5a;
     --heel: #6db4f0;
     --toe: #f0a06a;
     --skin: #d6aa88;
-    --jacket: #73cf80;
-    --pants: #c9d1c7;
-    --scrim: rgba(0, 0, 0, 0.6);
+    --jacket: #d7ff3c;
+    --pants: #c9c9c3;
+    --scrim: rgba(0, 0, 0, 0.62);
     color-scheme: dark;
   }
 }
 
 :root[data-theme='dark'] {
-  --bg: #0d100e;
-  --surface: #151916;
-  --surface-2: #1e231f;
-  --line: #2a312b;
-  --text: #edf1eb;
-  --muted: #98a297;
-  --accent: #73cf80;
-  --accent-ink: #09120b;
-  --accent-text: #7fd78b;
-  --accent-soft: rgba(115, 207, 128, 0.12);
-  --warn: #e8a64a;
-  --danger: #f07b66;
+  --bg: #0d0d0f;
+  --surface: #18181b;
+  --surface-2: #232327;
+  --line: #2e2e33;
+  --text: #f5f5ef;
+  --muted: #9d9d97;
+  --accent: #d7ff3c;
+  --accent-ink: #0d0d0f;
+  --accent-text: #d7ff3c;
+  --accent-soft: rgba(215, 255, 60, 0.13);
+  --hot: #ff5b22;
+  --hot-ink: #0d0d0f;
+  --hot-text: #ff7a4a;
+  --block: #d7ff3c;
+  --block-ink: #0d0d0f;
+  --sticker: #ff5b22;
+  --tab: #18181b;
+  --tab-ink: #0d0d0f;
+  --tab-muted: #8d8d88;
+  --tab-pill: #d7ff3c;
+  --tape: rgba(255, 255, 255, 0.55);
+  --warn: #ffb547;
+  --danger: #ff6b5a;
   --heel: #6db4f0;
   --toe: #f0a06a;
   --skin: #d6aa88;
-  --jacket: #73cf80;
-  --pants: #c9d1c7;
-  --scrim: rgba(0, 0, 0, 0.6);
+  --jacket: #d7ff3c;
+  --pants: #c9c9c3;
+  --scrim: rgba(0, 0, 0, 0.62);
   color-scheme: dark;
 }
 
@@ -89,6 +121,12 @@
   --color-accent-soft: var(--accent-soft);
   --color-warn: var(--warn);
   --color-danger: var(--danger);
+  --color-hot: var(--hot);
+  --color-hot-ink: var(--hot-ink);
+  --color-hot-text: var(--hot-text);
+  --color-block: var(--block);
+  --color-block-ink: var(--block-ink);
+  --color-sticker: var(--sticker);
   --color-heel: var(--heel);
   --color-toe: var(--toe);
   --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
@@ -167,10 +205,50 @@ button {
   font-variant-numeric: tabular-nums;
 }
 
-/* Gegroepeerd blok, zoals een inset-lijst in iOS. Alleen waar iets echt een groep is. */
+/* Gegroepeerd blok, zoals een inset-lijst in iOS. Alleen waar iets echt een groep is. Strakke hoek en een rand,
+   als een stuk karton op de poster. */
 .card {
   background: var(--surface);
-  border-radius: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+/* Korrel over het hele scherm, als gedrukt papier. Puur decor: niet klikbaar, niet voor screenreaders. */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  pointer-events: none;
+  opacity: 0.06;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* Knop met harde schaduw: bij indrukken zak je de schaduw in */
+.shadow-hard {
+  box-shadow: 3px 3px 0 var(--hot);
+  transition:
+    transform 120ms var(--ease-out-expo),
+    box-shadow 120ms var(--ease-out-expo),
+    opacity 150ms;
+}
+.shadow-hard:active:not(:disabled) {
+  transform: translate(3px, 3px);
+  box-shadow: 0 0 0 var(--hot);
+}
+
+/* Holle letters, voor een tweede woord in een titel */
+.outline-text {
+  color: transparent;
+  -webkit-text-stroke: 1.4px var(--text);
+}
+
+/* Sectiekop: titel met een doorlopende lijn */
+.rule {
+  height: 2px;
+  background: var(--text);
+  flex: 1;
+  min-width: 16px;
 }
 
 /* velden in een kaart: een tint dieper, anders vallen ze weg tegen de kaart */
@@ -251,11 +329,104 @@ button {
   animation: cue-pulse 1.3s var(--ease-out-expo) infinite;
 }
 
+/* ── Beweging in park-stijl ─────────────────────────────────────────────────
+   rise: titels komen omhoog, licht scheef, en vallen recht.
+   slap: een sticker of stempel wordt erop geklapt (groot en gedraaid, dan vast met een klein naveren).
+   row-in: rijen in een lijst komen kort na elkaar binnen.
+   grow: een balk loopt vol vanaf links. */
+@keyframes rise {
+  from {
+    transform: translateY(14px) skewY(4deg);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+.rise {
+  animation: rise 420ms var(--ease-out-expo) both;
+}
+
+@keyframes slap {
+  0% {
+    transform: scale(1.7) rotate(calc(var(--tilt, 8deg) - 24deg));
+    opacity: 0;
+  }
+  55% {
+    transform: scale(0.94) rotate(var(--tilt, 8deg));
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1) rotate(var(--tilt, 8deg));
+    opacity: 1;
+  }
+}
+.slap {
+  transform: rotate(var(--tilt, 8deg));
+  animation: slap 460ms cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+  animation-delay: var(--delay, 0ms);
+}
+
+@keyframes row-in {
+  from {
+    transform: translateY(8px);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+.stagger > * {
+  animation: row-in 320ms var(--ease-out-expo) both;
+}
+.stagger > :nth-child(2) {
+  animation-delay: 35ms;
+}
+.stagger > :nth-child(3) {
+  animation-delay: 70ms;
+}
+.stagger > :nth-child(4) {
+  animation-delay: 105ms;
+}
+.stagger > :nth-child(5) {
+  animation-delay: 140ms;
+}
+.stagger > :nth-child(6) {
+  animation-delay: 175ms;
+}
+.stagger > :nth-child(n + 7) {
+  animation-delay: 210ms;
+}
+
+@keyframes grow {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: none;
+  }
+}
+.grow {
+  transform-origin: left;
+  animation: grow 700ms var(--ease-out-expo) both;
+  animation-delay: var(--delay, 120ms);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .pop-in,
   .sheet-in,
-  .wrapped-in {
+  .wrapped-in,
+  .rise,
+  .slap,
+  .stagger > *,
+  .grow {
     animation-duration: 1ms;
+    animation-delay: 0ms;
+  }
+  .shadow-hard:active:not(:disabled) {
+    transform: none;
   }
   .cue-ring {
     animation: none;

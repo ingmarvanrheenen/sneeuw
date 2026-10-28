@@ -1,8 +1,9 @@
 // Dagopdracht op Home: je challenge van vandaag, afvinken, één keer per dag een andere, en wie van je crew
 // vandaag ook een opdracht deed.
 import { useEffect, useMemo, useState } from 'react'
-import { Button, List, Row } from './ui'
+import { Button, Heading, List, Row } from './ui'
 import { Icon } from '../design/icons'
+import { Stamp } from './Poster'
 import { useKind } from '../lib/repo'
 import { todayISO } from '../lib/ids'
 import { authStore } from '../lib/auth'
@@ -68,21 +69,34 @@ export function DailyChallenge() {
 
   return (
     <section className="mt-8" aria-labelledby="dagopdracht">
-      <div className="mb-2.5 flex items-baseline justify-between gap-3">
-        <h2 id="dagopdracht" className="text-[20px] font-semibold tracking-tight">
-          Dagopdracht
-        </h2>
-        {!cur!.done && !cur!.rerolled && (
-          <button
-            onClick={async () => setLog(await rerollChallenge(today, landed))}
-            className="-my-2 -mr-2 px-2 py-2 text-[15px] text-accent-text"
-          >
-            Andere opdracht
-          </button>
-        )}
-      </div>
-      <div className="card p-4">
-        <p className="text-[17px] font-semibold leading-snug">{c.text}</p>
+      <Heading
+        id="dagopdracht"
+        action={
+          !cur!.done &&
+          !cur!.rerolled && (
+            <button
+              onClick={async () => setLog(await rerollChallenge(today, landed))}
+              aria-label="Andere opdracht"
+              className="-my-2 -mr-2 px-2 py-2 text-[15px] font-semibold text-accent-text"
+            >
+              Andere
+            </button>
+          )
+        }
+      >
+        Dagopdracht
+      </Heading>
+      <div className="card relative p-4">
+        {/* stempel: +15 XP zolang hij open staat, GEDAAN als je hem afvinkt (klapt er dan opnieuw op) */}
+        <Stamp
+          key={cur!.done ? 'gedaan' : 'open'}
+          className="absolute -top-3 right-3"
+          tilt={cur!.done ? -9 : 6}
+          delay={cur!.done ? 0 : 350}
+        >
+          {cur!.done ? 'Gedaan' : '+15 XP'}
+        </Stamp>
+        <p className="pr-16 text-[17px] font-semibold leading-snug">{c.text}</p>
         <p className="mt-1 text-[13px] text-muted">
           Niveau {c.level}
           {needs.length ? ` · met ${needs.join(', ')}` : ''}

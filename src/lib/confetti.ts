@@ -10,7 +10,9 @@ export function confetti(intensity = 1) {
   const c = canvas.getContext('2d')!
   c.scale(dpr, dpr)
   const styles = getComputedStyle(document.documentElement)
-  const colors = [styles.getPropertyValue('--accent').trim() || '#9be564', '#ffffff', '#0b0d0a', '#6cc3ff']
+  // park-kleuren: lime, oranje, en de tekst- en kaartkleur van het thema
+  const token = (name: string, fallback: string) => styles.getPropertyValue(name).trim() || fallback
+  const colors = [token('--tab-pill', '#d7ff3c'), token('--hot', '#ff5b22'), token('--text', '#0d0d0f'), token('--surface', '#ffffff')]
   const n = Math.round(70 * intensity)
   const parts = Array.from({ length: n }, () => ({
     x: window.innerWidth / 2 + (Math.random() - 0.5) * 80,

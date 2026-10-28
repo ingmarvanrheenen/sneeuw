@@ -1,7 +1,7 @@
 // Liftpraat op Home: de liftvraag van vandaag, je antwoord, een weetje en je streak.
 import { useEffect, useMemo, useState } from 'react'
 import { Icon } from '../design/icons'
-import { cx } from './ui'
+import { Heading, cx } from './ui'
 import { answerLift, factFor, liftStreak, loadLift, questionFor, type LiftLog } from '../lib/liftpraat'
 import { todayISO } from '../lib/ids'
 import { sfx } from '../lib/sounds'
@@ -30,16 +30,18 @@ export function LiftQuestion() {
 
   return (
     <section className="mt-8" aria-labelledby="liftpraat">
-      <div className="mb-2.5 flex items-baseline justify-between gap-3">
-        <h2 id="liftpraat" className="text-[20px] font-semibold tracking-tight">
-          Liftpraat
-        </h2>
-        {streak.current > 0 && (
-          <span className="flex items-center gap-1 text-[15px] text-accent-text">
-            <Icon name="flame" size={16} /> {dagen(streak.current)} op rij
-          </span>
-        )}
-      </div>
+      <Heading
+        id="liftpraat"
+        action={
+          streak.current > 0 && (
+            <span className="flex shrink-0 items-center gap-1 text-[15px] font-semibold text-accent-text">
+              <Icon name="flame" size={16} /> {dagen(streak.current)} op rij
+            </span>
+          )
+        }
+      >
+        Liftpraat
+      </Heading>
       <div className="card p-4">
         <p className="text-[17px] font-semibold leading-snug">{q.prompt}</p>
         <div className="mt-3 space-y-2" role="group" aria-label="Antwoorden">
@@ -54,7 +56,7 @@ export function LiftQuestion() {
                 onClick={() => void choose(o)}
                 aria-pressed={isChosen}
                 className={cx(
-                  'flex w-full items-start gap-2 rounded-xl border px-3.5 py-3 text-left text-[15px] transition-colors duration-150',
+                  'flex w-full items-start gap-2 rounded-[6px] border px-3.5 py-3 text-left text-[15px] transition-colors duration-150',
                   !answer && 'hairline active:bg-surface-2',
                   answer && isAnswer && 'border-accent bg-accent-soft',
                   answer && isChosen && !isAnswer && 'border-danger bg-danger/10',

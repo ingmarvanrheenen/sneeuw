@@ -52,8 +52,11 @@ describe('dagopdracht op Home', () => {
     await waitFor(async () => expect((await loadChallenges())[TODAY]).toBeTruthy())
     const c = await current()
     expect(await screen.findByText(c.text)).toBeTruthy()
+    // stempel: eerst +15 XP, na afvinken GEDAAN
+    expect(screen.getByText('+15 XP').className).toContain('slap')
     await user.click(screen.getByRole('button', { name: 'Gedaan' }))
     expect(await screen.findByText(/Gedaan · \+15 XP/)).toBeTruthy()
+    expect(screen.queryByText('+15 XP')).toBeNull()
     expect(toastStore.get().map((t) => t.title)).toContain('Dagopdracht gedaan')
     // andere opdracht kan niet meer als je hem gedaan hebt
     expect(screen.queryByRole('button', { name: 'Andere opdracht' })).toBeNull()

@@ -25,7 +25,7 @@ export function MediaThumb({ m, onClick, className }: { m: MediaMeta; onClick?: 
   const url = useMediaUrl(m.thumb ? undefined : m)
   const src = m.thumb ?? (m.type === 'image' ? url : null)
   return (
-    <button onClick={onClick} className={cx('relative overflow-hidden rounded-xl bg-surface-2', className)}>
+    <button onClick={onClick} className={cx('relative overflow-hidden rounded-[6px] bg-surface-2', className)}>
       {src ? (
         <img src={src} alt="" className="h-full w-full object-cover" loading="lazy" />
       ) : (
@@ -153,7 +153,7 @@ export function MediaAddButton({
         type="button"
         disabled={busy}
         onClick={() => ref.current?.click()}
-        className="relative flex h-11 w-full items-center justify-center gap-2 overflow-hidden rounded-2xl border border-dashed hairline text-sm text-muted active:bg-surface-2"
+        className="relative flex h-11 w-full items-center justify-center gap-2 overflow-hidden rounded-[8px] border border-dashed hairline text-sm text-muted active:bg-surface-2"
       >
         {busy && prog && (
           <span

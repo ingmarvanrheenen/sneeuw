@@ -1,15 +1,8 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <rect width="512" height="512" rx="112" fill="#0b0d0a"/>
-  <g fill="none" stroke="#9be564" stroke-linecap="round">
-    <!-- sneeuwvlok -->
-    <g stroke-width="18" transform="translate(256 200)">
-      <path d="M0-92V92M-80-46 80 46M-80 46 80-46"/>
-      <path d="M-22-74 0-52 22-74M-22 74 0 52 22 74" stroke-width="14"/>
-      <path d="M-75-16-46-28-57-58M75 16 46 28 57 58M-75 16-46 28-57 58M75-16 46-28 57-58" stroke-width="14"/>
-    </g>
-  </g>
-  <!-- board -->
-  <rect x="86" y="356" width="340" height="56" rx="28" fill="#9be564" transform="rotate(-8 256 384)"/>
-  <circle cx="190" cy="392" r="9" fill="#0b0d0a" transform="rotate(-8 256 384)"/>
-  <circle cx="322" cy="392" r="9" fill="#0b0d0a" transform="rotate(-8 256 384)"/>
-</svg>
+  <!-- Sneeuw Daddy: de mascotte (Episch-sticker met goggles) op een oranje ster, op zwart. Bron voor npm run icons. -->
+<rect width="512" height="512" rx="112" fill="#0d0d0f"/><g transform="translate(250 250) rotate(-8) scale(6.3) translate(-32 -32)" stroke="#0d0d0f" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" fill="none">
+<path d="M34.2 3.2L41.6 11.4L52.4 9.1L53.6 20.1L63.7 24.6L58.2 34.2L63.7 43.8L53.6 48.3L52.4 59.3L41.6 57.0L34.2 65.2L26.8 57.0L16.0 59.3L14.8 48.3L4.7 43.8L10.2 34.2L4.7 24.6L14.8 20.1L16.0 9.1L26.8 11.4Z" fill="#3a3a40" stroke="#3a3a40" stroke-width="5"/>
+<path d="M32.0 1.0L39.4 9.2L50.2 6.9L51.4 17.9L61.5 22.4L56.0 32.0L61.5 41.6L51.4 46.1L50.2 57.1L39.4 54.8L32.0 63.0L24.6 54.8L13.8 57.1L12.6 46.1L2.5 41.6L8.0 32.0L2.5 22.4L12.6 17.9L13.8 6.9L24.6 9.2Z" fill="#ffffff" stroke="#ffffff" stroke-width="5"/><path d="M32.0 2.0L39.1 10.1L49.6 7.7L50.6 18.5L60.5 22.7L55.0 32.0L60.5 41.3L50.6 45.5L49.6 56.3L39.1 53.9L32.0 62.0L24.9 53.9L14.4 56.3L13.4 45.5L3.5 41.3L9.0 32.0L3.5 22.7L13.4 18.5L14.4 7.7L24.9 10.1Z" fill="#ff5b22"/>
+<circle cx="32" cy="34" r="23" fill="#d7ff3c"/>
+<path d="M9 22c6-5 40-5 46 0"/><rect x="18" y="14" width="28" height="11" rx="5.5" fill="#ffffff"/><path d="M22 18h8" stroke="#ff5b22" stroke-width="2"/>
+<path d="M20 33c1.5-2.5 5-2.5 6.5 0M37.5 33c1.5-2.5 5-2.5 6.5 0"/><path d="M20 40h24c0 8-5 12-12 12s-12-4-12-12z" fill="#0d0d0f"/><path d="M26 47c3-2 9-2 12 0" stroke="#ff5b22" stroke-width="3"/></g><filter id="g"><feTurbulence type="fractalNoise" baseFrequency=".9" numOctaves="3" stitchTiles="stitch"/><feColorMatrix values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 .09 0"/></filter><rect width="512" height="512" rx="112" filter="url(#g)"/></svg>

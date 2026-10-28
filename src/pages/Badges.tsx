@@ -1,4 +1,12 @@
-import { Card, Page, PageHeader, Progress, Section, cx } from '../components/ui'
+import type { CSSProperties } from 'react'
+import { Page, PageHeader, Section, cx } from '../components/ui'
+import { LevelPoster } from '../components/Poster'
+import { seasonOf } from '../lib/format'
+import { todayISO } from '../lib/ids'
+
+/** Sticker-kanteling en vertraging per positie: -6, 4, -2, 6, ... graden, 40 ms na elkaar (max ~0,5 s). */
+const stickerStyle = (i: number) =>
+  ({ '--tilt': `${[-6, 4, -2, 6, -4, 2][i % 6]}deg`, '--delay': `${Math.min(i, 12) * 40}ms` }) as CSSProperties
 import { Medal } from '../design/Medal'
 import { BADGES, LEVELS } from '../lib/progress'
 import { useProgress } from '../lib/useProgress'
@@ -13,16 +21,7 @@ export default function Badges() {
   return (
     <Page>
       <PageHeader title="Levels & badges" back />
-      <Card>
-        <div className="flex items-end justify-between">
-          <div>
-            <div className="label">Level {p.level.level}</div>
-            <div className="text-2xl font-semibold">{p.level.name}</div>
-          </div>
-          <div className="num text-2xl font-semibold text-accent-text">{p.xp} XP</div>
-        </div>
-        <Progress value={p.level.progress} className="mt-3" />
-      </Card>
+      <LevelPoster level={p.level} badges={p.badges.length} season={seasonOf(todayISO())} className="mt-4" />
 
       <Section title="Ladder">
         <ol className="card divide-y divide-[var(--line)] overflow-hidden p-0">
@@ -42,11 +41,14 @@ export default function Badges() {
 
       <Section title={`Badges ${p.badges.filter((b) => !b.rare).length}/${NORMAL.length}`}>
         <div className="grid grid-cols-3 gap-2">
-          {NORMAL.map((b) => {
+          {NORMAL.map((b, i) => {
             const on = unlocked.has(b.id)
             return (
               <div key={b.id} className={cx('card flex flex-col items-center p-3 text-center', !on && 'opacity-70')}>
-                <Medal icon={b.icon} mark={b.mark} unlocked={on} size={58} />
+                {/* gehaald: als sticker erop geklapt, telkens een tikje anders gedraaid */}
+                <span className={on ? 'slap block' : 'block'} style={on ? stickerStyle(i) : undefined}>
+                  <Medal icon={b.icon} mark={b.mark} unlocked={on} size={58} />
+                </span>
                 <div className="mt-2 text-xs font-semibold leading-tight">{b.name}</div>
                 <div className="mt-0.5 text-[11px] leading-tight text-muted">{b.desc}</div>
               </div>
@@ -60,11 +62,13 @@ export default function Badges() {
           Geheime stickers voor rare prestaties. Wat je moet doen zie je pas als je hem hebt.
         </p>
         <div className="grid grid-cols-3 gap-2">
-          {RARE.map((b) => {
+          {RARE.map((b, i) => {
             const on = unlocked.has(b.id)
             return (
               <div key={b.id} className="card flex flex-col items-center p-3 text-center">
-                <Medal icon={b.icon} mark={b.mark} unlocked={on} rare size={58} />
+                <span className={on ? 'slap block' : 'block'} style={on ? stickerStyle(i + 3) : undefined}>
+                  <Medal icon={b.icon} mark={b.mark} unlocked={on} rare size={58} />
+                </span>
                 <div className="mt-2 text-xs font-semibold leading-tight">{on ? b.name : 'Geheim'}</div>
                 <div className="mt-0.5 text-[11px] leading-tight text-muted">{on ? b.desc : b.hint}</div>
               </div>

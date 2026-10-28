@@ -17,11 +17,11 @@ const targets = [
 const browser = await chromium.launch()
 const page = await browser.newPage()
 for (const t of targets) {
-  const inner = t.square ? svg.replace('rx="112"', 'rx="0"') : svg
+  const inner = t.square ? svg.replaceAll('rx="112"', 'rx="0"') : svg
   const pad = Math.round(t.size * t.pad)
   await page.setViewportSize({ width: t.size, height: t.size })
   await page.setContent(
-    `<body style="margin:0;background:${t.square ? '#0b0d0a' : 'transparent'}">
+    `<body style="margin:0;background:${t.square ? '#0d0d0f' : 'transparent'}">
       <div style="width:${t.size}px;height:${t.size}px;padding:${pad}px;box-sizing:border-box">
         ${inner.replace('<svg ', '<svg width="100%" height="100%" ')}
       </div></body>`,

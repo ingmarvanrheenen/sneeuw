@@ -318,7 +318,7 @@ export function TechniqueSheet({
         </div>
       ) : (
         <div className="pb-6">
-          <div className="overflow-hidden rounded-xl bg-black">
+          <div className="overflow-hidden rounded-[6px] bg-black">
             {picked.type === 'video' ? (
               <video
                 ref={video}

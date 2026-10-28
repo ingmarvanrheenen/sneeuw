@@ -17,11 +17,14 @@ export function Page({ children, className }: { children: ReactNode; className?:
  */
 export function PageHeader({
   title,
+  outline,
   subtitle,
   back,
   right,
 }: {
   title: string
+  /** tweede deel van de titel in outline-letters (bijv. je naam op Home) */
+  outline?: string
   subtitle?: ReactNode
   back?: boolean | string
   right?: ReactNode
@@ -58,7 +61,10 @@ export function PageHeader({
       >
         <div className="mx-auto grid h-11 max-w-xl grid-cols-[1fr_auto_1fr] items-center px-4">
           <div className="justify-self-start">{back ? backBtn : null}</div>
-          <div className="max-w-[60vw] truncate text-[17px] font-semibold">{title}</div>
+          <div className="max-w-[60vw] truncate text-[17px] font-semibold">
+            {title}
+            {outline ? ` ${outline}` : ''}
+          </div>
           <div className="flex items-center gap-2 justify-self-end">{right}</div>
         </div>
       </div>
@@ -67,7 +73,11 @@ export function PageHeader({
           {backBtn}
           <div className="flex items-center gap-2">{right}</div>
         </div>
-        <h1 className="display mt-1 text-[38px] text-text">{title}</h1>
+        {/* key: bij een nieuwe titel komt hij opnieuw omhoog */}
+        <h1 key={title} className="display rise mt-1 text-[44px] uppercase leading-[0.88] text-text">
+          {title}
+          {outline && <span className="outline-text"> {outline}</span>}
+        </h1>
         {subtitle && <div className="mt-1.5 text-[15px] text-muted">{subtitle}</div>}
       </header>
     </>
@@ -89,15 +99,17 @@ export function Button({ variant = 'primary', size = 'md', icon, className, chil
         onClick?.(e)
       }}
       className={cx(
-        'inline-flex select-none items-center justify-center gap-2 font-semibold transition duration-150 active:opacity-70 disabled:opacity-40',
-        size === 'sm' && 'h-9 rounded-[10px] px-3.5 text-[15px]',
-        size === 'md' && 'h-11 rounded-xl px-5 text-[17px]',
-        size === 'lg' && 'h-[52px] rounded-[14px] px-6 text-[17px]',
-        variant === 'primary' && 'bg-accent text-accent-ink',
-        variant === 'ghost' && 'bg-surface-2 text-text',
-        variant === 'outline' && 'border hairline text-text',
-        variant === 'danger' && 'bg-surface text-danger',
-        variant === 'plain' && 'text-accent-text',
+        'inline-flex select-none items-center justify-center gap-2 font-semibold transition duration-150 disabled:opacity-40',
+        size === 'sm' && 'h-9 rounded-[6px] px-3.5 text-[15px]',
+        size === 'md' && 'h-11 rounded-[6px] px-5 text-[17px]',
+        size === 'lg' && 'h-[54px] rounded-[6px] px-6 text-[17px]',
+        // primair: zwart/lime met een harde oranje schaduw waar je in drukt; groot in poster-letters
+        variant === 'primary' && 'shadow-hard bg-accent text-accent-ink',
+        variant === 'primary' && size !== 'sm' && 'display text-[20px] uppercase tracking-[0.02em]',
+        variant === 'ghost' && 'bg-surface-2 text-text active:opacity-70',
+        variant === 'outline' && 'border-[1.5px] border-text text-text active:opacity-70',
+        variant === 'danger' && 'border hairline bg-surface text-danger active:opacity-70',
+        variant === 'plain' && 'text-accent-text active:opacity-70',
         className,
       )}
     >
@@ -144,6 +156,19 @@ export function Card({ children, className, onClick }: { children: ReactNode; cl
   )
 }
 
+/** Sectiekop in poster-stijl: titel in hoofdletters, een doorlopende lijn, en rechts eventueel een actie. */
+export function Heading({ children, id, action, className }: { children: ReactNode; id?: string; action?: ReactNode; className?: string }) {
+  return (
+    <div className={cx('mb-3 flex items-center gap-3', className)}>
+      <h2 id={id} className="display text-[26px] uppercase">
+        {children}
+      </h2>
+      <span aria-hidden className="rule" />
+      {action}
+    </div>
+  )
+}
+
 export function Section({
   title,
   action,
@@ -157,10 +182,7 @@ export function Section({
 }) {
   return (
     <section className={cx('mt-8', className)}>
-      <div className="mb-2.5 flex items-baseline justify-between gap-3">
-        <h2 className="text-[20px] font-semibold tracking-tight">{title}</h2>
-        {action}
-      </div>
+      <Heading action={action}>{title}</Heading>
       {children}
     </section>
   )
@@ -177,7 +199,7 @@ export function SectionLink({ to, children }: { to: string; children: ReactNode 
 
 /** Gegroepeerde lijst zoals iOS Instellingen. */
 export function List({ children, className }: { children: ReactNode; className?: string }) {
-  return <div className={cx('card divide-y divide-[var(--line)] overflow-hidden', className)}>{children}</div>
+  return <div className={cx('card stagger divide-y divide-[var(--line)] overflow-hidden', className)}>{children}</div>
 }
 
 export function Row({
@@ -249,8 +271,8 @@ export function Chip({
         onClick?.()
       }}
       className={cx(
-        'inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full px-3.5 text-[15px] transition-colors duration-150',
-        active ? 'bg-accent text-accent-ink' : 'bg-surface text-text',
+        'inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full border px-3.5 text-[15px] transition-colors duration-150',
+        active ? 'border-accent bg-accent font-semibold text-accent-ink' : 'hairline bg-surface text-text',
         className,
       )}
     >
@@ -293,7 +315,7 @@ export function Segmented<T extends string>({
   onChange: (v: T) => void
 }) {
   return (
-    <div className="flex rounded-[10px] bg-surface-2 p-0.5" role="tablist">
+    <div className="flex rounded-[8px] bg-surface-2 p-0.5" role="tablist">
       {options.map((o) => (
         <button
           key={o.value}
@@ -305,8 +327,8 @@ export function Segmented<T extends string>({
             onChange(o.value)
           }}
           className={cx(
-            'h-8 flex-1 rounded-[8px] px-3 text-[13px] font-semibold transition duration-200',
-            value === o.value ? 'bg-surface text-text shadow-[0_1px_3px_rgba(0,0,0,0.12)]' : 'text-muted',
+            'h-8 flex-1 rounded-[6px] px-3 text-[13px] font-semibold transition duration-200',
+            value === o.value ? 'bg-accent text-accent-ink' : 'text-muted',
           )}
         >
           {o.label}
@@ -380,17 +402,18 @@ export function Field({ label, children, hint, group }: { label: string; childre
 }
 
 export const inputCls =
-  'w-full rounded-xl border border-transparent bg-surface px-4 py-3 text-text outline-none placeholder:text-muted/70 focus:border-accent'
+  'w-full rounded-[6px] border border-transparent bg-surface px-4 py-3 text-text outline-none placeholder:text-muted/70 focus:border-accent'
 
 export function Progress({ value, className }: { value: number; className?: string }) {
   return (
     <div
-      className={cx('h-1.5 overflow-hidden rounded-full bg-surface-2', className)}
+      className={cx('h-2 overflow-hidden rounded-[2px] bg-surface-2', className)}
       role="progressbar"
       aria-valuenow={Math.round(value * 100)}
     >
+      {/* loopt vol bij het openen (grow), daarna schuift hij mee */}
       <div
-        className="h-full rounded-full bg-accent transition-[width] duration-500 ease-[var(--ease-out-expo)]"
+        className="grow h-full rounded-[2px] bg-accent transition-[width] duration-500 ease-[var(--ease-out-expo)]"
         style={{ width: `${Math.round(value * 100)}%` }}
       />
     </div>
@@ -445,7 +468,7 @@ export function Sheet({
         <div className="mx-auto mb-2 h-1.5 w-9 rounded-full bg-line" />
         <div className="mb-3 grid grid-cols-[1fr_auto_1fr] items-center">
           <span />
-          <h3 className="text-[17px] font-semibold">{title}</h3>
+          <h3 className="display text-[22px] uppercase">{title}</h3>
           <button onClick={onClose} className="justify-self-end text-[17px] font-semibold text-accent-text">
             {closeLabel}
           </button>
@@ -460,8 +483,8 @@ export function Sheet({
 export function Stat({ label, value, sub }: { label: string; value: ReactNode; sub?: string }) {
   return (
     <div className="px-3 py-3">
-      <div className="display num text-[30px]">{value}</div>
-      <div className="mt-1 text-[13px] text-muted">
+      <div className="display num text-[32px]">{value}</div>
+      <div className="mt-1 text-[11px] font-extrabold uppercase tracking-[0.08em] text-muted">
         {label}
         {sub ? ` ${sub}` : ''}
       </div>
@@ -477,7 +500,7 @@ export function LevelDots({ level }: { level: number }) {
   return (
     <span className="inline-flex gap-0.5" aria-label={`Niveau ${level} van 5`}>
       {[1, 2, 3, 4, 5].map((i) => (
-        <span key={i} className={cx('h-1.5 w-2.5 rounded-full', i <= level ? 'bg-accent' : 'bg-line')} />
+        <span key={i} className={cx('h-1.5 w-2.5 rounded-[1px]', i <= level ? 'bg-accent' : 'bg-line')} />
       ))}
     </span>
   )

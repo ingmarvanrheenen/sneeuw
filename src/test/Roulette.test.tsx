@@ -20,7 +20,7 @@ const open = (url = '/tricks') =>
   )
 
 /** naam die nu in de roulette staat */
-const current = (sheet: HTMLElement) => sheet.querySelector('.display')?.textContent ?? ''
+const current = (sheet: HTMLElement) => sheet.querySelector('[aria-live] .display')?.textContent ?? ''
 
 beforeEach(async () => {
   await db.records.clear()

@@ -115,7 +115,7 @@ export function CompareViewer({ tn, name, onClose }: { tn: ThenNow; name: string
         {anyVideo && (
           <button
             onClick={playBoth}
-            className="mb-3 flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-accent text-[17px] font-semibold text-accent-ink"
+            className="mb-3 flex h-11 w-full items-center justify-center gap-2 rounded-[6px] bg-accent text-[17px] font-semibold text-accent-ink"
           >
             <Icon name="play" size={18} /> Samen afspelen
           </button>

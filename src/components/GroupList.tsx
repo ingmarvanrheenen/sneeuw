@@ -1,6 +1,6 @@
 // Gedeelde groepslijst van een crew-trip: toevoegen, "ik neem 'm mee" en afvinken, samen met je crew.
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Chip, List, cx, inputCls } from './ui'
+import { Chip, Heading, List, cx, inputCls } from './ui'
 import { Icon, Spinner } from '../design/icons'
 import { crewMembers, type CrewMember } from '../lib/crew'
 import { GROUP_SUGGESTIONS, addItem, cachedItems, listItems, removeItem, setClaim, setDone, type CrewTripItem } from '../lib/crewTrips'
@@ -92,17 +92,21 @@ export function GroupList({ tripId, crewId, ownerId, ready = true }: { tripId: s
 
   return (
     <section className="mt-8">
-      <div className="mb-1 flex items-baseline justify-between gap-3">
-        <h2 className="text-[20px] font-semibold tracking-tight">Groepsspullen</h2>
-        <span className="flex items-center gap-2 text-[15px] text-muted">
-          {refreshing && items !== null && (
-            <span role="status" aria-label="Bijwerken">
-              <Spinner size={14} />
-            </span>
-          )}
-          {list.length > 0 && (open ? `${open} nog niemand` : 'alles verdeeld')}
-        </span>
-      </div>
+      <Heading
+        className="mb-1"
+        action={
+          <span className="flex shrink-0 items-center gap-2 text-[15px] text-muted">
+            {refreshing && items !== null && (
+              <span role="status" aria-label="Bijwerken">
+                <Spinner size={14} />
+              </span>
+            )}
+            {list.length > 0 && (open ? `${open} nog niemand` : 'alles verdeeld')}
+          </span>
+        }
+      >
+        Groepsspullen
+      </Heading>
       <p className="mb-3 text-[15px] text-muted">Wat je met de crew maar één keer nodig hebt. Tik op "Ik" als jij het meeneemt.</p>
 
       {!ready && (
@@ -216,7 +220,7 @@ export function GroupList({ tripId, crewId, ownerId, ready = true }: { tripId: s
             <button
               type="submit"
               aria-label="Toevoegen"
-              className="grid size-12 shrink-0 place-items-center rounded-xl bg-accent text-accent-ink"
+              className="grid size-12 shrink-0 place-items-center rounded-[6px] bg-accent text-accent-ink"
             >
               <Icon name="plus" size={20} />
             </button>

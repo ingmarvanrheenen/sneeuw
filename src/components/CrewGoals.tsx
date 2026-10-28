@@ -1,6 +1,6 @@
 // Crew-doelen voor een trip: iedereen vinkt voor zichzelf af, je ziet wie het al gehaald heeft.
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Chip, List, cx, inputCls } from './ui'
+import { Chip, Heading, List, cx, inputCls } from './ui'
 import { Icon, Spinner } from '../design/icons'
 import { crewMembers, type CrewMember } from '../lib/crew'
 import { addGoal, cachedGoals, listGoals, removeGoal, setGoalDone, type CrewGoal } from '../lib/crewTrips'
@@ -90,7 +90,7 @@ export function CrewGoals({ tripId, crewId, ownerId, ready = true }: { tripId: s
 
   return (
     <section className="mt-8">
-      <h2 className="mb-1 text-[20px] font-semibold tracking-tight">Crew-doelen</h2>
+      <Heading className="mb-1">Crew-doelen</Heading>
       <p className="mb-3 text-[15px] text-muted">Samen iets halen deze trip. Iedereen vinkt voor zichzelf af.</p>
       {goals === null ? (
         <div className="card grid h-20 place-items-center text-muted">
@@ -174,7 +174,7 @@ export function CrewGoals({ tripId, crewId, ownerId, ready = true }: { tripId: s
             <button
               type="submit"
               aria-label="Doel toevoegen"
-              className="grid size-12 shrink-0 place-items-center rounded-xl bg-accent text-accent-ink"
+              className="grid size-12 shrink-0 place-items-center rounded-[6px] bg-accent text-accent-ink"
             >
               <Icon name="plus" size={20} />
             </button>

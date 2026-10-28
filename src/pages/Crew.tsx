@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useState, type CSSProperties } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Button, Card, Empty, Field, Page, PageHeader, Segmented, Sheet, cx, inputCls } from '../components/ui'
 import { Icon, Mood, Spinner } from '../design/icons'
+import { ReactionSticker } from '../design/Stickers'
 import { MediaThumb, MediaViewer } from '../components/Media'
 import { authStore } from '../lib/auth'
 import { hasBackend } from '../lib/supabase'
@@ -77,7 +78,7 @@ function Post({
             <div className="label">{fmtDate(post.at)}</div>
           </div>
         </Link>
-        {s && <Mood value={s.mood} className="text-accent-text" />}
+        {s && <Mood value={s.mood} size={34} />}
         {t && <Icon name="stomp" size={24} className="text-accent-text" />}
       </div>
       <div className="px-4 pb-3">
@@ -129,12 +130,21 @@ function Post({
               key={r.key}
               aria-label={r.label}
               onClick={() => onReact(r.key, mine)}
+              aria-pressed={mine}
               className={cx(
-                'flex h-8 items-center gap-1 rounded-full border px-2.5 text-xs transition active:scale-90',
-                mine ? 'border-accent bg-accent-soft text-accent-text' : 'hairline text-muted',
+                'flex h-9 items-center gap-1 rounded-full border pl-0.5 pr-2.5 text-[13px] font-bold transition active:scale-90',
+                mine ? 'border-text bg-accent-soft text-text' : 'hairline text-muted',
+                !all.length && 'pr-0.5',
               )}
             >
-              <Icon name={r.icon} size={15} />
+              {/* jouw reactie klapt erop */}
+              <span
+                key={mine ? 'aan' : 'uit'}
+                className={mine ? 'slap' : undefined}
+                style={{ '--tilt': '-6deg', '--delay': '0ms' } as CSSProperties}
+              >
+                <ReactionSticker kind={r.key} size={30} />
+              </span>
               {all.length > 0 && <span className="num">{all.length}</span>}
             </button>
           )

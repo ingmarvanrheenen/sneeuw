@@ -1,7 +1,7 @@
 // Trip-recap: wat de hele crew deze trip gedaan heeft, uit de met de crew gedeelde dagen.
 import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { List, Row, Sheet, Stat, StatGroup } from './ui'
+import { Heading, List, Row, Sheet, Stat, StatGroup } from './ui'
 import { Spinner } from '../design/icons'
 import { MediaThumb, MediaViewer } from './Media'
 import { crewMembers, type CrewMember } from '../lib/crew'
@@ -81,7 +81,7 @@ export function TripRecap({ tripId, crewId, trip }: { tripId: string; crewId: st
 
   return (
     <section className="mt-8">
-      <h2 className="mb-1 text-[20px] font-semibold tracking-tight">Trip-recap</h2>
+      <Heading className="mb-1">Trip-recap</Heading>
       <p className="mb-3 text-[15px] text-muted">Alles wat de crew deze trip gelogd en gedeeld heeft.</p>
       {!recap ? (
         <div className="card grid h-20 place-items-center text-muted">{failed ? 'Recap laden lukte niet' : <Spinner size={20} />}</div>
@@ -99,7 +99,7 @@ export function TripRecap({ tripId, crewId, trip }: { tripId: string; crewId: st
 
           {awards.length > 0 && (
             <>
-              <h3 className="mb-2 mt-6 text-[17px] font-semibold">Awards</h3>
+              <h3 className="display mb-2 mt-6 text-[20px] uppercase">Awards</h3>
               <List>
                 {awards.map((aw) => (
                   <Row
@@ -123,7 +123,7 @@ export function TripRecap({ tripId, crewId, trip }: { tripId: string; crewId: st
             <Votes tripId={tripId} crewId={crewId} members={members} media={media} me={me ?? ''} nameOf={nameOf} names={names} />
           )}
 
-          <h3 className="mb-2 mt-6 text-[17px] font-semibold">Per rider</h3>
+          <h3 className="display mb-2 mt-6 text-[20px] uppercase">Per rider</h3>
           <List className="mt-3">
             {recap.people.map((p) => (
               <Link
@@ -217,7 +217,7 @@ function Votes({
 
   return (
     <>
-      <h3 className="mb-2 mt-6 text-[17px] font-semibold">Stemmen</h3>
+      <h3 className="display mb-2 mt-6 text-[20px] uppercase">Stemmen</h3>
       <List>
         {VOTE_CATEGORIES.map((c) => {
           const r = voteResult(votes, c.id)
