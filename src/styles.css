@@ -26,6 +26,7 @@
   --tab-ink: #0d0d0f;
   --tab-muted: #8d8d88;
   --tab-pill: #d7ff3c;
+  --tape: rgba(215, 255, 60, 0.92);
   --warn: #9a5a00;
   --danger: #b4321f;
   --heel: #1767b0;
@@ -59,6 +60,7 @@
     --tab-ink: #0d0d0f;
     --tab-muted: #8d8d88;
     --tab-pill: #d7ff3c;
+    --tape: rgba(255, 255, 255, 0.55);
     --warn: #ffb547;
     --danger: #ff6b5a;
     --heel: #6db4f0;
@@ -92,6 +94,7 @@
   --tab-ink: #0d0d0f;
   --tab-muted: #8d8d88;
   --tab-pill: #d7ff3c;
+  --tape: rgba(255, 255, 255, 0.55);
   --warn: #ffb547;
   --danger: #ff6b5a;
   --heel: #6db4f0;
@@ -232,6 +235,12 @@ body::after {
 .shadow-hard:active:not(:disabled) {
   transform: translate(3px, 3px);
   box-shadow: 0 0 0 var(--hot);
+}
+
+/* Holle letters, voor een tweede woord in een titel */
+.outline-text {
+  color: transparent;
+  -webkit-text-stroke: 1.4px var(--text);
 }
 
 /* Sectiekop: titel met een doorlopende lijn */

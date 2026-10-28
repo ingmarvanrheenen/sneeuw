@@ -1,7 +1,7 @@
 // Dagreview van Coach Daddy: opt-in per dag (kost een coach-bericht), bewaard bij de dag.
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Button, List, cx } from './ui'
+import { Button, Heading, List, cx } from './ui'
 import { Icon, Spinner } from '../design/icons'
 import { CoachError, reviewDay } from '../lib/coach'
 import { create, update, useKind } from '../lib/repo'
@@ -64,14 +64,17 @@ export function DayReview({ session }: { session: Session }) {
 
   return (
     <section className="mt-8">
-      <div className="mb-2.5 flex items-baseline justify-between gap-3">
-        <h2 className="text-[20px] font-semibold tracking-tight">Coach-review</h2>
-        {canAsk && (
-          <button onClick={run} disabled={busy} className="-my-2.5 -mr-2 px-2 py-2.5 text-[15px] text-accent-text disabled:opacity-50">
-            {busy ? 'Bezig…' : 'Opnieuw'}
-          </button>
-        )}
-      </div>
+      <Heading
+        action={
+          canAsk && (
+            <button onClick={run} disabled={busy} className="-my-2.5 -mr-2 px-2 py-2.5 text-[15px] text-accent-text disabled:opacity-50">
+              {busy ? 'Bezig…' : 'Opnieuw'}
+            </button>
+          )
+        }
+      >
+        Coach-review
+      </Heading>
       <List>
         <Item label="Ging goed">{r.goed}</Item>
         <Item label="Focus voor de volgende keer">{r.focus}</Item>

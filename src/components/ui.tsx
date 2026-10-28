@@ -17,11 +17,14 @@ export function Page({ children, className }: { children: ReactNode; className?:
  */
 export function PageHeader({
   title,
+  outline,
   subtitle,
   back,
   right,
 }: {
   title: string
+  /** tweede deel van de titel in outline-letters (bijv. je naam op Home) */
+  outline?: string
   subtitle?: ReactNode
   back?: boolean | string
   right?: ReactNode
@@ -58,7 +61,10 @@ export function PageHeader({
       >
         <div className="mx-auto grid h-11 max-w-xl grid-cols-[1fr_auto_1fr] items-center px-4">
           <div className="justify-self-start">{back ? backBtn : null}</div>
-          <div className="max-w-[60vw] truncate text-[17px] font-semibold">{title}</div>
+          <div className="max-w-[60vw] truncate text-[17px] font-semibold">
+            {title}
+            {outline ? ` ${outline}` : ''}
+          </div>
           <div className="flex items-center gap-2 justify-self-end">{right}</div>
         </div>
       </div>
@@ -70,6 +76,7 @@ export function PageHeader({
         {/* key: bij een nieuwe titel komt hij opnieuw omhoog */}
         <h1 key={title} className="display rise mt-1 text-[44px] uppercase leading-[0.88] text-text">
           {title}
+          {outline && <span className="outline-text"> {outline}</span>}
         </h1>
         {subtitle && <div className="mt-1.5 text-[15px] text-muted">{subtitle}</div>}
       </header>
@@ -149,6 +156,19 @@ export function Card({ children, className, onClick }: { children: ReactNode; cl
   )
 }
 
+/** Sectiekop in poster-stijl: titel in hoofdletters, een doorlopende lijn, en rechts eventueel een actie. */
+export function Heading({ children, id, action, className }: { children: ReactNode; id?: string; action?: ReactNode; className?: string }) {
+  return (
+    <div className={cx('mb-3 flex items-center gap-3', className)}>
+      <h2 id={id} className="display text-[26px] uppercase">
+        {children}
+      </h2>
+      <span aria-hidden className="rule" />
+      {action}
+    </div>
+  )
+}
+
 export function Section({
   title,
   action,
@@ -162,11 +182,7 @@ export function Section({
 }) {
   return (
     <section className={cx('mt-8', className)}>
-      <div className="mb-3 flex items-center gap-3">
-        <h2 className="display text-[26px] uppercase">{title}</h2>
-        <span aria-hidden className="rule" />
-        {action}
-      </div>
+      <Heading action={action}>{title}</Heading>
       {children}
     </section>
   )

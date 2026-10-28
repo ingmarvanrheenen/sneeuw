@@ -1,6 +1,6 @@
 // Trip-bingo op de trippagina: je eigen kaart om af te vinken, de stand van de crew, en de kaart van een maat.
 import { useCallback, useEffect, useState } from 'react'
-import { List, Row, Sheet, cx } from './ui'
+import { Heading, List, Row, Sheet, cx } from './ui'
 import { Icon } from '../design/icons'
 import { crewMembers, type CrewMember } from '../lib/crew'
 import { bingoPlayer, bingoStand, cachedTicks, listTicks, setTick, type BingoPlayer, type BingoTick } from '../lib/bingo'
@@ -97,7 +97,7 @@ export function TripBingo({ tripId, crewId }: { tripId: string; crewId: string }
 
   return (
     <section className="mt-8">
-      <h2 className="mb-1 text-[20px] font-semibold tracking-tight">Trip-bingo</h2>
+      <Heading className="mb-1">Trip-bingo</Heading>
       <p className="mb-3 text-[15px] text-muted">
         {stand.first
           ? `${name(stand.first)} had als eerste bingo.`

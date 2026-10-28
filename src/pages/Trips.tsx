@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Button, Empty, Field, Page, PageHeader, Progress, Sheet, cx, inputCls } from '../components/ui'
+import { Button, Empty, Field, Heading, Page, PageHeader, Progress, Sheet, cx, inputCls } from '../components/ui'
 import { Icon } from '../design/icons'
 import { ResortPicker } from '../components/Pickers'
 import { create, useKind } from '../lib/repo'
@@ -85,7 +85,7 @@ export default function Trips() {
 
       {shared.length > 0 && (
         <section className="mt-8">
-          <h2 className="mb-2.5 text-[20px] font-semibold tracking-tight">Van je crew</h2>
+          <Heading>Van je crew</Heading>
           <div className="card divide-y divide-[var(--line)] overflow-hidden">
             {shared.map(({ id, trip: t }) => (
               <button

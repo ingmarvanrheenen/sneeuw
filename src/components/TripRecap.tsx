@@ -1,7 +1,7 @@
 // Trip-recap: wat de hele crew deze trip gedaan heeft, uit de met de crew gedeelde dagen.
 import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { List, Row, Sheet, Stat, StatGroup } from './ui'
+import { Heading, List, Row, Sheet, Stat, StatGroup } from './ui'
 import { Spinner } from '../design/icons'
 import { MediaThumb, MediaViewer } from './Media'
 import { crewMembers, type CrewMember } from '../lib/crew'
@@ -81,7 +81,7 @@ export function TripRecap({ tripId, crewId, trip }: { tripId: string; crewId: st
 
   return (
     <section className="mt-8">
-      <h2 className="mb-1 text-[20px] font-semibold tracking-tight">Trip-recap</h2>
+      <Heading className="mb-1">Trip-recap</Heading>
       <p className="mb-3 text-[15px] text-muted">Alles wat de crew deze trip gelogd en gedeeld heeft.</p>
       {!recap ? (
         <div className="card grid h-20 place-items-center text-muted">{failed ? 'Recap laden lukte niet' : <Spinner size={20} />}</div>

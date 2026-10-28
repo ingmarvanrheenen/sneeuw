@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { Chip, Empty, Page, PageHeader, Progress, LevelDots } from '../components/ui'
+import { Chip, Empty, Heading, Page, PageHeader, Progress, LevelDots } from '../components/ui'
 import { Icon } from '../design/icons'
 import { MediaThumb } from '../components/Media'
 import { ThenNowCard } from '../components/ThenNow'
@@ -38,7 +38,7 @@ export default function Vault() {
       <Progress value={landed.length / TRICKS.length} className="mt-2" />
       {compare.length > 0 && (
         <section className="mt-6">
-          <h2 className="mb-1 text-[20px] font-semibold tracking-tight">Toen en nu</h2>
+          <Heading className="mb-1">Toen en nu</Heading>
           <p className="mb-3 text-[15px] text-muted">Je eerste clip naast je laatste. Kijk hoeveel je vooruit bent gegaan.</p>
           <div className="no-scrollbar -mx-4 flex snap-x gap-3 overflow-x-auto px-4 pb-1">
             {compare.map((tn) => (

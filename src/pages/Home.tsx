@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Icon, Mood } from '../design/icons'
-import { Button, List, Page, PageHeader, Progress, Row, Section, SectionLink, LevelDots } from '../components/ui'
+import { Button, List, Page, PageHeader, Row, Section, SectionLink, LevelDots, cx } from '../components/ui'
+import { Peaks, Segments, Sticker, Tape } from '../components/Poster'
 import { SyncBadge } from '../components/SyncBadge'
 import { QuickLog } from '../components/QuickLog'
 import { useProgress } from '../lib/useProgress'
-import { seasonOf } from '../lib/wrapped'
+import { seasonOf } from '../lib/format'
 import { LiftQuestion } from '../components/LiftQuestion'
 import { DailyChallenge } from '../components/DailyChallenge'
 import { sessionsSorted, useKind } from '../lib/repo'
@@ -50,6 +51,21 @@ function InstallHint() {
   )
 }
 
+/** Een cijfer van je seizoen; slams in het oranje vak, een tikje scheef. */
+function SeasonCell({ value, label, hot }: { value: number | string; label: string; hot?: boolean }) {
+  return (
+    <span
+      className={cx(
+        'block rounded-[6px] border px-3 py-2.5',
+        hot ? '-rotate-2 border-hot bg-hot text-hot-ink' : 'hairline bg-surface text-text',
+      )}
+    >
+      <span className="display num block text-[32px]">{value}</span>
+      <span className={cx('block text-[11px] font-extrabold uppercase tracking-[0.08em]', hot ? 'opacity-70' : 'text-muted')}>{label}</span>
+    </span>
+  )
+}
+
 export default function Home() {
   const nav = useNavigate()
   const progress = useProgress()
@@ -85,28 +101,56 @@ export default function Home() {
     .slice(0, 4)
 
   const lvl = progress?.level
+  const season = seasonOf(today)
+  const seasonStats = (() => {
+    const mine = (sessions ?? []).filter((x) => seasonOf(x.date) === season)
+    return {
+      days: new Set(mine.map((x) => x.date)).size,
+      hours: Math.round(mine.reduce((a, x) => a + (x.hours || 0), 0) * 10) / 10,
+      falls: mine.reduce((a, x) => a + (x.falls || 0), 0),
+    }
+  })()
   const hour = new Date().getHours()
   const greet = hour < 6 ? 'Nachtbraker' : hour < 12 ? 'Goeiemorgen' : hour < 18 ? 'Yo' : 'Goeienavond'
 
   return (
     <Page>
-      <PageHeader subtitle={fmtDate(today, true)} title={`${greet}${name ? `, ${name}` : ''}`} right={<SyncBadge />} />
+      <PageHeader subtitle={fmtDate(today, true)} title={greet} outline={name || undefined} right={<SyncBadge />} />
       <InstallHint />
 
       {lvl && (
-        <button onClick={() => nav('/badges')} className="block w-full text-left active:opacity-70">
-          <div className="flex items-baseline justify-between gap-3">
-            <span className="display text-[26px]">{lvl.name}</span>
-            <span className="num text-[15px] text-muted">
-              Level {lvl.level} · {lvl.xp} XP
+        <button
+          onClick={() => nav('/badges')}
+          aria-label={`Level ${lvl.level}, ${lvl.name}, ${lvl.xp} XP`}
+          className="relative mt-2 block w-full rounded-[6px] bg-block p-4 pb-3.5 text-left text-block-ink transition-transform duration-150 active:scale-[0.98]"
+        >
+          <Tape className="-top-2.5 left-6" />
+          <Peaks className="bottom-10 right-0 w-[170px]" />
+          <Sticker className="-right-2 -top-6" size={98}>
+            <span>
+              Level
+              <span className="display block text-[32px] tracking-normal">{lvl.level}</span>
+              <span className="num">{lvl.xp} XP</span>
             </span>
-          </div>
-          <Progress value={lvl.progress} className="mt-3" />
-          <div className="mt-2 text-[13px] text-muted">
+          </Sticker>
+          <span className="block text-[12px] font-extrabold uppercase tracking-[0.1em]">Seizoen {season}</span>
+          <span className="display mt-3 block max-w-[78%] text-[64px] uppercase leading-[0.82]">{lvl.name}</span>
+          <Segments value={lvl.progress} className="mt-4" />
+          <span className="mt-2 block text-[12px] font-extrabold uppercase tracking-[0.08em] opacity-80">
             {lvl.next ? `Nog ${lvl.needed - lvl.current} XP tot ${lvl.next}` : 'Max level. Respect.'} · {progress.badges.length} badges
-          </div>
+          </span>
         </button>
       )}
+
+      <button
+        onClick={() => nav('/stats')}
+        className="stagger mt-3 grid w-full grid-cols-3 gap-2 text-left"
+        aria-label="Je seizoen in cijfers"
+      >
+        <SeasonCell value={seasonStats.days} label={seasonStats.days === 1 ? 'dag' : 'dagen'} />
+        <SeasonCell value={seasonStats.hours.toLocaleString('nl-NL')} label="uur" />
+        <SeasonCell value={seasonStats.falls} label="slams" hot />
+      </button>
 
       {loggedToday ? (
         <Button
