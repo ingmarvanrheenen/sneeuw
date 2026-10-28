@@ -46,7 +46,7 @@ export function DayReview({ session }: { session: Session }) {
   if (!r)
     return (
       <div className="card mt-8 flex items-center gap-3 p-4">
-        <div className="grid size-10 shrink-0 place-items-center rounded-xl bg-accent-soft text-accent-text">
+        <div className="grid size-10 shrink-0 place-items-center rounded-[6px] bg-accent-soft text-accent-text">
           <Icon name="chat" size={20} />
         </div>
         <div className="min-w-0 flex-1">

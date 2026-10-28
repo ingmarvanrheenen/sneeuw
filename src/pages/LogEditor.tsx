@@ -161,7 +161,7 @@ export default function LogEditor() {
               type="button"
               onClick={() => set('mood', v)}
               className={cx(
-                'flex flex-1 flex-col items-center gap-1 rounded-xl py-2 transition',
+                'flex flex-1 flex-col items-center gap-1 rounded-[6px] py-2 transition',
                 d.mood === v ? 'bg-accent text-accent-ink' : 'text-muted',
               )}
             >

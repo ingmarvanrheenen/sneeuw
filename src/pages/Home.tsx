@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Icon, Mood } from '../design/icons'
 import { Button, List, Page, PageHeader, Row, Section, SectionLink, LevelDots, cx } from '../components/ui'
-import { Peaks, Segments, Sticker, Tape } from '../components/Poster'
+import { LevelPoster } from '../components/Poster'
 import { SyncBadge } from '../components/SyncBadge'
 import { QuickLog } from '../components/QuickLog'
 import { useProgress } from '../lib/useProgress'
@@ -27,7 +27,7 @@ function InstallHint() {
   }, [])
   if (!show) return null
   return (
-    <div className="relative mb-6 rounded-[14px] bg-accent-soft p-4 pr-10">
+    <div className="relative mb-6 rounded-[8px] bg-accent-soft p-4 pr-10">
       <button
         aria-label="Verbergen"
         className="absolute right-2 top-2 grid size-9 place-items-center text-muted"
@@ -118,29 +118,7 @@ export default function Home() {
       <PageHeader subtitle={fmtDate(today, true)} title={greet} outline={name || undefined} right={<SyncBadge />} />
       <InstallHint />
 
-      {lvl && (
-        <button
-          onClick={() => nav('/badges')}
-          aria-label={`Level ${lvl.level}, ${lvl.name}, ${lvl.xp} XP`}
-          className="relative mt-2 block w-full rounded-[6px] bg-block p-4 pb-3.5 text-left text-block-ink transition-transform duration-150 active:scale-[0.98]"
-        >
-          <Tape className="-top-2.5 left-6" />
-          <Peaks className="bottom-10 right-0 w-[170px]" />
-          <Sticker className="-right-2 -top-6" size={98}>
-            <span>
-              Level
-              <span className="display block text-[32px] tracking-normal">{lvl.level}</span>
-              <span className="num">{lvl.xp} XP</span>
-            </span>
-          </Sticker>
-          <span className="block text-[12px] font-extrabold uppercase tracking-[0.1em]">Seizoen {season}</span>
-          <span className="display mt-3 block max-w-[78%] text-[64px] uppercase leading-[0.82]">{lvl.name}</span>
-          <Segments value={lvl.progress} className="mt-4" />
-          <span className="mt-2 block text-[12px] font-extrabold uppercase tracking-[0.08em] opacity-80">
-            {lvl.next ? `Nog ${lvl.needed - lvl.current} XP tot ${lvl.next}` : 'Max level. Respect.'} · {progress.badges.length} badges
-          </span>
-        </button>
-      )}
+      {lvl && <LevelPoster level={lvl} badges={progress.badges.length} season={season} onClick={() => nav('/badges')} className="mt-2" />}
 
       <button
         onClick={() => nav('/stats')}

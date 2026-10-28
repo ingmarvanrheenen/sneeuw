@@ -11,7 +11,7 @@ import { Toasts } from '../components/Toasts'
 import { SyncBadge } from '../components/SyncBadge'
 import Crew from '../pages/Crew'
 import Settings from '../pages/Settings'
-import { undoToast, toastStore } from '../lib/toast'
+import { toast, undoToast, toastStore } from '../lib/toast'
 import { syncStore } from '../lib/sync'
 import { authStore } from '../lib/auth'
 import { setCurrentUserId } from '../lib/auth-state'
@@ -64,6 +64,17 @@ describe('verwijderen met terugzetten', () => {
     await user.click(await screen.findByRole('button', { name: 'Terugzetten' }))
     expect(undo).toHaveBeenCalledOnce()
     expect(toastStore.get()).toEqual([])
+  })
+
+  it('feest (level-up) klapt erop als poster-sticker; een gewone melding schuift rustig in', () => {
+    render(<Toasts />)
+    act(() => {
+      toast({ title: 'Level 5', tone: 'level' })
+      toast({ title: 'Opgeslagen' })
+    })
+    expect(screen.getByText('Level 5').closest('[data-tone]')!.className).toContain('slap')
+    expect(screen.getByText('Opgeslagen').closest('[data-tone]')!.className).toContain('pop-in')
+    act(() => toastStore.set([]))
   })
 })
 

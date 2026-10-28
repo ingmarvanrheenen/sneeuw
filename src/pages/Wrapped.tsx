@@ -112,7 +112,7 @@ export default function Wrapped() {
           onClick={() => void share()}
           disabled={sharing}
           className={cx(
-            'mb-3 flex h-12 flex-1 items-center justify-center gap-2 rounded-xl text-[17px] font-semibold active:opacity-70 disabled:opacity-50',
+            'mb-3 flex h-12 flex-1 items-center justify-center gap-2 rounded-[6px] text-[17px] font-semibold active:opacity-70 disabled:opacity-50',
             onAccent ? 'bg-accent-ink text-accent' : 'bg-bg text-text',
           )}
         >
@@ -121,7 +121,7 @@ export default function Wrapped() {
         {last && (
           <button
             onClick={() => setI(0)}
-            className="mb-3 flex h-12 items-center justify-center gap-2 rounded-xl border border-current px-4 text-[17px] font-semibold active:opacity-70"
+            className="mb-3 flex h-12 items-center justify-center gap-2 rounded-[6px] border border-current px-4 text-[17px] font-semibold active:opacity-70"
           >
             <Icon name="replay" size={18} /> Opnieuw
           </button>

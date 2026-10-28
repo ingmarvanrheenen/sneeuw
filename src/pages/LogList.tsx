@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Button, Empty, Page, PageHeader, Stat, StatGroup } from '../components/ui'
+import { Button, Empty, Heading, Page, PageHeader, Stat, StatGroup } from '../components/ui'
 import { Icon, Mood } from '../design/icons'
 import { sessionsSorted, useKind } from '../lib/repo'
 import { parseISO, seasonOf } from '../lib/format'
@@ -45,7 +45,7 @@ export default function LogList() {
         const falls = list.reduce((a, s) => a + s.falls, 0)
         return (
           <section key={season} className="mb-8">
-            <h2 className="mb-2.5 text-[20px] font-semibold">Seizoen {season}</h2>
+            <Heading>Seizoen {season}</Heading>
             <StatGroup className="mb-3">
               <Stat label="Dagen" value={new Set(list.map((s) => s.date)).size} />
               <Stat label="Uren" value={hours} />

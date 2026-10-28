@@ -246,14 +246,14 @@ export default function Coach() {
           <div className="space-y-3">
             {conv.messages.map((m, i) =>
               m.role === 'user' ? (
-                <div key={i} className="ml-10 overflow-hidden rounded-2xl rounded-br-sm bg-accent text-[15px] text-accent-ink">
+                <div key={i} className="ml-10 overflow-hidden rounded-[8px] rounded-br-sm bg-accent text-[15px] text-accent-ink">
                   {m.image && <img src={imageSrc(m.image)} alt="Jouw foto voor de coach" className="max-h-64 w-full object-cover" />}
                   {m.content && <div className="whitespace-pre-line px-4 py-2.5">{m.content}</div>}
                 </div>
               ) : (
                 <div key={i} className="mr-6 space-y-2">
                   {(m.content || !m.actions?.length) && (
-                    <div className="rounded-2xl rounded-bl-sm border hairline bg-surface px-4 py-2.5 text-[15px] leading-relaxed">
+                    <div className="rounded-[8px] rounded-bl-sm border hairline bg-surface px-4 py-2.5 text-[15px] leading-relaxed">
                       {m.content ? <Rich text={m.content} /> : <Spinner size={16} />}
                     </div>
                   )}
@@ -264,7 +264,7 @@ export default function Coach() {
               ),
             )}
             {error && (
-              <div className="flex items-center gap-2 rounded-2xl border border-danger/40 px-4 py-3 text-sm text-danger">
+              <div className="flex items-center gap-2 rounded-[8px] border border-danger/40 px-4 py-3 text-sm text-danger">
                 <Icon name="alert" size={16} /> {error}
               </div>
             )}

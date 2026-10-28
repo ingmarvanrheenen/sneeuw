@@ -24,7 +24,7 @@ function Card({ player, onTap, label }: { player: BingoPlayer; onTap?: (id: stri
             disabled={!onTap}
             onClick={() => onTap?.(sq.id, !on)}
             className={cx(
-              'flex aspect-square items-center justify-center rounded-xl p-1 text-center text-[11px] font-medium leading-tight transition-colors duration-150 hyphens-auto',
+              'flex aspect-square items-center justify-center rounded-[6px] p-1 text-center text-[11px] font-medium leading-tight transition-colors duration-150 hyphens-auto',
               on ? (line ? 'bg-accent text-accent-ink' : 'bg-accent-soft text-accent-text') : 'bg-surface text-text',
               onTap && 'active:opacity-70',
             )}

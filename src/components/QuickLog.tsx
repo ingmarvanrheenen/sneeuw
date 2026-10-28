@@ -88,7 +88,7 @@ export function QuickLog({ open, onClose }: { open: boolean; onClose: () => void
                 aria-pressed={d.mood === v}
                 onClick={() => set('mood', v)}
                 className={cx(
-                  'flex h-[72px] flex-col items-center justify-center gap-1 rounded-[14px] transition-colors duration-150',
+                  'flex h-[72px] flex-col items-center justify-center gap-1 rounded-[8px] transition-colors duration-150',
                   d.mood === v ? 'bg-accent text-accent-ink' : 'bg-surface text-muted',
                 )}
               >

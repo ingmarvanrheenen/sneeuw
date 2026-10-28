@@ -56,7 +56,7 @@ export function LiftQuestion() {
                 onClick={() => void choose(o)}
                 aria-pressed={isChosen}
                 className={cx(
-                  'flex w-full items-start gap-2 rounded-xl border px-3.5 py-3 text-left text-[15px] transition-colors duration-150',
+                  'flex w-full items-start gap-2 rounded-[6px] border px-3.5 py-3 text-left text-[15px] transition-colors duration-150',
                   !answer && 'hairline active:bg-surface-2',
                   answer && isAnswer && 'border-accent bg-accent-soft',
                   answer && isChosen && !isAnswer && 'border-danger bg-danger/10',

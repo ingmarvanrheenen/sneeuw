@@ -1,6 +1,7 @@
 // Poster-onderdelen van de park-stijl: sticker, stempel, tape en een balk in blokjes.
 // Stickers en stempels worden erop "geklapt" (`.slap`), de blokjes lopen één voor één vol.
 import type { CSSProperties, ReactNode } from 'react'
+import type { LevelInfo } from '../lib/progress'
 import { cx } from './ui'
 
 /** Ster-sticker: punten rondom, gekanteld. `tilt` in graden, `delay` in ms voor het erop klappen. */
@@ -87,5 +88,57 @@ export function Peaks({ className }: { className?: string }) {
     <svg viewBox="0 0 190 120" aria-hidden className={cx('pointer-events-none absolute opacity-[0.16]', className)}>
       <path d="M0 120 L50 40 L75 70 L115 10 L190 120Z" fill="currentColor" />
     </svg>
+  )
+}
+
+/**
+ * Je level als poster: seizoen, levelnaam groot, bergvorm, tape, sticker met level en XP, en een balk in blokjes.
+ * Met `onClick` is het een knop (Home opent je badges).
+ */
+export function LevelPoster({
+  level,
+  badges,
+  season,
+  onClick,
+  className,
+}: {
+  level: LevelInfo
+  badges: number
+  season: string
+  onClick?: () => void
+  className?: string
+}) {
+  const body = (
+    <>
+      <Tape className="-top-2.5 left-6" />
+      <Peaks className="bottom-10 right-0 w-[170px]" />
+      <Sticker className="-right-2 -top-6" size={98}>
+        <span>
+          Level
+          <span className="display block text-[32px] tracking-normal">{level.level}</span>
+          <span className="num">{level.xp} XP</span>
+        </span>
+      </Sticker>
+      <span className="block text-[12px] font-extrabold uppercase tracking-[0.1em]">Seizoen {season}</span>
+      <span className="display mt-3 block max-w-[78%] text-[64px] uppercase leading-[0.82]">{level.name}</span>
+      <Segments value={level.progress} className="mt-4" />
+      <span className="mt-2 block text-[12px] font-extrabold uppercase tracking-[0.08em] opacity-80">
+        {level.next ? `Nog ${level.needed - level.current} XP tot ${level.next}` : 'Max level. Respect.'} · {badges} badges
+      </span>
+    </>
+  )
+  const cls = cx('relative block w-full rounded-[6px] bg-block p-4 pb-3.5 text-left text-block-ink', className)
+  return onClick ? (
+    <button
+      onClick={onClick}
+      aria-label={`Level ${level.level}, ${level.name}, ${level.xp} XP`}
+      className={cx(cls, 'transition-transform duration-150 active:scale-[0.98]')}
+    >
+      {body}
+    </button>
+  ) : (
+    <div role="group" aria-label={`Level ${level.level}, ${level.name}, ${level.xp} XP`} className={cls}>
+      {body}
+    </div>
   )
 }

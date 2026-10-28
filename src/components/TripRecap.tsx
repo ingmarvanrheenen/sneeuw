@@ -99,7 +99,7 @@ export function TripRecap({ tripId, crewId, trip }: { tripId: string; crewId: st
 
           {awards.length > 0 && (
             <>
-              <h3 className="mb-2 mt-6 text-[17px] font-semibold">Awards</h3>
+              <h3 className="display mb-2 mt-6 text-[20px] uppercase">Awards</h3>
               <List>
                 {awards.map((aw) => (
                   <Row
@@ -123,7 +123,7 @@ export function TripRecap({ tripId, crewId, trip }: { tripId: string; crewId: st
             <Votes tripId={tripId} crewId={crewId} members={members} media={media} me={me ?? ''} nameOf={nameOf} names={names} />
           )}
 
-          <h3 className="mb-2 mt-6 text-[17px] font-semibold">Per rider</h3>
+          <h3 className="display mb-2 mt-6 text-[20px] uppercase">Per rider</h3>
           <List className="mt-3">
             {recap.people.map((p) => (
               <Link
@@ -217,7 +217,7 @@ function Votes({
 
   return (
     <>
-      <h3 className="mb-2 mt-6 text-[17px] font-semibold">Stemmen</h3>
+      <h3 className="display mb-2 mt-6 text-[20px] uppercase">Stemmen</h3>
       <List>
         {VOTE_CATEGORIES.map((c) => {
           const r = voteResult(votes, c.id)

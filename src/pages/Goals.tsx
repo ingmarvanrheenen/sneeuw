@@ -37,7 +37,7 @@ export default function Goals() {
       >
         <span
           className={cx(
-            'grid size-7 place-items-center rounded-lg border-2',
+            'grid size-7 place-items-center rounded-[4px] border-2',
             g.done ? 'border-accent bg-accent text-accent-ink' : 'border-line',
           )}
         >

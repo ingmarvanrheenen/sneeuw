@@ -174,7 +174,7 @@ export function CrewGoals({ tripId, crewId, ownerId, ready = true }: { tripId: s
             <button
               type="submit"
               aria-label="Doel toevoegen"
-              className="grid size-12 shrink-0 place-items-center rounded-xl bg-accent text-accent-ink"
+              className="grid size-12 shrink-0 place-items-center rounded-[6px] bg-accent text-accent-ink"
             >
               <Icon name="plus" size={20} />
             </button>

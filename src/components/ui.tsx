@@ -402,7 +402,7 @@ export function Field({ label, children, hint, group }: { label: string; childre
 }
 
 export const inputCls =
-  'w-full rounded-xl border border-transparent bg-surface px-4 py-3 text-text outline-none placeholder:text-muted/70 focus:border-accent'
+  'w-full rounded-[6px] border border-transparent bg-surface px-4 py-3 text-text outline-none placeholder:text-muted/70 focus:border-accent'
 
 export function Progress({ value, className }: { value: number; className?: string }) {
   return (
