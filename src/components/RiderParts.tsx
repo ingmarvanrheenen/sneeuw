@@ -18,6 +18,7 @@ import type { Trick } from '../content/tricks'
 import { fmtDate } from '../lib/format'
 import { RESORT_BY_ID } from '../content/resorts'
 import type { Profile } from '../lib/types'
+import { boardStyle, checkDesign, isDarkBoard } from '../lib/boardDesign'
 
 export function RiderAvatar({ photo, name, size = 36, square }: { photo?: string; name: string; size?: number; square?: boolean }) {
   const shape = square ? 'rounded-[22%]' : 'rounded-full'
@@ -139,15 +140,23 @@ function Sticker({ trick, rotate = 0, className, style }: { trick: Trick; rotate
 }
 
 /** Je board met je gelande tricks als stickers erop, de moeilijkste eerst. */
-export function StickerBoard({ landed }: { landed: string[] }) {
+export function StickerBoard({ landed, design: raw }: { landed: string[]; design?: unknown }) {
   const { shown, more } = boardStickers(landed)
   const names = shown.map((t) => t.name).join(', ')
+  // ontwerp komt uit een profiel (ook dat van een ander): alleen geldige palet-ids
+  const design = checkDesign(raw)
+  const dark = design ? isDarkBoard(design) : false
   return (
     <div
       role="img"
       aria-label={shown.length ? `Je board met stickers: ${names}${more ? ` en nog ${more}` : ''}` : 'Leeg board, nog geen stickers'}
-      className="relative h-[176px] overflow-hidden rounded-full border-2 hairline bg-surface"
-      style={{ backgroundImage: 'repeating-linear-gradient(115deg, transparent 0 22px, var(--surface-2) 22px 30px)' }}
+      data-pattern={design?.pattern ?? 'standaard'}
+      className={cx('relative h-[176px] overflow-hidden rounded-full border-2 hairline', !design && 'bg-surface')}
+      style={
+        design
+          ? boardStyle(design)
+          : { backgroundImage: 'repeating-linear-gradient(115deg, transparent 0 22px, var(--surface-2) 22px 30px)' }
+      }
     >
       {/* inserts van de bindingen */}
       {[30, 70].map((x) => (
@@ -158,7 +167,7 @@ export function StickerBoard({ landed }: { landed: string[] }) {
           style={{ left: `${x}%` }}
         >
           {Array.from({ length: 8 }, (_, i) => (
-            <span key={i} className="size-1.5 rounded-full bg-line" />
+            <span key={i} className={cx('size-1.5 rounded-full', !design ? 'bg-line' : dark ? 'bg-white/55' : 'bg-black/25')} />
           ))}
         </span>
       ))}
@@ -187,7 +196,12 @@ export function StickerBoard({ landed }: { landed: string[] }) {
           )
         })()}
       {!shown.length && (
-        <span className="absolute inset-0 grid place-items-center px-10 text-center text-[15px] text-muted">
+        <span
+          className={cx(
+            'absolute inset-0 grid place-items-center px-10 text-center text-[15px]',
+            !design ? 'text-muted' : dark ? 'text-white/80' : 'text-black/60',
+          )}
+        >
           Land je eerste trick en hij komt hier als sticker op
         </span>
       )}

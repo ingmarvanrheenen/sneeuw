@@ -135,6 +135,8 @@ export interface Profile {
   signatureTrick?: string
   /** bijnaam die je crew voorstelde en jij goedkeurde */
   nickname?: string
+  /** ontwerp van je board op je skipas (ids uit src/content/boards.ts) */
+  board?: { pattern: string; base: string; accent: string }
 }
 
 export type AnyRecord = Session | TrickProgress | Goal | Trip | Gear | MediaMeta

@@ -5,6 +5,8 @@ import { useParams } from 'react-router-dom'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { Button, Chip, Empty, Field, List, Page, PageHeader, Row, Section, Sheet, Stat, StatGroup, inputCls } from '../components/ui'
 import { RiderAvatar, SkiPass, StickerBoard, StickerLegend, StickerTracks, resortName } from '../components/RiderParts'
+import { BoardDesigner } from '../components/BoardDesigner'
+import { checkDesign } from '../lib/boardDesign'
 import { MediaGrid } from '../components/Media'
 import { ResortPicker } from '../components/Pickers'
 import { Icon, Spinner } from '../design/icons'
@@ -114,7 +116,7 @@ function RiderView({
           <span className="num">{book.landed}</span> van <span className="num">{book.total}</span> verdiend.{' '}
           {isMe ? 'Land een trick en hij komt erop.' : 'Tik op een track voor wat nog te verdienen is.'}
         </p>
-        <StickerBoard landed={landed} />
+        <StickerBoard landed={landed} design={profile.board} />
         <StickerLegend />
         <div className="mt-4">
           <StickerTracks landed={landed} />
@@ -240,6 +242,7 @@ function MyRider() {
 function ProfileEditor({ open, onClose, profile, landed }: { open: boolean; onClose: () => void; profile: Profile; landed: string[] }) {
   const [p, setP] = useState(profile)
   const [resorts, setResorts] = useState(false)
+  const [designing, setDesigning] = useState(false)
   const file = useRef<HTMLInputElement>(null)
   useEffect(() => {
     if (open) setP(profile)
@@ -327,6 +330,12 @@ function ProfileEditor({ open, onClose, profile, landed }: { open: boolean; onCl
           )}
         </Field>
         <List>
+          <Row
+            icon="palette"
+            title="Je board"
+            detail={checkDesign(p.board) ? 'Eigen ontwerp op je skipas' : 'Kies patroon en kleuren'}
+            onClick={() => setDesigning(true)}
+          />
           <Row icon="board" title="Stance en bindingen" detail="Staat op je pas, stel je in bij Gear" to="/gear" />
         </List>
         {p.nickname && (
@@ -341,6 +350,13 @@ function ProfileEditor({ open, onClose, profile, landed }: { open: boolean; onCl
         )}
       </div>
       <div className="h-4" />
+      <BoardDesigner
+        open={designing}
+        onClose={() => setDesigning(false)}
+        value={p.board}
+        landed={landed}
+        onChange={(board) => setP((cur) => ({ ...cur, board }))}
+      />
       <ResortPicker
         open={resorts}
         title="Je thuisresort"

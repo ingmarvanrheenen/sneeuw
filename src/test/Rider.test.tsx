@@ -160,6 +160,50 @@ describe('je eigen skipas', () => {
     expect(within(screen.getByRole('group', { name: /Skipas/ })).getByText('Altijd de eerste lift')).toBeTruthy()
   })
 
+  it('board ontwerpen: patroon en kleuren live op je board, en opgeslagen in je profiel', async () => {
+    const user = userEvent.setup()
+    await seed()
+    at('/rider/ik')
+    await user.click(await screen.findByRole('button', { name: 'Bewerk' }))
+    await user.click(screen.getByRole('button', { name: /Je board/ }))
+    const sheet = screen.getByRole('dialog', { name: 'Je board' })
+    const board = () => within(sheet).getByRole('img', { name: /board/ })
+    expect(board().getAttribute('data-pattern')).toBe('standaard')
+    await user.click(within(sheet).getByRole('button', { name: 'Stippen' }))
+    expect(board().getAttribute('data-pattern')).toBe('stippen')
+    const base = within(sheet).getByRole('group', { name: 'Basiskleur' })
+    const accent = within(sheet).getByRole('group', { name: 'Accentkleur' })
+    await user.click(within(base).getByRole('button', { name: 'Zwart' }))
+    await user.click(within(accent).getByRole('button', { name: 'Lime' }))
+    // accent kan niet dezelfde kleur zijn als de basis
+    expect((within(accent).getByRole('button', { name: 'Zwart' }) as HTMLButtonElement).disabled).toBe(true)
+    // basis op de accentkleur zetten: dan wisselen ze om
+    await user.click(within(base).getByRole('button', { name: 'Lime' }))
+    expect(within(accent).getByRole('button', { name: 'Zwart' }).getAttribute('aria-pressed')).toBe('true')
+    await user.click(within(base).getByRole('button', { name: 'Zwart' }))
+    await user.click(within(accent).getByRole('button', { name: 'Lime' }))
+    await user.click(within(sheet).getByRole('button', { name: 'Klaar' }))
+    await user.click(within(screen.getByRole('dialog', { name: 'Profiel bewerken' })).getByRole('button', { name: 'Klaar' }))
+    await waitFor(async () => expect((await getProfile()).board).toEqual({ pattern: 'stippen', base: 'zwart', accent: 'lime' }))
+    expect(screen.getByRole('img', { name: 'Je board met stickers: Ollie' }).getAttribute('data-pattern')).toBe('stippen')
+  })
+
+  it('verras me geeft een ontwerp, standaard haalt het weer weg', async () => {
+    const user = userEvent.setup()
+    await seed()
+    at('/rider/ik')
+    await user.click(await screen.findByRole('button', { name: 'Bewerk' }))
+    await user.click(screen.getByRole('button', { name: /Je board/ }))
+    const sheet = screen.getByRole('dialog', { name: 'Je board' })
+    await user.click(within(sheet).getByRole('button', { name: /Verras me/ }))
+    expect(within(sheet).getByRole('img', { name: /board/ }).getAttribute('data-pattern')).not.toBe('standaard')
+    await user.click(within(sheet).getByRole('button', { name: 'Standaard' }))
+    expect(within(sheet).getByRole('img', { name: /board/ }).getAttribute('data-pattern')).toBe('standaard')
+    await user.click(within(sheet).getByRole('button', { name: 'Klaar' }))
+    await user.click(within(screen.getByRole('dialog', { name: 'Profiel bewerken' })).getByRole('button', { name: 'Klaar' }))
+    await waitFor(async () => expect((await getProfile()).board).toBeUndefined())
+  })
+
   it('bijnaam-voorstel van je crew: ja zet hem op je pas', async () => {
     const user = userEvent.setup()
     await seed()
@@ -203,6 +247,19 @@ describe('skipas van een crewgenoot', () => {
     expect(screen.getByRole('img', { name: /Je board met stickers: (Shifty, Ollie|Ollie, Shifty)$/ })).toBeTruthy()
     expect(screen.queryByRole('button', { name: 'Bewerk' })).toBeNull()
     expect(api.riderMedia).toHaveBeenCalledWith('daan')
+  })
+
+  it('zijn board-ontwerp staat op zijn pas; rommel in zijn profiel wordt het standaard board', async () => {
+    api.loadRider.mockResolvedValue({ ...daan, profile: { ...daan.profile, board: { pattern: 'zigzag', base: 'rood', accent: 'sneeuw' } } })
+    const { unmount } = at('/rider/daan')
+    expect((await screen.findByRole('img', { name: /Je board/ })).getAttribute('data-pattern')).toBe('zigzag')
+    unmount()
+    api.loadRider.mockResolvedValue({
+      ...daan,
+      profile: { ...daan.profile, board: { pattern: 'zigzag', base: 'url(x)', accent: 'sneeuw' } },
+    })
+    at('/rider/daan')
+    expect((await screen.findByRole('img', { name: /Je board/ })).getAttribute('data-pattern')).toBe('standaard')
   })
 
   it('bijnaam voorstellen', async () => {
