@@ -13,6 +13,14 @@ const valid = (q: { options: string[]; answer: string }) => {
 }
 
 describe('vragen', () => {
+  it('een quizronde heeft altijd 10 verschillende vragen, ook als er dubbele of lege tussen zaten', () => {
+    for (let n = 0; n < 400; n++) {
+      const round = quizRound(seeded(`ronde-${n}`))
+      expect(round, `seed ronde-${n}`).toHaveLength(10)
+      expect(new Set(round.map((q) => q.prompt + q.answer)).size).toBe(10)
+    }
+  })
+
   it('liftvraag: elke dag één geldige vraag zonder animatie, en vandaag blijft hij hetzelfde', () => {
     for (let d = 1; d <= 28; d++) {
       const date = `2027-02-${String(d).padStart(2, '0')}`
