@@ -41,30 +41,45 @@ const TABS = [
   { to: '/meer', label: 'Meer', icon: 'more' },
 ] satisfies { to: string; label: string; icon: IconName; end?: boolean }[]
 
-function TabBar() {
+/** Welke tab hoort bij dit pad (de langste die past), of -1 op een pagina zonder tab. */
+export function activeTab(pathname: string): number {
+  let best = -1
+  TABS.forEach((t, i) => {
+    const hit = t.end ? pathname === t.to : pathname === t.to || pathname.startsWith(t.to + '/')
+    if (hit && (best < 0 || t.to.length > TABS[best].to.length)) best = i
+  })
+  return best
+}
+
+/** Zwevende tabbalk. Een lime pil schuift mee naar de tab waar je bent. */
+export function TabBar() {
   const { pathname } = useLocation()
   if (pathname === '/log/nieuw' || pathname.endsWith('/bewerk') || pathname === '/coach') return null
+  const active = activeTab(pathname)
   return (
-    <nav className="pb-safe fixed inset-x-0 bottom-0 z-30 border-t hairline bg-bg/90 backdrop-blur-xl">
-      <div className="mx-auto flex max-w-xl">
-        {TABS.map(({ to, label, icon, end }) => (
+    <nav className="fixed inset-x-0 bottom-0 z-30 px-3 pb-[max(env(safe-area-inset-bottom),10px)]">
+      <div className="relative mx-auto flex h-[62px] max-w-xl items-center rounded-[22px] bg-[var(--tab)] p-1.5 shadow-[0_8px_24px_rgba(0,0,0,0.25)]">
+        <span
+          aria-hidden
+          data-testid="tab-pill"
+          className={cx(
+            'absolute inset-y-1.5 left-1.5 rounded-[16px] bg-[var(--tab-pill)] transition-[transform,opacity] duration-300 ease-[var(--ease-out-expo)]',
+            active < 0 && 'opacity-0',
+          )}
+          style={{ width: `calc((100% - 12px) / ${TABS.length})`, transform: `translateX(${Math.max(active, 0) * 100}%)` }}
+        />
+        {TABS.map(({ to, label, icon, end }, i) => (
           <NavLink
             key={to}
             to={to}
             end={end}
-            className={({ isActive }) =>
-              cx(
-                'flex flex-1 flex-col items-center gap-1 pt-2 pb-0.5 text-[10px] font-medium transition-colors duration-150',
-                isActive ? 'text-accent-text' : 'text-muted',
-              )
-            }
-          >
-            {({ isActive }) => (
-              <>
-                <Icon name={icon} size={25} stroke={isActive ? 2.1 : 1.6} />
-                <span>{label}</span>
-              </>
+            className={cx(
+              'relative flex h-full flex-1 flex-col items-center justify-center gap-0.5 text-[10px] font-semibold transition-colors duration-200',
+              i === active ? 'text-[var(--tab-ink)]' : 'text-[var(--tab-muted)]',
             )}
+          >
+            <Icon name={icon} size={24} stroke={i === active ? 2.1 : 1.7} />
+            <span>{label}</span>
           </NavLink>
         ))}
       </div>
