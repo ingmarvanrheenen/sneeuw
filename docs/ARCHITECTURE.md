@@ -63,6 +63,10 @@ In de trip-recap: awards uit de met de crew gedeelde dagen van die trip (langst 
 
 Stemronde in `crew_trip_votes`: "Val van de trip" en "Held van de trip". Eén stem per persoon per categorie, alleen op een crewgenoot en niet op jezelf. Omzetten (alleen `candidate` is aan te passen) en intrekken mogen. De stand zie je pas als je zelf gestemd hebt. RLS-scenario's: `supabase/tests/crew_trip_votes.sh`.
 
+## Dagopdracht (`src/lib/challenges.ts`)
+
+Op Home: elke dag één challenge uit `src/content/challenges.ts` die bij je niveau past (hoogste gelande trick, ±1, en alleen met tricks die je al kunt). De opdracht van vandaag ligt vast zodra je hem ziet; één keer per dag kun je een andere vragen. Je lijst staat lokaal in kv (`dagopdracht`), dus het werkt offline. Gedaan gaat ook naar `daily_challenges` (één rij per persoon per dag, alleen het id), zodat je crewgenoten zien wie vandaag een opdracht deed. Offline afgevinkt gaat later alsnog mee (`flushChallenges`, tot een week terug). Telt mee voor XP (+15) en de badge "Opdrachtjesjager" (10). RLS-scenario's: `supabase/tests/daily_challenges.sh`.
+
 ## Trip-bingo (`src/lib/bingo.ts`)
 
 Op de trippagina van een crew-trip. Iedereen heeft een eigen kaart van 4×4 vakjes uit `src/content/bingo.ts`. De kaart volgt uit trip + speler (seeded shuffle), dus elke telefoon ziet dezelfde kaart zonder dat hij opgeslagen wordt. Alleen de afgevinkte vakjes staan in `crew_trip_bingo`, met tijdstip. Wie bingo heeft (rij, kolom of diagonaal vol) en wie als eerste een lijn vol had, rekent `bingoStand()` uit. Iedereen vinkt alleen zijn eigen kaart af; tijdstippen zijn niet aan te passen. RLS-scenario's: `supabase/tests/crew_trip_bingo.sh`.

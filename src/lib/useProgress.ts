@@ -4,6 +4,7 @@ import { levelFor, stats, totalXP, unlockedBadges, type ProgressInput } from './
 import { riderStats } from './rider'
 import type { AnyRecord, Gear, Goal, MediaMeta, Session, TrickProgress, Trip } from './types'
 import { liftStreak, loadLift } from './liftpraat'
+import { challengesDone, loadChallenges } from './challenges'
 import { todayISO } from './ids'
 
 export async function loadProgressInput(): Promise<ProgressInput> {
@@ -20,6 +21,7 @@ export async function loadProgressInput(): Promise<ProgressInput> {
     quizCorrect: await kvGet('quizCorrect', 0),
     inCrew: await kvGet('inCrew', false),
     liftBest: liftStreak(await loadLift(), todayISO()).best,
+    challengesDone: challengesDone(await loadChallenges()),
   }
 }
 

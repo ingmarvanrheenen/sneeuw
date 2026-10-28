@@ -16,6 +16,8 @@ export interface ProgressInput {
   inCrew: boolean
   /** langste reeks dagen op rij met een liftvraag beantwoord */
   liftBest?: number
+  /** aantal gedane dagopdrachten */
+  challengesDone?: number
 }
 
 export const LEVELS = [
@@ -78,6 +80,7 @@ export function totalXP(input: ProgressInput): number {
   }
   xp += input.goals.filter((g) => g.done).length * 30
   xp += Math.min(input.quizCorrect, 500) * 2
+  xp += (input.challengesDone ?? 0) * 15
   xp += unlockedBadges(input).length * 25
   return xp
 }
@@ -195,6 +198,14 @@ export const BADGES: Badge[] = [
   },
   { id: 'filmer', name: 'Filmer', desc: "10 foto's of video's", icon: 'video', mark: '10', test: (i) => i.media.length >= 10 },
   { id: 'quiz', name: 'Wandelend woordenboek', desc: '10/10 in de quiz', icon: 'quiz', mark: '10', test: (i) => i.quizBest >= 10 },
+  {
+    id: 'dagopdracht-10',
+    name: 'Opdrachtjesjager',
+    desc: '10 dagopdrachten gedaan',
+    icon: 'target',
+    mark: '10',
+    test: (i) => (i.challengesDone ?? 0) >= 10,
+  },
   {
     id: 'liftpraat-7',
     name: 'Liftfilosoof',

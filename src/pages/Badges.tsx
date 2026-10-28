@@ -73,7 +73,8 @@ export default function Badges() {
         </div>
       </Section>
       <p className="mt-6 text-xs text-muted">
-        XP: 50 per dag + 10 per uur, tricks tellen per niveau (×40), beheerst geeft extra, doelen +30, badges +25, quizvragen +2.
+        XP: 50 per dag + 10 per uur, tricks tellen per niveau (×40), beheerst geeft extra, doelen +30, dagopdrachten +15, badges +25,
+        quizvragen +2.
       </p>
     </Page>
   )
