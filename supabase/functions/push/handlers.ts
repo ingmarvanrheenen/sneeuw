@@ -10,7 +10,7 @@ export interface PushMessage {
   tag: string
 }
 
-export type Pref = 'crew_days' | 'goals' | 'reminder'
+export type Pref = 'crew_days' | 'goals' | 'reminder' | 'pow'
 
 export interface SubRow {
   id: string
@@ -40,12 +40,22 @@ export interface Store {
   subscriptions(pref: Pref | null, userIds?: string[]): Promise<SubRow[]>
   /** trips en dagen (niet verwijderd) van deze users */
   tripsAndDays(userIds: string[]): Promise<Pick<RecordRow, 'user_id' | 'kind' | 'data'>[]>
+  /** sneeuwverwachting per dag voor een resort uit de app, of null als het resort onbekend is of het weer niet lukt */
+  forecast(resortId: string): Promise<SnowDay[] | null>
   /** true als deze sleutel nog niet gebruikt is (en legt hem vast): elke melding maar één keer */
   once(key: string): Promise<boolean>
   removeSubscription(id: string): Promise<void>
 }
 
 export type Send = (sub: SubRow, msg: PushMessage) => Promise<{ ok: boolean; gone: boolean }>
+
+export interface SnowDay {
+  date: string
+  snowCm: number
+}
+
+/** vanaf zoveel cm verse sneeuw in de komende dagen is het pow-alarm */
+export const POW_CM = 15
 
 export interface Result {
   status: number
@@ -99,6 +109,50 @@ export function reminderMessage(resortName?: string): PushMessage {
       : 'Hoe ging het vandaag? Even loggen, dan telt hij mee.',
     url: '#/log/nieuw',
     tag: 'reminder',
+  }
+}
+
+const WEEKDAY = ['zo', 'ma', 'di', 'wo', 'do', 'vr', 'za']
+const dayDiff = (a: string, b: string) => Math.round((Date.parse(b + 'T12:00:00Z') - Date.parse(a + 'T12:00:00Z')) / 864e5)
+
+/**
+ * Valt er genoeg verse sneeuw voor deze trip? We kijken naar de komende 6 dagen, alleen tijdens de trip en de
+ * twee dagen ervoor (dan ligt het er als je aankomt). Geeft de dagen met sneeuw en de dag met de meeste.
+ */
+export function powCheck(trip: { startDate: string; endDate?: string }, forecast: SnowDay[], today: string) {
+  const end = trip.endDate ?? trip.startDate
+  const from = addDays(trip.startDate, -2)
+  const days = forecast.filter((d) => d.date > today && d.date <= addDays(today, 6) && d.date >= from && d.date <= end && d.snowCm >= 1)
+  const total = Math.round(days.reduce((a, d) => a + d.snowCm, 0))
+  if (total < POW_CM) return null
+  const peak = days.reduce((a, d) => (d.snowCm > a.snowCm ? d : a))
+  return { total, days, peak }
+}
+
+export function powMessage(
+  tripId: string,
+  resortName: string,
+  trip: { startDate: string },
+  pow: NonNullable<ReturnType<typeof powCheck>>,
+  today: string,
+): PushMessage {
+  const label = (date: string) => {
+    const n = dayDiff(today, date)
+    return n === 1 ? 'morgen' : n === 2 ? 'overmorgen' : WEEKDAY[new Date(date + 'T12:00:00Z').getUTCDay()]
+  }
+  const list = pow.days.map((d) => `${label(d.date)} ${Math.round(d.snowCm)} cm`).join(', ')
+  const until = dayDiff(today, trip.startDate)
+  const when =
+    until <= 0
+      ? 'Zet je wekker voor de eerste lift.'
+      : until === 1
+        ? 'Je trip begint morgen. Goggles klaarleggen.'
+        : `Je trip begint over ${until} dagen.`
+  return {
+    title: `Pow-alarm: ${pow.total} cm in ${resortName}`,
+    body: `${list[0].toUpperCase()}${list.slice(1)}. ${when}`,
+    url: '#/weer',
+    tag: `pow-${tripId}`,
   }
 }
 
@@ -192,6 +246,44 @@ export function createHandlers(store: Store, send: Send, now: () => Date = () =>
     return { status: 200, sent }
   }
 
+  /**
+   * Elk uur via pg_cron (zelfde aanroep als de herinnering): om 18:00 lokaal, voor je eerstvolgende trip
+   * (bezig of binnen een week). Dezelfde sneeuwbui (trip + dag met de meeste sneeuw) meldt hij maar één keer.
+   */
+  async function runPow(): Promise<Result> {
+    const at = now()
+    const subs = (await store.subscriptions('pow')).filter((s) => localParts(at, s.tz).hour === 18)
+    if (!subs.length) return { status: 200, sent: 0 }
+    const users = [...new Set(subs.map((s) => s.user_id))]
+    const rows = await store.tripsAndDays(users)
+    const forecasts = new Map<string, Promise<SnowDay[] | null>>()
+    let sent = 0
+    for (const u of users) {
+      const mine = subs.filter((s) => s.user_id === u)
+      const today = localParts(at, mine[0].tz).date
+      const trip = rows
+        .filter((r) => r.user_id === u && r.kind === 'trip' && r.data.startDate && r.data.resortId)
+        .filter((r) => String(r.data.endDate ?? r.data.startDate) > today && String(r.data.startDate) <= addDays(today, 7))
+        .sort((a, b) => String(a.data.startDate).localeCompare(String(b.data.startDate)))[0]
+      if (!trip) continue
+      const resortId = String(trip.data.resortId)
+      // één weerbericht per resort per run, ook als de hele crew erheen gaat
+      if (!forecasts.has(resortId))
+        forecasts.set(
+          resortId,
+          store.forecast(resortId).catch(() => null),
+        )
+      const forecast = await forecasts.get(resortId)!
+      if (!forecast) continue
+      const t = { startDate: String(trip.data.startDate), endDate: trip.data.endDate ? String(trip.data.endDate) : undefined }
+      const pow = powCheck(t, forecast, today)
+      const tripId = String(trip.data.id ?? '')
+      if (!pow || !(await store.once(`pow:${u}:${tripId}:${pow.peak.date}`))) continue
+      sent += await deliver(mine, () => powMessage(tripId, String(trip.data.resortName ?? 'je resort'), t, pow, today))
+    }
+    return { status: 200, sent }
+  }
+
   /** Testmelding naar je eigen telefoon(s), vanuit Instellingen. */
   async function onTest(userId: string): Promise<Result> {
     const subs = await store.subscriptions(null, [userId])
@@ -206,5 +298,5 @@ export function createHandlers(store: Store, send: Send, now: () => Date = () =>
     return { status: 200, sent: await deliver(subs, () => msg) }
   }
 
-  return { onDay, onGoal, runReminders, onTest }
+  return { onDay, onGoal, runReminders, runPow, onTest }
 }

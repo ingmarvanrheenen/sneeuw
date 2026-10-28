@@ -19,7 +19,7 @@ import { PushNudge, PushSettings } from '../components/PushSettings'
 import { db } from '../lib/db'
 import { toastStore } from '../lib/toast'
 
-const PREFS = { crew_days: true, goals: true, reminder: true }
+const PREFS = { crew_days: true, goals: true, reminder: true, pow: true }
 const switchFor = (name: string) => screen.getByRole('switch', { name: new RegExp(name) })
 
 beforeEach(async () => {
@@ -80,6 +80,17 @@ describe('meldingen in Instellingen', () => {
     await user.click(switchFor('Crew-doelen'))
     await waitFor(() => expect(switchFor('Crew-doelen').getAttribute('aria-checked')).toBe('true'))
     expect(toastStore.get().some((t) => t.title === 'Niet opgeslagen')).toBe(true)
+  })
+
+  it('pow-alarm: eigen schakelaar met uitleg, uitzetten wordt opgeslagen', async () => {
+    const user = userEvent.setup()
+    api.getPushState.mockResolvedValue({ status: 'on', prefs: PREFS })
+    render(<PushSettings />)
+    const sw = await screen.findByRole('switch', { name: /Pow-alarm/ })
+    expect(sw.getAttribute('aria-checked')).toBe('true')
+    expect(screen.getByText(/15 cm of meer verse sneeuw/)).toBeTruthy()
+    await user.click(sw)
+    expect(api.setPushPref).toHaveBeenCalledWith('pow', false)
   })
 
   it('helemaal uit', async () => {

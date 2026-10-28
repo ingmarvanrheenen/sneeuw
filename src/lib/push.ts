@@ -4,7 +4,7 @@
 import { supabase } from './supabase'
 import { isIOS, isStandalone } from './pwa'
 
-export type PushPref = 'crew_days' | 'goals' | 'reminder'
+export type PushPref = 'crew_days' | 'goals' | 'reminder' | 'pow'
 export type PushPrefs = Record<PushPref, boolean>
 export type PushStatus = 'unsupported' | 'install' | 'denied' | 'off' | 'on'
 
@@ -34,7 +34,11 @@ export async function getPushState(): Promise<{ status: PushStatus; prefs?: Push
   if (Notification.permission === 'denied') return { status: 'denied' }
   const sub = await currentSubscription()
   if (!sub) return { status: 'off' }
-  const { data } = await supabase.from('push_subscriptions').select('crew_days, goals, reminder').eq('endpoint', sub.endpoint).maybeSingle()
+  const { data } = await supabase
+    .from('push_subscriptions')
+    .select('crew_days, goals, reminder, pow')
+    .eq('endpoint', sub.endpoint)
+    .maybeSingle()
   // staat de telefoon nog op een ander account (of is hij opgeruimd): dan voor jou uit
   return data ? { status: 'on', prefs: data as PushPrefs } : { status: 'off' }
 }
@@ -66,7 +70,7 @@ export async function enablePush(): Promise<PushPrefs> {
   })
   if (error) throw error
   const row = data as PushPrefs
-  return { crew_days: row.crew_days, goals: row.goals, reminder: row.reminder }
+  return { crew_days: row.crew_days, goals: row.goals, reminder: row.reminder, pow: row.pow ?? true }
 }
 
 export async function setPushPref(pref: PushPref, on: boolean) {

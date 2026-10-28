@@ -99,8 +99,8 @@ describe('status', () => {
 describe('aanzetten', () => {
   it('vraagt eerst toestemming, abonneert met de server-key en slaat op met je tijdzone', async () => {
     phone()
-    fake().respond((c) => (c.op === 'rpc' ? { data: { crew_days: true, goals: true, reminder: true } } : {}))
-    expect(await enablePush()).toEqual({ crew_days: true, goals: true, reminder: true })
+    fake().respond((c) => (c.op === 'rpc' ? { data: { crew_days: true, goals: true, reminder: true, pow: false } } : {}))
+    expect(await enablePush()).toEqual({ crew_days: true, goals: true, reminder: true, pow: false })
     expect(requestPermission.mock.invocationCallOrder[0]).toBeLessThan(fetchMock.mock.invocationCallOrder[0])
     expect(subscribe).toHaveBeenCalledWith({ userVisibleOnly: true, applicationServerKey: expect.any(Uint8Array) })
     const rpc = fake().calls.find((c) => c.op === 'rpc')!

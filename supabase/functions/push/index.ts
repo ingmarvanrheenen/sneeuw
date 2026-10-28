@@ -2,11 +2,13 @@
 // - GET                         publieke VAPID-key voor de app
 // - POST {event:'day'|'goal', id}  na een gedeelde dag of afgevinkt crew-doel (ingelogd)
 // - POST {event:'test'}            testmelding naar je eigen telefoon (ingelogd)
-// - POST {task:'reminder'}         elk uur via pg_cron (supabase/cron/push_reminder.sql); stuurt alleen
-//                                  wat om 17:00 lokaal hoort en per user per dag maar één keer, dus open is veilig.
+// - POST {task:'reminder'}         elk uur via pg_cron (supabase/cron/push_reminder.sql): de "Log je dag"-
+//                                  herinnering (17:00 lokaal) en het pow-alarm (18:00 lokaal). Elke melding gaat
+//                                  maar één keer (push_log), dus open is veilig.
 // Deploy met --no-verify-jwt: inloggen checken we hier zelf, zodat pg_cron zonder key kan aanroepen.
 import { createClient } from 'npm:@supabase/supabase-js@2'
-import { createHandlers, type Pref, type Store, type SubRow } from './handlers.ts'
+import { createHandlers, type Pref, type SnowDay, type Store, type SubRow } from './handlers.ts'
+import { RESORT_COORDS } from './resorts.ts'
 import { sendPush, type Vapid } from './webpush.ts'
 
 const cors = {
@@ -65,6 +67,23 @@ const store: Store = {
     if (error) throw error
     return data ?? []
   },
+  async forecast(resortId) {
+    const r = RESORT_COORDS[resortId]
+    if (!r) return null
+    const params = new URLSearchParams({
+      latitude: String(r.lat),
+      longitude: String(r.lon),
+      elevation: String(r.elevation),
+      daily: 'snowfall_sum',
+      forecast_days: '7',
+      timezone: 'Europe/Paris',
+    })
+    const res = await fetch(`https://api.open-meteo.com/v1/forecast?${params}`, { signal: AbortSignal.timeout(8000) })
+    if (!res.ok) return null
+    const json = (await res.json()) as { daily?: { time?: string[]; snowfall_sum?: (number | null)[] } }
+    const time = json.daily?.time ?? []
+    return time.map((date, i): SnowDay => ({ date, snowCm: json.daily?.snowfall_sum?.[i] ?? 0 }))
+  },
   async once(key) {
     const { error } = await admin.from('push_log').insert({ key })
     return !error
@@ -75,7 +94,10 @@ const store: Store = {
 }
 
 const h = createHandlers(store, async (sub, msg) => {
-  const r = await sendPush(sub, JSON.stringify(msg), vapid, { topic: msg.tag, urgency: msg.tag === 'reminder' ? 'normal' : 'low' })
+  const r = await sendPush(sub, JSON.stringify(msg), vapid, {
+    topic: msg.tag,
+    urgency: msg.tag === 'reminder' || msg.tag.startsWith('pow-') ? 'normal' : 'low',
+  })
   if (!r.ok && !r.gone) console.error('push mislukt', r.status, new URL(sub.endpoint).host)
   return r
 })
@@ -94,8 +116,8 @@ Deno.serve(async (req) => {
   }
   try {
     if (body.task === 'reminder') {
-      const r = await h.runReminders()
-      return json(r.status, r)
+      const [reminder, pow] = await Promise.all([h.runReminders(), h.runPow()])
+      return json(200, { status: 200, sent: reminder.sent + pow.sent, reminder: reminder.sent, pow: pow.sent })
     }
 
     const token = req.headers.get('Authorization')?.replace('Bearer ', '')

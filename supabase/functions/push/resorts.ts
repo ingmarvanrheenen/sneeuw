@@ -1,0 +1,32 @@
+// Coördinaten van de resorts uit de app (src/content/resorts.ts), voor het pow-alarm op de server.
+// De Edge Function kan niet bij src/, dus dit is een kopie; src/test/pushResorts.test.ts bewaakt dat hij gelijk blijft.
+// Hoogte = midden tussen onderste en bovenste lift, net als op de weerpagina. Indoorhallen staan er niet in.
+export const RESORT_COORDS: Record<string, { lat: number; lon: number; elevation: number }> = {
+  'val-thorens': { lat: 45.298, lon: 6.58, elevation: 2765 },
+  'les-menuires': { lat: 45.324, lon: 6.538, elevation: 2150 },
+  meribel: { lat: 45.397, lon: 6.566, elevation: 2176 },
+  tignes: { lat: 45.468, lon: 6.906, elevation: 2503 },
+  'val-disere': { lat: 45.449, lon: 6.981, elevation: 2503 },
+  'la-plagne': { lat: 45.507, lon: 6.678, elevation: 2250 },
+  'les-arcs': { lat: 45.573, lon: 6.828, elevation: 2213 },
+  'alpe-dhuez': { lat: 45.092, lon: 6.069, elevation: 2290 },
+  'les-deux-alpes': { lat: 45.008, lon: 6.124, elevation: 2450 },
+  chamonix: { lat: 45.924, lon: 6.869, elevation: 2439 },
+  avoriaz: { lat: 46.191, lon: 6.774, elevation: 1783 },
+  flaine: { lat: 46.006, lon: 6.69, elevation: 2050 },
+  'la-clusaz': { lat: 45.905, lon: 6.423, elevation: 1850 },
+  'serre-chevalier': { lat: 44.945, lon: 6.561, elevation: 2000 },
+  risoul: { lat: 44.62, lon: 6.638, elevation: 2300 },
+  solden: { lat: 46.966, lon: 11.008, elevation: 2345 },
+  ischgl: { lat: 47.012, lon: 10.292, elevation: 2136 },
+  mayrhofen: { lat: 47.167, lon: 11.867, elevation: 1565 },
+  hintertux: { lat: 47.076, lon: 11.675, elevation: 2375 },
+  saalbach: { lat: 47.391, lon: 12.636, elevation: 1550 },
+  kitzbuhel: { lat: 47.447, lon: 12.393, elevation: 1400 },
+  'st-anton': { lat: 47.13, lon: 10.268, elevation: 2056 },
+  obertauern: { lat: 47.25, lon: 13.56, elevation: 1972 },
+  kaprun: { lat: 47.19, lon: 12.685, elevation: 1899 },
+  schladming: { lat: 47.393, lon: 13.687, elevation: 1380 },
+  flachau: { lat: 47.346, lon: 13.392, elevation: 1557 },
+  stubai: { lat: 46.992, lon: 11.115, elevation: 2480 },
+}

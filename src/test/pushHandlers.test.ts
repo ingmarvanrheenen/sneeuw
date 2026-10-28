@@ -1,5 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { createHandlers, localParts, type Pref, type RecordRow, type Store, type SubRow } from '../../supabase/functions/push/handlers'
+import {
+  POW_CM,
+  createHandlers,
+  localParts,
+  powCheck,
+  type Pref,
+  type RecordRow,
+  type SnowDay,
+  type Store,
+  type SubRow,
+} from '../../supabase/functions/push/handlers'
 
 // Nep-database: crew c1 met me, daan, sem. Iedereen heeft één telefoon.
 let records: RecordRow[]
@@ -7,6 +17,8 @@ let subs: (SubRow & Record<Pref, boolean>)[]
 let done: string[]
 let used: Set<string>
 let removed: string[]
+let forecasts: Record<string, SnowDay[] | null>
+let forecastCalls: string[]
 const NOW = new Date('2027-01-17T16:10:00Z') // 17:10 in Amsterdam (wintertijd)
 
 const sub = (user_id: string, over: Partial<SubRow & Record<Pref, boolean>> = {}) => ({
@@ -19,6 +31,7 @@ const sub = (user_id: string, over: Partial<SubRow & Record<Pref, boolean>> = {}
   crew_days: true,
   goals: true,
   reminder: true,
+  pow: true,
   ...over,
 })
 const day = (id: string, user_id: string, data: Record<string, unknown>, over: Partial<RecordRow> = {}): RecordRow => ({
@@ -40,6 +53,10 @@ const store: Store = {
   subscriptions: async (pref, users) => subs.filter((s) => (pref === null || s[pref]) && (!users || users.includes(s.user_id))),
   tripsAndDays: async (users) =>
     records.filter((r) => users.includes(r.user_id) && !r.deleted && (r.kind === 'trip' || r.kind === 'session')),
+  forecast: async (id) => {
+    forecastCalls.push(id)
+    return forecasts[id] ?? null
+  },
   once: async (k) => !used.has(k) && !!used.add(k),
   removeSubscription: async (id) => void removed.push(id),
 }
@@ -63,6 +80,8 @@ beforeEach(() => {
   done = []
   used = new Set()
   removed = []
+  forecasts = {}
+  forecastCalls = []
   send.mockReset().mockResolvedValue({ ok: true, gone: false })
 })
 
@@ -195,5 +214,85 @@ describe('localParts', () => {
     expect(localParts(NOW, 'Europe/Amsterdam')).toEqual({ date: '2027-01-17', hour: 17 })
     expect(localParts(NOW, 'Asia/Tokyo')).toEqual({ date: '2027-01-18', hour: 1 })
     expect(localParts(NOW, 'Niet/Bestaand')).toEqual({ date: '2027-01-17', hour: 17 })
+  })
+})
+
+describe('pow-alarm', () => {
+  // 17:10 UTC = 18:10 in Amsterdam
+  const powH = createHandlers(store, send, () => new Date('2027-01-17T17:10:00Z'))
+  const trip = (user_id: string, over: Record<string, unknown> = {}): RecordRow => ({
+    id: 'trip-' + user_id,
+    user_id,
+    kind: 'trip',
+    crew_id: null,
+    deleted: false,
+    data: { id: 'trip-' + user_id, startDate: '2027-01-18', endDate: '2027-01-25', resortId: 'tignes', resortName: 'Tignes', ...over },
+  })
+  const snow = (cm: Record<string, number>): SnowDay[] => Object.entries(cm).map(([date, snowCm]) => ({ date, snowCm }))
+
+  it('genoeg verse sneeuw: melding om 18:00 met de dagen, één weerbericht per resort', async () => {
+    records = [trip('me'), trip('daan')]
+    subs = [sub('me'), sub('daan')]
+    forecasts.tignes = snow({ '2027-01-17': 30, '2027-01-18': 18, '2027-01-19': 7, '2027-01-20': 0 })
+    expect(await powH.runPow()).toEqual({ status: 200, sent: 2 })
+    expect(forecastCalls).toEqual(['tignes'])
+    // sneeuw van vandaag telt niet (die heb je al gezien), morgen en overmorgen wel
+    expect(lastMsg()).toEqual({
+      title: 'Pow-alarm: 25 cm in Tignes',
+      body: 'Morgen 18 cm, overmorgen 7 cm. Je trip begint morgen. Goggles klaarleggen.',
+      url: '#/weer',
+      tag: 'pow-trip-daan',
+    })
+  })
+
+  it('dezelfde bui maar één keer; een nieuwe piekdag wel weer', async () => {
+    records = [trip('me')]
+    subs = [sub('me')]
+    forecasts.tignes = snow({ '2027-01-18': 20 })
+    await powH.runPow()
+    expect(await powH.runPow()).toMatchObject({ sent: 0 })
+    forecasts.tignes = snow({ '2027-01-18': 20, '2027-01-19': 30 })
+    expect(await powH.runPow()).toMatchObject({ sent: 1 })
+  })
+
+  it('niet om een ander uur, niet met de voorkeur uit, niet zonder resort, niet bij te weinig sneeuw', async () => {
+    records = [trip('me'), trip('daan', { resortId: undefined }), trip('sem')]
+    subs = [sub('me', { tz: 'Asia/Tokyo' }), sub('daan'), sub('sem', { pow: false })]
+    forecasts.tignes = snow({ '2027-01-18': 40 })
+    expect(await powH.runPow()).toMatchObject({ sent: 0 })
+    subs = [sub('me')]
+    records = [trip('me')]
+    forecasts.tignes = snow({ '2027-01-18': POW_CM - 1 })
+    expect(await powH.runPow()).toMatchObject({ sent: 0 })
+  })
+
+  it('trip ver weg of al voorbij: geen alarm; weer kapot: ook niet', async () => {
+    subs = [sub('me')]
+    forecasts.tignes = snow({ '2027-01-18': 40 })
+    records = [trip('me', { startDate: '2027-02-10', endDate: '2027-02-17' })]
+    expect(await powH.runPow()).toMatchObject({ sent: 0 })
+    records = [trip('me', { startDate: '2027-01-10', endDate: '2027-01-17' })]
+    expect(await powH.runPow()).toMatchObject({ sent: 0 })
+    records = [trip('me')]
+    forecasts.tignes = null
+    expect(await powH.runPow()).toMatchObject({ sent: 0 })
+  })
+
+  it('tijdens de trip: wekker zetten; sneeuw na de trip telt niet, twee dagen ervoor wel', () => {
+    const t = { startDate: '2027-01-20', endDate: '2027-01-22' }
+    const r = powCheck(t, snow({ '2027-01-17': 50, '2027-01-18': 10, '2027-01-19': 6, '2027-01-23': 40 }), '2027-01-17')
+    // 17e is vandaag, 18e en 19e vallen in de twee dagen voor de trip, 23e is na de trip
+    expect(r?.total).toBe(16)
+    expect(r?.peak.date).toBe('2027-01-18')
+    expect(powCheck(t, snow({ '2027-01-23': 40 }), '2027-01-17')).toBeNull()
+  })
+
+  it('tijdens de trip zegt de melding: wekker zetten', async () => {
+    records = [trip('me', { startDate: '2027-01-15' })]
+    subs = [sub('me')]
+    forecasts.tignes = snow({ '2027-01-18': 12, '2027-01-21': 9 })
+    await powH.runPow()
+    // 21 januari 2027 is een donderdag
+    expect(lastMsg().body).toBe('Morgen 12 cm, do 9 cm. Zet je wekker voor de eerste lift.')
   })
 })
