@@ -225,6 +225,20 @@ describe('potjes op de crew-pagina', () => {
     expect(server.games[0]).toMatchObject({ crew_id: 'c1', players: ['me', 'sem', 'daan'] })
   })
 
+  it('wie net de crew joinde staat er bij "Nieuw potje" meteen tussen', async () => {
+    const user = userEvent.setup()
+    // de pagina kent alleen jou en Daan; Sem joinde daarna
+    render(
+      <MemoryRouter>
+        <SnowGames crewId="c1" members={MEMBERS.slice(0, 2)} me="me" />
+      </MemoryRouter>,
+    )
+    await user.click(await screen.findByRole('button', { name: /Nieuw potje/ }))
+    const sheet = screen.getByRole('dialog', { name: 'Nieuw potje' })
+    expect(await within(sheet).findByRole('button', { name: /Sem/ })).toBeTruthy()
+    expect(crew.crewMembers).toHaveBeenCalledWith('c1')
+  })
+
   it('lopende en gewonnen potjes met hoe het staat', async () => {
     game()
     move(0, 'set', 'me', 'ollie', true)

@@ -7,7 +7,7 @@ import { TRACKS, TRICKS, TRICK_BY_ID, type Track } from '../content/tricks'
 import { MAX_PLAYERS, MIN_PLAYERS, WORD, cachedGames, listGames, snowState, startGame, type GameWithMoves } from '../lib/snow'
 import { errMsg } from '../lib/errors'
 import { toast } from '../lib/toast'
-import type { CrewMember } from '../lib/crew'
+import { crewMembers, type CrewMember } from '../lib/crew'
 
 /** De vier letters; wat je hebt staat er vet, de rest vaag. */
 export function Letters({ n, className }: { n: number; className?: string }) {
@@ -107,7 +107,10 @@ export function gameSummary(g: GameWithMoves, members: CrewMember[], me: string)
 }
 
 /** Potjes van de crew plus "Nieuw potje". Staat als tab op de crew-pagina. */
-export function SnowGames({ crewId, members, me }: { crewId: string; members: CrewMember[]; me: string }) {
+export function SnowGames({ crewId, members: known, me }: { crewId: string; members: CrewMember[]; me: string }) {
+  // wie net joinde staat nog niet in de lijst van de pagina; bij "Nieuw potje" halen we hem vers op
+  const [fresh, setFresh] = useState<CrewMember[] | null>(null)
+  const members = fresh ?? known
   const nav = useNavigate()
   const [games, setGames] = useState<GameWithMoves[] | null>(null)
   const [picking, setPicking] = useState(false)
@@ -127,6 +130,7 @@ export function SnowGames({ crewId, members, me }: { crewId: string; members: Cr
 
   useEffect(() => {
     setGames(null)
+    setFresh(null)
     void load()
   }, [load])
 
@@ -155,6 +159,9 @@ export function SnowGames({ crewId, members, me }: { crewId: string; members: Cr
         onClick={() => {
           setPlayers([me])
           setPicking(true)
+          crewMembers(crewId)
+            .then(setFresh)
+            .catch(() => {})
         }}
       >
         Nieuw potje
