@@ -97,3 +97,22 @@ describe('design-pagina', () => {
     expect(screen.getByRole('button', { name: 'Kapot' }).getAttribute('aria-pressed')).toBe('true')
   })
 })
+
+describe('app-icoon', () => {
+  const dir = join(__dirname, '..', '..', 'public', 'icons')
+  // breedte en hoogte uit de PNG-header (IHDR)
+  const size = (file: string) => {
+    const b = readFileSync(join(dir, file))
+    return [b.readUInt32BE(16), b.readUInt32BE(20)]
+  }
+
+  it('de mascotte op zwart is de bron, en alle formaten zijn er in de goede maat', () => {
+    const svg = readFileSync(join(dir, 'icon.svg'), 'utf8')
+    expect(svg).toContain('mascotte')
+    expect(svg).toContain('rx="112" fill="#0d0d0f"')
+    expect(size('icon-192.png')).toEqual([192, 192])
+    expect(size('icon-512.png')).toEqual([512, 512])
+    expect(size('icon-maskable-512.png')).toEqual([512, 512])
+    expect(size('apple-touch-icon.png')).toEqual([180, 180])
+  })
+})
