@@ -31,6 +31,7 @@ import { errMsg } from '../lib/errors'
 import { PushNudge } from '../components/PushSettings'
 import { RiderAvatar } from '../components/RiderParts'
 import { riderProfiles, type CrewRider } from '../lib/riders'
+import { SnowGames } from '../components/SnowParts'
 
 function NeedAccount() {
   const nav = useNavigate()
@@ -148,7 +149,7 @@ export default function Crew() {
   const { user } = authStore.use()
   const [crews, setCrews] = useState<CrewT[] | null>(null)
   const [active, setActive] = useState<string | null>(null)
-  const [tab, setTab] = useState<'feed' | 'board'>('feed')
+  const [tab, setTab] = useState<'feed' | 'board' | 'snow'>('feed')
   const [posts, setPosts] = useState<FeedPost[]>([])
   const [members, setMembers] = useState<CrewMember[]>([])
   const [riders, setRiders] = useState<Record<string, CrewRider>>({})
@@ -329,6 +330,7 @@ export default function Crew() {
             options={[
               { value: 'feed', label: 'Feed' },
               { value: 'board', label: 'Leaderboard' },
+              { value: 'snow', label: 'S.N.O.W.' },
             ]}
           />
           {loading && (
@@ -397,6 +399,7 @@ export default function Crew() {
               </p>
             </Section>
           )}
+          {tab === 'snow' && !loading && crew && <SnowGames crewId={crew.id} members={members} me={user.id} />}
           {crew && (
             <button
               onClick={async () => {

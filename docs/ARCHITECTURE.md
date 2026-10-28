@@ -57,6 +57,15 @@ Foto's worden op het toestel verkleind naar max 2048 px (JPEG). Video's gaan doo
 - **Online-first lijsten** (groepslijst, doelen): een lege cache wordt online genegeerd (spinner tot de server antwoordt), en een refresh die liep terwijl jij iets wijzigde, wordt weggegooid zodat hij je net gezette vinkje niet terugdraait.
 - Je crewlijst staat ook lokaal (`kv: crews`), zodat je zonder bereik een dag met je crew kunt delen. De feed ververst stil bij terugkomen, weer online en elke minuut.
 
+## S.N.O.W. (`src/lib/snow.ts`)
+
+S.K.A.T.E., maar op de piste, binnen een crew. Wie aan de beurt is zet een trick uit de bijbel neer; landt hij hem, dan doet de rest hem na en wie mist krijgt een letter. Mist de zetter, dan gaat de beurt door. Bij S-N-O-W lig je eruit, en een gelande trick mag niet nog een keer.
+
+- `snow_games` (crew, spelers in speelvolgorde) en `snow_moves` (volgnummer, zet of nadoen, speler, trick, geland). Alleen de zetten staan in de database; `snowState()` rekent de letters, de beurt en de winnaar uit. Zetten die niet passen tellen niet mee.
+- Elke telefoon in de crew mag een poging invullen, maar alleen als volgende zet (`seq = snow_next_seq()`). Vullen twee telefoons dezelfde beurt in, dan botst de tweede op de primary key en laadt opnieuw (`SnowConflict`). Alleen de laatste zet kan ongedaan worden gemaakt.
+- Online-first zoals crew-doelen: laatst bekende stand in kv, en het open potje ververst elke 5 seconden.
+- RLS-scenario's: `supabase/tests/snow_games.sh`.
+
 ## Rider-profiel (skipas)
 
 - Route `/rider/:id` (`ik` = jezelf, werkt ook zonder account). Je eigen pas rekent alles live uit je logboek (`useProgress` → `riderStats()` in `src/lib/rider.ts`); die van een crewgenoot komt uit `profiles` (laatst bekende in `kv: rider:<id>` voor offline).
