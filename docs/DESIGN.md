@@ -1,64 +1,87 @@
 # Sneeuw Daddy design system
 
-Dit is een iPhone-app voor onderweg: op de piste in fel sneeuwlicht, in de lift met handschoenen, en 's avonds in het huisje. Het design moet verdwijnen in de taak. Het merk zit in de details: één groen, een workwear-titel en eigen iconen.
+Dit is een iPhone-app voor onderweg: op de piste in fel sneeuwlicht, in de lift met handschoenen, en 's avonds in het huisje. De stijl is **park**: een poster van een snowboardmerk, met stickers, tape en stempels. Grote smalle hoofdletters, zwart en neon-lime, oranje als tweede kleur. Speels in de details, rustig waar je iets moet doen.
 
-De levende referentie staat in de app op **Meer → Design system** (`/#/design`). De regels volgen de [Impeccable](https://github.com/pbakaus/impeccable)-craft-floor voor app-UI (Operate-modus) en iOS.
+De levende referentie staat in de app op **Meer → Design system** (`/#/design`), met een knop om de animaties opnieuw af te spelen.
 
 ## Harde regels
 
-1. **Nooit emoji.** Iconen komen uit `src/design/icons.tsx`. De test `src/test/design.test.ts` faalt op emoji in `src/`.
+1. **Nooit emoji.** Iconen komen uit `src/design/icons.tsx`, stickers uit `src/design/Stickers.tsx`. De test `src/test/design.test.ts` faalt op emoji in `src/`.
 2. **Geen kickers of eyebrows** boven titels, en geen sectienummers zoals "01 / Logboek". De titel draagt zichzelf. Echte informatie (datum, voortgang) staat als `subtitle` ónder de titel.
 3. **Geen monospace als kostuum.** Getallen krijgen `.num` (tabular figures), geen mono-font.
-4. **Geen kaarten als standaardcontainer.** Lijsten zijn gegroepeerde iOS-lijsten (`List` + `Row`). Geen kaart-in-kaart, geen grids van gelijke tegels.
-5. **Accent alleen voor acties, selectie en voortgang.** Nooit als decoratie.
-6. **Kleuren via tokens.** Uitzondering: de pistekleuren, want dat zijn echte signaalkleuren.
+4. **Lijsten zijn lijsten.** Gegroepeerde lijsten (`List` + `Row`), geen grids van gelijke kaarten. Het posterblok (`LevelPoster`) is het enige grote statement per scherm.
+5. **Accent voor acties, selectie en voortgang.** Oranje (`hot`) voor de harde schaduw, stempels, slams en links in licht. Stickers en tape zijn de enige decoratie, en die staan altijd op iets (een blok, een kaart), nooit los.
+6. **Kleuren via tokens.** Uitzonderingen: de pistekleuren (echte signaalkleuren) en de stickers (artwork, in licht en donker hetzelfde).
 
 ## Kleur
 
-Licht is de basis (fel buitenlicht), donker is eersteklas voor 's avonds. Neutralen hebben een lichte groene tint, nooit puur zwart.
+Licht is gebroken wit met zwart en lime, donker is echt zwart met neon-lime. Beide zijn eersteklas.
 
-| Token                  | Licht          | Donker    | Gebruik                      |
-| ---------------------- | -------------- | --------- | ---------------------------- |
-| `--bg`                 | `#f3f5f2`      | `#0d100e` | achtergrond                  |
-| `--surface`            | `#ffffff`      | `#151916` | gegroepeerde lijsten         |
-| `--surface-2`          | `#e8ece7`      | `#1e231f` | tracks, controls             |
-| `--line`               | `#d7ddd6`      | `#2a312b` | scheidingslijnen             |
-| `--text`               | `#0f1410`      | `#edf1eb` | tekst                        |
-| `--muted`              | `#576157`      | `#98a297` | secundaire tekst (≥ 4.5:1)   |
-| `--accent`             | `#1f7a3d`      | `#73cf80` | knoppen, selectie, voortgang |
-| `--accent-ink`         | `#ffffff`      | `#09120b` | tekst op accent              |
-| `--accent-text`        | `#1c6f37`      | `#7fd78b` | groene tekst en links        |
-| `--heel` / `--toe`     | blauw / oranje |           | edges in animaties           |
-| `--jacket` / `--pants` |                |           | kleding van de rider         |
+| Token                     | Licht        | Donker     | Gebruik                                            |
+| ------------------------- | ------------ | ---------- | -------------------------------------------------- |
+| `--bg`                    | `#f1f0ea`    | `#0d0d0f`  | achtergrond                                        |
+| `--surface`               | `#ffffff`    | `#18181b`  | kaarten en lijsten (met rand `--line`)             |
+| `--surface-2`             | `#e5e4dd`    | `#232327`  | tracks, controls                                   |
+| `--line`                  | `#d3d2ca`    | `#2e2e33`  | randen en scheidingslijnen                         |
+| `--text` / `--muted`      | zwart/grijs  | wit/grijs  | tekst (muted ≥ 4.5:1)                              |
+| `--accent`                | `#0d0d0f`    | `#d7ff3c`  | primaire knop, selectie, voortgang                 |
+| `--accent-ink`            | `#d7ff3c`    | `#0d0d0f`  | tekst op accent                                    |
+| `--accent-text`           | `#c23d0a`    | `#d7ff3c`  | links en iconen in rijen                           |
+| `--accent-soft`           | lime 30%     | lime 13%   | gekozen rij, huidige plek                          |
+| `--hot`                   | `#ff5b22`    | `#ff5b22`  | harde schaduw, stempels, slams                     |
+| `--block` / `--block-ink` | zwart/lime   | lime/zwart | het posterblok                                     |
+| `--sticker`               | lime         | oranje     | ster-sticker op het posterblok (contrast met blok) |
+| `--tab` / `--tab-pill`    | zwart/lime   | grijs/lime | zwevende tabbalk en de pil die meeschuift          |
+| `--tape`                  | lime         | wit 55%    | tape over de rand van een blok                     |
+| `--heel` / `--toe`        | blauw/oranje |            | edges in animaties                                 |
+| `--jacket` / `--pants`    |              |            | kleding van de rider                               |
+
+`src/test/theme.test.tsx` checkt dat licht en donker dezelfde tokens hebben.
 
 ## Typografie
 
 - **UI**: het systeemfont (SF Pro op iPhone). Body 17, secundair 15, footnote 13.
-- **Display**: Archivo, smal (72%) en extra vet. Alleen voor paginatitels (38) en grote getallen. Dat is de workwear-labelstijl van het merk.
-- Sectiekoppen: 20 semibold, gewone hoofdletters.
+- **Display**: Archivo, smal (72%) en extra vet, **in hoofdletters**. Paginatitels 44 (met `outline` als tweede woord in holle letters, zoals je naam op Home), sectiekoppen 26, grote getallen 32.
+- **Labels**: 11, extra vet, kapitalen met wat letterafstand (onder getallen, in stempels).
 
 ## Componenten
 
 In `src/components/ui.tsx`:
 
-- **`PageHeader`**: grote titel, bij scrollen een compacte balk met de titel klein (zoals iOS). Terug-knop als "‹ Terug" in accent.
-- **`List`** + **`Row`**: gegroepeerde lijst met icoon, titel, detail, waarde en chevron.
-- **`Section`** + **`SectionLink`**.
-- **`Button`**: primary, ghost, outline, danger, plain. Hoogtes 36, 44 en 52, rounded-rect.
-- **`Segmented`**: iOS segmented control.
-- **`Chip`**, **`Stepper`**, **`Field`** + `inputCls`, **`Progress`**, **`Empty`**, **`Sheet`** (met "Klaar"), **`Stat`** + **`StatGroup`**, **`LevelDots`**, **`CountryTag`**.
+- **`PageHeader`**: grote titel in hoofdletters die omhoog komt (`rise`), bij scrollen een compacte balk. Optioneel `outline`.
+- **`Heading`** / **`Section`**: sectiekop met een doorlopende lijn en rechts een actie. Losse koppen gebruiken altijd `Heading`.
+- **`List`** + **`Row`**: gegroepeerde lijst met icoon, titel, detail, waarde en chevron. Rijen komen na elkaar binnen.
+- **`Button`**: primair is zwart/lime met een harde oranje schaduw, grote maten in poster-letters. Ghost, outline, danger, plain. Hoeken 6px.
+- **`Segmented`**, **`Chip`** (actief = accent), **`Stepper`**, **`Field`** + `inputCls`, **`Progress`**, **`Empty`**, **`Sheet`**, **`Stat`** + **`StatGroup`**, **`LevelDots`**, **`CountryTag`**.
 
-Tikdoelen zijn minimaal 44pt. Safe areas via `pt-safe` en `pb-safe`.
+In `src/components/Poster.tsx`:
 
-## Iconen
+- **`LevelPoster`**: je level als poster (Home en badges).
+- **`Sticker`**: ster-sticker, gekanteld, klapt erop.
+- **`Stamp`**: oranje stempel ("+15 XP", "Gedaan").
+- **`Tape`**, **`Segments`** (balk in blokjes), **`Peaks`** (bergvorm).
 
-`<Icon name="..." />`: 24-grid, stroke 1.8, square caps, miter joins. Moods `mood1` t/m `mood5`, crew-reacties `flame`, `stomp`, `lol`, `skull`, `crown`. Landen als tekst-tag (`FR`, `AT`).
+Kaarten hebben een rand en hoek 8px, knoppen en velden 6px. Over het hele scherm ligt een lichte korrel. Tikdoelen zijn minimaal 44pt. Safe areas via `pt-safe` en `pb-safe`; de tabbalk zweeft boven de home-indicator.
+
+## Iconen en stickers
+
+- **Iconen** (`<Icon name="..." />`): 24-grid, stroke 1.8, square caps, miter joins. Voor bediening en rijen.
+- **Stickers** (`src/design/Stickers.tsx`): die-cut met witte rand, dikke inktlijnen, lime/oranje/ijsblauw. Stemmingen 1-5 (`MoodSticker`, `Mood`), crew-reacties (`ReactionSticker`, op de sleutel in de database), en `MoodPick` voor kiezers. Nieuwe sticker: in dat bestand, op het 64-grid. De lijn-iconen `mood1`-`mood5` blijven voor de share-kaart (canvas).
+- Landen als tekst-tag (`FR`, `AT`).
 
 ## Beweging
 
-- Routine-overgangen 150–250 ms, `cubic-bezier(0.16, 1, 0.3, 1)`. Geen bounce.
-- Het enige geregisseerde moment is het landen van een trick (confetti en geluid). Al het andere is feedback.
-- `prefers-reduced-motion` dempt alles behalve state-feedback.
+Speels maar kort. Alles in `src/styles.css`:
+
+- **`rise`**: titels komen scheef omhoog en vallen recht (420 ms).
+- **`slap`**: een sticker of stempel wordt erop geklapt: groot en gedraaid, dan vast met een klein naveren (460 ms). `--tilt` en `--delay` per sticker. Ook voor feestmeldingen, gekozen stemmingen, je eigen crew-reactie en gehaalde badges.
+- **`stagger`**: rijen in een lijst komen kort na elkaar binnen.
+- **`grow`**: een balk of blokje loopt vol vanaf links.
+- **`shadow-hard`**: bij indrukken zak je de knop in zijn schaduw.
+- De tabbalk-pil schuift mee naar de actieve tab (300 ms).
+- Routine-overgangen 150–300 ms, `cubic-bezier(0.16, 1, 0.3, 1)`. Naveren alleen bij `slap`.
+- Het grootste moment is nog steeds het landen van een trick (confetti in lime en oranje, geluid, sticker-melding).
+- `prefers-reduced-motion` zet alles uit behalve state-feedback.
 
 ## Trick-animaties
 

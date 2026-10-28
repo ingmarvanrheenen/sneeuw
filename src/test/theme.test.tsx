@@ -78,3 +78,22 @@ describe('kleur-tokens', () => {
     expect(darkMedia['--tab-pill']).toBe('#d7ff3c')
   })
 })
+
+describe('design-pagina', () => {
+  it('toont de poster, alle stickers, en "Opnieuw" speelt de animaties opnieuw af', async () => {
+    const { default: DesignSystem } = await import('../pages/DesignSystem')
+    const user = userEvent.setup()
+    render(
+      <MemoryRouter>
+        <DesignSystem />
+      </MemoryRouter>,
+    )
+    expect(screen.getAllByRole('group', { name: /^Level 4,/ }).length).toBeGreaterThan(0)
+    for (const label of ['Kapot', 'Meh', 'Prima', 'Chill', 'Episch']) expect(screen.getByRole('button', { name: label })).toBeTruthy()
+    const rise = screen.getByText('Rise')
+    await user.click(screen.getByRole('button', { name: 'Opnieuw' }))
+    expect(screen.getByText('Rise')).not.toBe(rise)
+    await user.click(screen.getByRole('button', { name: 'Kapot' }))
+    expect(screen.getByRole('button', { name: 'Kapot' }).getAttribute('aria-pressed')).toBe('true')
+  })
+})
