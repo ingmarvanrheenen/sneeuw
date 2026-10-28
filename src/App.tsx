@@ -28,6 +28,7 @@ const Weather = lazy(() => import('./pages/Weather'))
 const GearPage = lazy(() => import('./pages/Gear'))
 const Rider = lazy(() => import('./pages/Rider'))
 const Snow = lazy(() => import('./pages/Snow'))
+const Wrapped = lazy(() => import('./pages/Wrapped'))
 const Settings = lazy(() => import('./pages/Settings'))
 const Badges = lazy(() => import('./pages/Badges'))
 const DesignSystem = lazy(() => import('./pages/DesignSystem'))
@@ -170,6 +171,7 @@ export default function App() {
               <Route path="/gear" element={<GearPage />} />
               <Route path="/rider/:id" element={<Rider />} />
               <Route path="/snow/:id" element={<Snow />} />
+              <Route path="/wrapped" element={<Wrapped />} />
               <Route path="/instellingen" element={<Settings />} />
               <Route path="/design" element={<DesignSystem />} />
               <Route path="*" element={<Home />} />

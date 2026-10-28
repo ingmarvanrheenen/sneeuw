@@ -1,8 +1,9 @@
 import { useMemo } from 'react'
-import { Card, Empty, Page, PageHeader, Section, Stat, StatGroup } from '../components/ui'
+import { Card, Empty, List, Page, PageHeader, Row, Section, Stat, StatGroup } from '../components/ui'
 import { BarChart, HBar, LineChart } from '../components/Charts'
 import { Icon, Mood, MOOD_LABELS } from '../design/icons'
 import { useProgress } from '../lib/useProgress'
+import { seasonsWithData } from '../lib/wrapped'
 import { monthLabel, fmtShort, plural } from '../lib/format'
 import { TRACKS, TRICKS } from '../content/tricks'
 import { PISTES } from '../content/logOptions'
@@ -55,6 +56,17 @@ export default function Stats() {
         />
       ) : (
         <>
+          <List className="mb-4">
+            {seasonsWithData(p.input.sessions).map((season) => (
+              <Row
+                key={season}
+                icon="sparkle"
+                title={`Season Wrapped ${season}`}
+                detail="Je seizoen als story, om te delen"
+                to={`/wrapped?seizoen=${encodeURIComponent(season)}`}
+              />
+            ))}
+          </List>
           <StatGroup>
             <Stat label="Dagen" value={s.days} />
             <Stat label="Uren" value={s.hours} />

@@ -219,6 +219,21 @@ button {
   animation: sheet-in 300ms var(--ease-out-expo) both;
 }
 
+/* Season Wrapped: elke kaart schuift zacht omhoog */
+@keyframes wrapped-in {
+  from {
+    transform: translateY(18px);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+.wrapped-in {
+  animation: wrapped-in 420ms var(--ease-out-expo) both;
+}
+
 /* Markering op het lichaamsdeel waar de stap om draait */
 @keyframes cue-pulse {
   from {
@@ -238,7 +253,8 @@ button {
 
 @media (prefers-reduced-motion: reduce) {
   .pop-in,
-  .sheet-in {
+  .sheet-in,
+  .wrapped-in {
     animation-duration: 1ms;
   }
   .cue-ring {

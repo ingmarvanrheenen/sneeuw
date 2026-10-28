@@ -5,6 +5,7 @@ import { Button, List, Page, PageHeader, Progress, Row, Section, SectionLink, Le
 import { SyncBadge } from '../components/SyncBadge'
 import { QuickLog } from '../components/QuickLog'
 import { useProgress } from '../lib/useProgress'
+import { seasonOf } from '../lib/wrapped'
 import { sessionsSorted, useKind } from '../lib/repo'
 import { getProfile } from '../lib/auth'
 import { TRICKS, TRICK_BY_ID } from '../content/tricks'
@@ -50,6 +51,12 @@ function InstallHint() {
 export default function Home() {
   const nav = useNavigate()
   const progress = useProgress()
+  // Wrapped op Home zodra je dit seizoen 3 dagen of meer gelogd hebt
+  const wrappedSeason = (() => {
+    const now = seasonOf(todayISO())
+    const days = new Set((progress?.input.sessions ?? []).filter((s) => seasonOf(s.date) === now).map((s) => s.date)).size
+    return days >= 3 ? now : null
+  })()
   const sessions = useKind('session')
   const goals = useKind('goal')
   const trips = useKind('trip')
@@ -117,6 +124,14 @@ export default function Home() {
       <QuickLog open={quick} onClose={() => setQuick(false)} />
 
       <List className="mt-3">
+        {wrappedSeason && (
+          <Row
+            icon="sparkle"
+            title={`Season Wrapped ${wrappedSeason}`}
+            detail="Je seizoen tot nu toe, als story"
+            to={`/wrapped?seizoen=${encodeURIComponent(wrappedSeason)}`}
+          />
+        )}
         <Row icon="replay" title="Trick-roulette" detail="Weet je niet wat je moet oefenen?" to="/tricks?roulette=1" />
         <Row icon="chat" title="Coach Daddy" detail="Vraag om tips of een oefenplan" to="/coach" />
         {nextTrip && (

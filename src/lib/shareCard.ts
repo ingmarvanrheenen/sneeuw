@@ -176,12 +176,16 @@ export async function renderShareCard(s: Session): Promise<Blob> {
 }
 
 export async function shareSession(s: Session) {
-  const blob = await renderShareCard(s)
-  const file = new File([blob], `sneeuw-daddy-${s.date}.png`, { type: 'image/png' })
+  await shareImage(await renderShareCard(s), `sneeuw-daddy-${s.date}.png`, s.resortName)
+}
+
+/** Deelt een afbeelding via het iOS-deelmenu, of downloadt hem als dat niet kan. */
+export async function shareImage(blob: Blob, name: string, title?: string) {
+  const file = new File([blob], name, { type: 'image/png' })
   const nav = navigator as Navigator & { canShare?: (d: ShareData) => boolean }
   if (nav.canShare?.({ files: [file] })) {
     try {
-      await navigator.share({ files: [file], title: s.resortName })
+      await navigator.share({ files: [file], title })
       return
     } catch (e) {
       if ((e as Error).name === 'AbortError') return
@@ -193,4 +197,92 @@ export async function shareSession(s: Session) {
   a.download = file.name
   a.click()
   setTimeout(() => URL.revokeObjectURL(url), 5000)
+}
+
+// ── Season Wrapped ───────────────────────────────────────────────────────────
+
+/** Tekst over meerdere regels binnen een breedte. Geeft de y van de volgende regel terug. */
+function wrapText(c: CanvasRenderingContext2D, text: string, x: number, y: number, maxW: number, lineH: number, maxLines = 6) {
+  const words = text.split(/\s+/)
+  let line = ''
+  let lines = 0
+  for (const w of words) {
+    const next = line ? `${line} ${w}` : w
+    if (c.measureText(next).width > maxW && line) {
+      c.fillText(line, x, y)
+      y += lineH
+      line = w
+      if (++lines >= maxLines - 1) break
+    } else line = next
+  }
+  if (line) {
+    c.fillText(line, x, y)
+    y += lineH
+  }
+  return y
+}
+
+/** Grootste lettergrootte (tot max) waarbij de tekst op één regel past. */
+function fitFont(c: CanvasRenderingContext2D, text: string, family: string, weight: number, max: number, maxW: number) {
+  let size = max
+  for (; size > 60; size -= 8) {
+    c.font = `${weight} ${size}px ${family}`
+    if (c.measureText(text).width <= maxW) break
+  }
+  return size
+}
+
+/** Story-kaart (1080×1920) van één Wrapped-kaart. */
+export async function renderWrappedCard(
+  card: { icon: IconName; big: string; title: string; body: string },
+  season: string,
+  index: number,
+  total: number,
+): Promise<Blob> {
+  await document.fonts.ready
+  const canvas = document.createElement('canvas')
+  canvas.width = W
+  canvas.height = H
+  const c = canvas.getContext('2d')!
+  const sans = '-apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif'
+  const display = '"Archivo Variable", -apple-system, system-ui, sans-serif'
+  // om en om donker en accent, zoals in de app
+  const onAccent = index % 2 === 1
+  const bg = onAccent ? ACCENT : INK
+  const fg = onAccent ? INK : PAPER
+  const soft = onAccent ? 'rgba(11,13,10,0.62)' : MUTED
+
+  c.fillStyle = bg
+  c.fillRect(0, 0, W, H)
+
+  // voortgang bovenaan, zoals in de app
+  const gap = 10
+  const seg = (W - 120 - gap * (total - 1)) / total
+  for (let i = 0; i < total; i++) {
+    c.fillStyle = i <= index ? fg : onAccent ? 'rgba(11,13,10,0.18)' : 'rgba(236,239,230,0.18)'
+    c.fillRect(60 + i * (seg + gap), 80, seg, 8)
+  }
+
+  c.fillStyle = soft
+  c.font = `600 40px ${sans}`
+  c.fillText(`Season Wrapped ${season}`, 60, 190)
+
+  drawIcon(c, card.icon, 60, 620, 96, fg)
+  c.fillStyle = fg
+  const size = fitFont(c, card.big, display, 800, 300, W - 120)
+  c.font = `800 ${size}px ${display}`
+  c.fillText(card.big, 52, 760 + size * 0.8)
+  let y = 760 + size * 0.8 + 110
+  c.font = `700 72px ${sans}`
+  y = wrapText(c, card.title, 60, y, W - 120, 84, 2)
+  y += 30
+  c.fillStyle = soft
+  c.font = `500 48px ${sans}`
+  wrapText(c, card.body, 60, y, W - 120, 64, 6)
+
+  c.fillStyle = soft
+  c.font = `600 34px ${sans}`
+  c.fillText('Sneeuw Daddy', 60, H - 90)
+
+  return new Promise((resolve, reject) => canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('canvas'))), 'image/png'))
 }
