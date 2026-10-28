@@ -1,12 +1,11 @@
 // Season Wrapped: je seizoen als een reeks story-kaarten, uitgerekend uit je gelogde dagen.
-// Puur en afgeleid, zoals XP: niets wordt opgeslagen. Een seizoen loopt van juli t/m juni (zie seasonFor).
+// Puur en afgeleid, zoals XP: niets wordt opgeslagen. Een seizoen loopt van juli t/m juni (zie seasonOf in format.ts).
 import type { IconName } from '../design/icons'
 import { MOOD_LABELS } from '../design/icons'
 import { TRICK_BY_ID } from '../content/tricks'
 import { PISTES, SNOW } from '../content/logOptions'
-import { fmtShort } from './format'
+import { fmtShort, seasonOf } from './format'
 import { levelFor, totalXP, type ProgressInput } from './progress'
-import { seasonFor } from './rider'
 import type { Session } from './types'
 
 export interface WrappedCard {
@@ -19,7 +18,7 @@ export interface WrappedCard {
 }
 
 /** Seizoenslabel van een dag, bijv. "26/27". */
-export const seasonOf = (date: string) => seasonFor(new Date(`${date}T12:00:00`)).label
+export { seasonOf }
 
 /** Seizoenen waarin je iets gelogd hebt, nieuwste eerst. */
 export function seasonsWithData(sessions: Session[]): string[] {

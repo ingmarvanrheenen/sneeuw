@@ -33,9 +33,12 @@ export function plural(n: number, one: string, many: string) {
   return `${n} ${n === 1 ? one : many}`
 }
 
-/** Winterseizoen loopt van augustus t/m juli: "25/26". */
+/**
+ * Winterseizoen van een datum, bijv. "25/26". Loopt van juli t/m juni; dé definitie voor de hele app
+ * (logboek, skipas, Season Wrapped, seizoensladder).
+ */
 export function seasonOf(d: string) {
   const date = parseISO(d)
-  const y = date.getMonth() >= 7 ? date.getFullYear() : date.getFullYear() - 1
+  const y = date.getMonth() >= 6 ? date.getFullYear() : date.getFullYear() - 1
   return `${String(y).slice(2)}/${String(y + 1).slice(2)}`
 }

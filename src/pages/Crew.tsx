@@ -1,10 +1,9 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Button, Card, Empty, Field, Page, PageHeader, Section, Segmented, Sheet, cx, inputCls } from '../components/ui'
+import { Button, Card, Empty, Field, Page, PageHeader, Segmented, Sheet, cx, inputCls } from '../components/ui'
 import { Icon, Mood, Spinner } from '../design/icons'
 import { MediaThumb, MediaViewer } from '../components/Media'
 import { authStore } from '../lib/auth'
-import { plural } from '../lib/format'
 import { hasBackend } from '../lib/supabase'
 import {
   REACTIONS,
@@ -32,6 +31,7 @@ import { PushNudge } from '../components/PushSettings'
 import { RiderAvatar } from '../components/RiderParts'
 import { riderProfiles, type CrewRider } from '../lib/riders'
 import { SnowGames } from '../components/SnowParts'
+import { CrewLadder } from '../components/Ladder'
 
 function NeedAccount() {
   const nav = useNavigate()
@@ -371,34 +371,7 @@ export default function Crew() {
               ))}
             </div>
           )}
-          {tab === 'board' && !loading && (
-            <Section title="Op XP">
-              <ol className="card divide-y divide-[var(--line)] overflow-hidden p-0">
-                {members.map((m, i) => (
-                  <li key={m.user_id} className={cx(m.user_id === user.id && 'bg-accent-soft')}>
-                    <Link to={`/rider/${m.user_id}`} className="flex items-center gap-3 px-4 py-3 active:bg-surface-2">
-                      <span className={cx('num w-6 text-lg font-semibold', i === 0 ? 'text-accent-text' : 'text-muted')}>{i + 1}</span>
-                      <RiderAvatar photo={riders[m.user_id]?.profile.photo} name={m.display_name} size={32} />
-                      <div className="min-w-0 flex-1">
-                        <div className="truncate font-medium">{m.display_name}</div>
-                        <div className="label">
-                          {m.stats.levelName ?? 'Groentje'} · {plural(m.stats.days ?? 0, 'dag', 'dagen')} ·{' '}
-                          {plural(m.stats.tricksLanded ?? 0, 'trick', 'tricks')}
-                        </div>
-                      </div>
-                      <div className="num text-right">
-                        <div className="font-semibold">{m.stats.xp ?? 0}</div>
-                        <div className="label">xp</div>
-                      </div>
-                    </Link>
-                  </li>
-                ))}
-              </ol>
-              <p className="mt-2 text-xs text-muted">
-                Stats worden bijgewerkt bij elke sync. Valpartijen tellen niet mee voor de ranking (gelukkig).
-              </p>
-            </Section>
-          )}
+          {tab === 'board' && !loading && <CrewLadder members={members} riders={riders} me={user.id} />}
           {tab === 'snow' && !loading && crew && <SnowGames crewId={crew.id} members={members} me={user.id} />}
           {crew && (
             <button

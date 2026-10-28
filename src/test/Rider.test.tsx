@@ -14,6 +14,21 @@ const api = vi.hoisted(() => ({
 }))
 vi.mock('../lib/riders', async (orig) => ({ ...(await orig<typeof import('../lib/riders')>()), ...api }))
 vi.mock('../lib/sync', async (orig) => ({ ...(await orig<typeof import('../lib/sync')>()), scheduleSync: vi.fn() }))
+const ladderApi = vi.hoisted(() => ({ loadPodiums: vi.fn(), cachedPodiums: vi.fn(), backend: { on: false } }))
+vi.mock('../lib/ladder', async (orig) => ({
+  ...(await orig<typeof import('../lib/ladder')>()),
+  loadPodiums: ladderApi.loadPodiums,
+  cachedPodiums: ladderApi.cachedPodiums,
+}))
+vi.mock('../lib/supabase', async (orig) => {
+  const real = await orig<typeof import('../lib/supabase')>()
+  return {
+    ...real,
+    get hasBackend() {
+      return ladderApi.backend.on || real.hasBackend
+    },
+  }
+})
 
 import Rider from '../pages/Rider'
 import { SkiPass, StickerBoard, StickerTracks } from '../components/RiderParts'
@@ -47,6 +62,9 @@ beforeEach(async () => {
   api.answerNickname.mockResolvedValue(undefined)
   api.suggestNickname.mockResolvedValue(undefined)
   api.cachedRider.mockResolvedValue(null)
+  ladderApi.backend.on = false
+  ladderApi.loadPodiums.mockResolvedValue([])
+  ladderApi.cachedPodiums.mockResolvedValue([])
 })
 afterEach(() => {
   cleanup()
@@ -249,7 +267,7 @@ describe('skipas van een crewgenoot', () => {
     expect(api.riderMedia).toHaveBeenCalledWith('daan')
   })
 
-  it('zijn board-ontwerp staat op zijn pas; rommel in zijn profiel wordt het standaard board', async () => {
+  it('het board-ontwerp van een crewgenoot staat op de pas; rommel in het profiel wordt het standaard board', async () => {
     api.loadRider.mockResolvedValue({ ...daan, profile: { ...daan.profile, board: { pattern: 'zigzag', base: 'rood', accent: 'sneeuw' } } })
     const { unmount } = at('/rider/daan')
     expect((await screen.findByRole('img', { name: /Je board/ })).getAttribute('data-pattern')).toBe('zigzag')
@@ -260,6 +278,29 @@ describe('skipas van een crewgenoot', () => {
     })
     at('/rider/daan')
     expect((await screen.findByRole('img', { name: /Je board/ })).getAttribute('data-pattern')).toBe('standaard')
+  })
+
+  it('podium van vorig seizoen staat als medaille op de pas', async () => {
+    ladderApi.backend.on = true
+    ladderApi.loadPodiums.mockResolvedValue([
+      { crewId: 'c1', crewName: 'Shredheads', season: '25/26', rank: 1, of: 4 },
+      { crewId: 'c2', crewName: 'Familie', season: '25/26', rank: 3, of: 5 },
+    ])
+    api.loadRider.mockResolvedValue(daan)
+    at('/rider/daan')
+    const sec = (await screen.findByRole('heading', { name: 'Seizoensladder' })).closest('section') as HTMLElement
+    expect(within(sec).getByText('Kampioen 25/26')).toBeTruthy()
+    expect(within(sec).getByText('Shredheads')).toBeTruthy()
+    expect(within(sec).getByText('3e plek 25/26')).toBeTruthy()
+    expect(ladderApi.loadPodiums).toHaveBeenCalledWith('daan')
+  })
+
+  it('geen podium: geen lege seizoensladder', async () => {
+    ladderApi.backend.on = true
+    api.loadRider.mockResolvedValue(daan)
+    at('/rider/daan')
+    await screen.findByRole('group', { name: 'Skipas van Daan' })
+    expect(screen.queryByRole('heading', { name: 'Seizoensladder' })).toBeNull()
   })
 
   it('bijnaam voorstellen', async () => {

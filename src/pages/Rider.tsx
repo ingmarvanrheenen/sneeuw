@@ -7,6 +7,8 @@ import { Button, Chip, Empty, Field, List, Page, PageHeader, Row, Section, Sheet
 import { RiderAvatar, SkiPass, StickerBoard, StickerLegend, StickerTracks, resortName } from '../components/RiderParts'
 import { BoardDesigner } from '../components/BoardDesigner'
 import { checkDesign } from '../lib/boardDesign'
+import { cachedPodiums, loadPodiums, type Podium } from '../lib/ladder'
+import { hasBackend } from '../lib/supabase'
 import { MediaGrid } from '../components/Media'
 import { ResortPicker } from '../components/Pickers'
 import { Icon, Spinner } from '../design/icons'
@@ -42,6 +44,24 @@ export default function Rider() {
 
 const fmtHours = (h: number) => String(Math.round(h * 10) / 10).replace('.', ',')
 
+/** Podium van vorig seizoen in de crews die je deelt (laatst bekende eerst, dan vers). */
+function usePodiums(userId: string | null): Podium[] {
+  const [list, setList] = useState<Podium[]>([])
+  useEffect(() => {
+    if (!userId || !hasBackend) return
+    let alive = true
+    void cachedPodiums(userId).then((c) => alive && setList((cur) => (cur.length ? cur : c)))
+    if (navigator.onLine)
+      loadPodiums(userId)
+        .then((l) => alive && setList(l))
+        .catch(() => {})
+    return () => {
+      alive = false
+    }
+  }, [userId])
+  return list
+}
+
 function RiderView({
   userId,
   name,
@@ -63,6 +83,7 @@ function RiderView({
 }) {
   const landed = stats.landed ?? []
   const book = stickerBook(landed)
+  const podiumList = usePodiums(userId)
   const signature = profile.signatureTrick ? TRICK_BY_ID.get(profile.signatureTrick) : undefined
   // zeldzame stickers vooraan: daar schep je mee op
   const badges = BADGES.filter((b) => stats.badgeIds?.includes(b.id)).sort((a, b) => Number(!!b.rare) - Number(!!a.rare))
@@ -122,6 +143,22 @@ function RiderView({
           <StickerTracks landed={landed} />
         </div>
       </Section>
+
+      {podiumList.length > 0 && (
+        <Section title="Seizoensladder">
+          <div className="no-scrollbar -mx-4 flex gap-3 overflow-x-auto px-4">
+            {podiumList.map((p) => (
+              <div key={p.crewId} className="flex w-24 shrink-0 flex-col items-center text-center">
+                <Medal icon={p.rank === 1 ? 'crown' : 'trophy'} mark={String(p.rank)} unlocked rare={p.rank === 1} size={58} />
+                <span className="mt-1 text-[13px] font-medium leading-tight">
+                  {p.rank === 1 ? 'Kampioen' : `${p.rank}e plek`} {p.season}
+                </span>
+                <span className="text-[13px] leading-tight text-muted">{p.crewName}</span>
+              </div>
+            ))}
+          </div>
+        </Section>
+      )}
 
       {badges.length > 0 && (
         <Section title="Badges">

@@ -63,6 +63,10 @@ In de trip-recap: awards uit de met de crew gedeelde dagen van die trip (langst 
 
 Stemronde in `crew_trip_votes`: "Val van de trip" en "Held van de trip". Eén stem per persoon per categorie, alleen op een crewgenoot en niet op jezelf. Omzetten (alleen `candidate` is aan te passen) en intrekken mogen. De stand zie je pas als je zelf gestemd hebt. RLS-scenario's: `supabase/tests/crew_trip_votes.sh`.
 
+## Seizoensladder (`src/lib/ladder.ts`)
+
+Het crew-leaderboard per seizoen (dit seizoen, vorig seizoen, altijd). Geen eigen tabel: iedereen synct `seasonXP` (XP per seizoen, laatste vier) mee in `profiles.stats`, afgeleid in `seasonXPs()` uit wat een datum heeft: dagen, de eerste keer dat je een trick landde en gehaalde doelen. Quiz, badges en dagopdrachten tellen alleen in je totaal. Gelijke XP deelt de plek. Het podium van vorig seizoen staat als medaille op de skipas, uitgerekend uit de crews die de kijker en de rider delen (laatst bekende lokaal). Zolang nog niemand in een crew met de nieuwe versie gesynct heeft, opent het leaderboard op "Altijd". Seizoen = juli t/m juni, één definitie in `format.seasonOf`.
+
 ## Dagopdracht (`src/lib/challenges.ts`)
 
 Op Home: elke dag één challenge uit `src/content/challenges.ts` die bij je niveau past (hoogste gelande trick, ±1, en alleen met tricks die je al kunt). De opdracht van vandaag ligt vast zodra je hem ziet; één keer per dag kun je een andere vragen. Je lijst staat lokaal in kv (`dagopdracht`), dus het werkt offline. Gedaan gaat ook naar `daily_challenges` (één rij per persoon per dag, alleen het id), zodat je crewgenoten zien wie vandaag een opdracht deed. Offline afgevinkt gaat later alsnog mee (`flushChallenges`, tot een week terug). Telt mee voor XP (+15) en de badge "Opdrachtjesjager" (10). RLS-scenario's: `supabase/tests/daily_challenges.sh`.

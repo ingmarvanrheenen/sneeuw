@@ -1,7 +1,8 @@
 // Rider-profiel: je skipas, stickerboek en eerlijke stats. Alles wat te tellen valt wordt afgeleid
 // (uit progress.ts voor jezelf, uit de gesyncte stats voor je crew), nooit los opgeslagen.
-import { TRICKS, TRACKS, type Trick, type Track } from '../content/tricks'
-import type { ProgressInput } from './progress'
+import { TRICKS, TRACKS, TRICK_BY_ID, trickXP, type Trick, type Track } from '../content/tricks'
+import { seasonOf } from './format'
+import { sessionXP, type ProgressInput } from './progress'
 import type { Progress } from './useProgress'
 
 /** Wat je crew van je ziet. Gaat mee met je profiel bij elke sync (`profiles.stats`). */
@@ -24,6 +25,8 @@ export interface RiderStats {
   /** datum van je eerste dag met een rode piste */
   firstRed?: string
   resorts: number
+  /** XP per seizoen ("26/27"), voor de seizoensladder van je crew. De laatste paar seizoenen. */
+  seasonXP?: Record<string, number>
 }
 
 const isLanded = (s: string) => s === 'geland' || s === 'beheerst'
@@ -49,7 +52,29 @@ export function riderStats(p: Progress): RiderStats {
     worstFalls: Math.max(0, ...sessions.map((s) => s.falls || 0)),
     firstRed: reds[0],
     resorts: p.stats.resorts,
+    seasonXP: seasonXPs(p.input),
   }
+}
+
+/**
+ * XP per seizoen: alles wat een datum heeft telt in het seizoen van die datum (dagen, eerste keer een trick
+ * geland, doelen gehaald). Quiz en badges hebben geen datum en tellen alleen in je totaal. De laatste vier.
+ */
+export function seasonXPs(input: Pick<ProgressInput, 'sessions' | 'tricks' | 'goals'>): Record<string, number> {
+  const out: Record<string, number> = {}
+  const add = (date: string | undefined, xp: number) => {
+    if (!date || !xp) return
+    const s = seasonOf(date)
+    out[s] = (out[s] ?? 0) + xp
+  }
+  for (const s of input.sessions) add(s.date, sessionXP(s))
+  for (const t of input.tricks) {
+    const trick = TRICK_BY_ID.get(t.trickId)
+    if (trick && isLanded(t.status)) add(t.firstLandedAt, trickXP(trick))
+  }
+  for (const g of input.goals) if (g.done && g.doneAt) add(new Date(g.doneAt).toISOString().slice(0, 10), 30)
+  const keep = Object.keys(out).sort().slice(-4)
+  return Object.fromEntries(keep.map((k) => [k, Math.round(out[k])]))
 }
 
 export function landedIds(input: Pick<ProgressInput, 'tricks'>): string[] {
