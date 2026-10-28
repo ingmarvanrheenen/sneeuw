@@ -87,6 +87,9 @@ export interface Badge {
   icon: IconName
   /** optioneel cijfer/tekst in het medaille (bijv. "10") */
   mark?: string
+  /** zeldzame sticker: geheim tot je hem haalt, alleen de hint is zichtbaar */
+  rare?: boolean
+  hint?: string
   test: (i: ProgressInput) => boolean
 }
 
@@ -200,7 +203,125 @@ export const BADGES: Badge[] = [
   },
   { id: 'doel', name: 'Doelgericht', desc: 'Je eerste doel gehaald', icon: 'target', test: (i) => i.goals.some((g) => g.done) },
   { id: 'crew', name: 'Crew', desc: 'Lid van een crew', icon: 'crew', test: (i) => i.inCrew },
+  ...rareBadges(),
 ]
+
+// ── Zeldzame stickers: rare prestaties, geheim tot je ze haalt ─────────────────
+
+/** weekdag van een YYYY-MM-DD, los van de tijdzone (0 = zondag) */
+const weekday = (date: string) => new Date(`${date}T12:00:00Z`).getUTCDay()
+const dayNumber = (date: string) => Math.round(Date.parse(`${date}T12:00:00Z`) / 86_400_000)
+
+/** langste reeks dagen achter elkaar met een gelogde dag */
+export function longestStreak(dates: string[]): number {
+  const ns = [...new Set(dates)].map(dayNumber).sort((a, b) => a - b)
+  let best = 0
+  let run = 0
+  ns.forEach((n, i) => {
+    run = i && n === ns[i - 1] + 1 ? run + 1 : 1
+    best = Math.max(best, run)
+  })
+  return best
+}
+
+function rareBadges(): Badge[] {
+  const any = (i: ProgressInput, f: (s: Session) => boolean) => i.sessions.some(f)
+  const rare = (b: Omit<Badge, 'rare'>): Badge => ({ ...b, rare: true })
+  return [
+    rare({
+      id: 'vroege-vogel',
+      name: 'Vroege vogel',
+      desc: 'Een dag gelogd voor 8 uur in de ochtend',
+      hint: 'Wie vroeg opstaat...',
+      icon: 'sun',
+      test: (i) => any(i, (s) => s.createdAt > 0 && new Date(s.createdAt).getHours() >= 4 && new Date(s.createdAt).getHours() < 8),
+    }),
+    rare({
+      id: 'ijskonijn',
+      name: 'IJskonijn',
+      desc: 'Gereden bij -15 graden of kouder',
+      hint: 'Het kan altijd kouder.',
+      icon: 'thermo',
+      mark: '-15',
+      test: (i) => any(i, (s) => typeof s.tempC === 'number' && s.tempC <= -15),
+    }),
+    rare({
+      id: 'lachend-vallen',
+      name: 'Lachend vallen',
+      desc: '20 keer gevallen op een dag en toch mood 5',
+      hint: 'Vallen hoort erbij. Genieten ook.',
+      icon: 'lol',
+      test: (i) => any(i, (s) => s.falls >= 20 && s.mood === 5),
+    }),
+    rare({
+      id: 'marathon',
+      name: 'Eerste tot laatste lift',
+      desc: '8 uur of meer op een dag',
+      hint: 'Pauze is voor skiërs.',
+      icon: 'lift',
+      mark: '8u',
+      test: (i) => any(i, (s) => s.hours >= 8),
+    }),
+    rare({
+      id: 'regenboog',
+      name: 'Regenboog',
+      desc: 'Groen, blauw, rood en zwart op een dag',
+      hint: 'Alle kleuren in één dag.',
+      icon: 'trail',
+      test: (i) => any(i, (s) => (['groen', 'blauw', 'rood', 'zwart'] as const).every((c) => s.pistes.includes(c))),
+    }),
+    rare({
+      id: 'vrijdag-13',
+      name: 'Vrijdag de 13e',
+      desc: 'Gereden op vrijdag de 13e',
+      hint: 'Niet bijgelovig?',
+      icon: 'skull',
+      mark: '13',
+      test: (i) => any(i, (s) => s.date.endsWith('-13') && weekday(s.date) === 5),
+    }),
+    rare({
+      id: 'nieuwjaar',
+      name: 'Nieuwjaarsrit',
+      desc: 'Gereden op oudjaar of nieuwjaarsdag',
+      hint: 'Het jaar uit (of in) op de plank.',
+      icon: 'sparkle',
+      test: (i) => any(i, (s) => s.date.endsWith('-12-31') || s.date.endsWith('-01-01')),
+    }),
+    rare({
+      id: 'mist-ninja',
+      name: 'Mist-ninja',
+      desc: 'In de mist gereden (2u+) zonder te vallen',
+      hint: 'Je zag niks, maar je viel ook niet.',
+      icon: 'fog',
+      test: (i) => any(i, (s) => s.weather === 'mist' && s.falls === 0 && s.hours >= 2),
+    }),
+    rare({
+      id: 'natte-kat',
+      name: 'Natte kat',
+      desc: 'Een regendag (3u+) met mood 4 of hoger',
+      hint: 'Slecht weer bestaat niet.',
+      icon: 'rain',
+      test: (i) => any(i, (s) => s.weather === 'regen' && s.hours >= 3 && s.mood >= 4),
+    }),
+    rare({
+      id: 'pijn-is-fijn',
+      name: 'Pijn is fijn',
+      desc: 'Drie pijntjes op een dag en toch mood 4 of hoger',
+      hint: 'Au. Maar wel lekker gereden.',
+      icon: 'bandage',
+      test: (i) => any(i, (s) => s.pains.length >= 3 && s.mood >= 4),
+    }),
+    rare({
+      id: 'zeven-op-een-rij',
+      name: 'Zeven op een rij',
+      desc: 'Zeven dagen achter elkaar op de plank',
+      hint: 'Een hele week, geen rustdag.',
+      icon: 'calendar',
+      mark: '7',
+      test: (i) => longestStreak(i.sessions.map((s) => s.date)) >= 7,
+    }),
+  ]
+}
 
 export function unlockedBadges(input: ProgressInput): Badge[] {
   return BADGES.filter((b) => b.test(input))

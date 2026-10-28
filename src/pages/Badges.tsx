@@ -3,6 +3,9 @@ import { Medal } from '../design/Medal'
 import { BADGES, LEVELS } from '../lib/progress'
 import { useProgress } from '../lib/useProgress'
 
+const NORMAL = BADGES.filter((b) => !b.rare)
+const RARE = BADGES.filter((b) => b.rare)
+
 export default function Badges() {
   const p = useProgress()
   if (!p) return null
@@ -37,15 +40,33 @@ export default function Badges() {
         </ol>
       </Section>
 
-      <Section title={`Badges ${p.badges.length}/${BADGES.length}`}>
+      <Section title={`Badges ${p.badges.filter((b) => !b.rare).length}/${NORMAL.length}`}>
         <div className="grid grid-cols-3 gap-2">
-          {BADGES.map((b) => {
+          {NORMAL.map((b) => {
             const on = unlocked.has(b.id)
             return (
               <div key={b.id} className={cx('card flex flex-col items-center p-3 text-center', !on && 'opacity-70')}>
                 <Medal icon={b.icon} mark={b.mark} unlocked={on} size={58} />
                 <div className="mt-2 text-xs font-semibold leading-tight">{b.name}</div>
                 <div className="mt-0.5 text-[11px] leading-tight text-muted">{b.desc}</div>
+              </div>
+            )
+          })}
+        </div>
+      </Section>
+
+      <Section title={`Zeldzaam ${p.badges.filter((b) => b.rare).length}/${RARE.length}`}>
+        <p className="-mt-1 mb-3 text-[15px] text-muted">
+          Geheime stickers voor rare prestaties. Wat je moet doen zie je pas als je hem hebt.
+        </p>
+        <div className="grid grid-cols-3 gap-2">
+          {RARE.map((b) => {
+            const on = unlocked.has(b.id)
+            return (
+              <div key={b.id} className="card flex flex-col items-center p-3 text-center">
+                <Medal icon={b.icon} mark={b.mark} unlocked={on} rare size={58} />
+                <div className="mt-2 text-xs font-semibold leading-tight">{on ? b.name : 'Geheim'}</div>
+                <div className="mt-0.5 text-[11px] leading-tight text-muted">{on ? b.desc : b.hint}</div>
               </div>
             )
           })}

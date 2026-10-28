@@ -62,7 +62,8 @@ function RiderView({
   const landed = stats.landed ?? []
   const book = stickerBook(landed)
   const signature = profile.signatureTrick ? TRICK_BY_ID.get(profile.signatureTrick) : undefined
-  const badges = BADGES.filter((b) => stats.badgeIds?.includes(b.id))
+  // zeldzame stickers vooraan: daar schep je mee op
+  const badges = BADGES.filter((b) => stats.badgeIds?.includes(b.id)).sort((a, b) => Number(!!b.rare) - Number(!!a.rare))
   const falls = stats.falls ?? 0
   return (
     <>
@@ -125,7 +126,7 @@ function RiderView({
           <div className="no-scrollbar -mx-4 flex gap-3 overflow-x-auto px-4">
             {badges.map((b) => (
               <div key={b.id} className="flex w-20 shrink-0 flex-col items-center text-center">
-                <Medal icon={b.icon} mark={b.mark} unlocked size={58} />
+                <Medal icon={b.icon} mark={b.mark} unlocked rare={b.rare} size={58} />
                 <span className="mt-1 text-[13px] leading-tight">{b.name}</span>
               </div>
             ))}

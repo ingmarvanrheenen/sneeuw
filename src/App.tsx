@@ -100,7 +100,7 @@ function CelebrationWatcher() {
             )
             await kvSet('levelSeen', progress.level.level)
           } else if (fresh.length === 1) {
-            celebrate('badge', `Badge: ${fresh[0].name}`, fresh[0].desc, fresh[0].icon)
+            celebrate('badge', `${fresh[0].rare ? 'Zeldzame sticker' : 'Badge'}: ${fresh[0].name}`, fresh[0].desc, fresh[0].icon)
           } else if (fresh.length > 1) {
             celebrate('badge', `${fresh.length} nieuwe badges`, fresh.map((b) => b.name).join(', '), 'trophy')
           }
