@@ -14,6 +14,8 @@ export interface ProgressInput {
   quizBest: number
   quizCorrect: number
   inCrew: boolean
+  /** langste reeks dagen op rij met een liftvraag beantwoord */
+  liftBest?: number
 }
 
 export const LEVELS = [
@@ -193,6 +195,14 @@ export const BADGES: Badge[] = [
   },
   { id: 'filmer', name: 'Filmer', desc: "10 foto's of video's", icon: 'video', mark: '10', test: (i) => i.media.length >= 10 },
   { id: 'quiz', name: 'Wandelend woordenboek', desc: '10/10 in de quiz', icon: 'quiz', mark: '10', test: (i) => i.quizBest >= 10 },
+  {
+    id: 'liftpraat-7',
+    name: 'Liftfilosoof',
+    desc: '7 dagen op rij een liftvraag',
+    icon: 'lift',
+    mark: '7',
+    test: (i) => (i.liftBest ?? 0) >= 7,
+  },
   { id: 'gear', name: 'Gear nerd', desc: '3 stuks gear toegevoegd', icon: 'sliders', test: (i) => i.gear.length >= 3 },
   {
     id: 'ingepakt',

@@ -3,6 +3,8 @@ import { db, kvGet } from './db'
 import { levelFor, stats, totalXP, unlockedBadges, type ProgressInput } from './progress'
 import { riderStats } from './rider'
 import type { AnyRecord, Gear, Goal, MediaMeta, Session, TrickProgress, Trip } from './types'
+import { liftStreak, loadLift } from './liftpraat'
+import { todayISO } from './ids'
 
 export async function loadProgressInput(): Promise<ProgressInput> {
   const all = (await db.records.toArray()).filter((r) => !r.deleted)
@@ -17,6 +19,7 @@ export async function loadProgressInput(): Promise<ProgressInput> {
     quizBest: await kvGet('quizBest', 0),
     quizCorrect: await kvGet('quizCorrect', 0),
     inCrew: await kvGet('inCrew', false),
+    liftBest: liftStreak(await loadLift(), todayISO()).best,
   }
 }
 

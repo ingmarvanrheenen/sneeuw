@@ -6,6 +6,7 @@ import { SyncBadge } from '../components/SyncBadge'
 import { QuickLog } from '../components/QuickLog'
 import { useProgress } from '../lib/useProgress'
 import { seasonOf } from '../lib/wrapped'
+import { LiftQuestion } from '../components/LiftQuestion'
 import { sessionsSorted, useKind } from '../lib/repo'
 import { getProfile } from '../lib/auth'
 import { TRICKS, TRICK_BY_ID } from '../content/tricks'
@@ -122,6 +123,7 @@ export default function Home() {
         </Button>
       )}
       <QuickLog open={quick} onClose={() => setQuick(false)} />
+      <LiftQuestion />
 
       <List className="mt-3">
         {wrappedSeason && (

@@ -5,32 +5,13 @@
 import { supabase } from './supabase'
 import { kvGet, kvSet } from './db'
 import { BINGO_SIZE, BINGO_SQUARES, type BingoSquare } from '../content/bingo'
+import { seeded, shuffle } from './random'
 
 // ── Kaart en lijnen (puur) ───────────────────────────────────────────────────
 
-/** Klein, voorspelbaar random-getal uit een tekst (zelfde trip + speler = zelfde kaart). */
-function seeded(seed: string) {
-  let h = 2166136261
-  for (let i = 0; i < seed.length; i++) h = Math.imul(h ^ seed.charCodeAt(i), 16777619)
-  let a = h >>> 0
-  return () => {
-    a = (a + 0x6d2b79f5) >>> 0
-    let t = a
-    t = Math.imul(t ^ (t >>> 15), t | 1)
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61)
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296
-  }
-}
-
 /** De kaart van één speler voor één trip: 16 vakjes, rij voor rij. */
 export function bingoCard(tripId: string, userId: string): BingoSquare[] {
-  const rnd = seeded(`${tripId}:${userId}`)
-  const pool = [...BINGO_SQUARES]
-  for (let i = pool.length - 1; i > 0; i--) {
-    const j = Math.floor(rnd() * (i + 1))
-    ;[pool[i], pool[j]] = [pool[j], pool[i]]
-  }
-  return pool.slice(0, BINGO_SIZE * BINGO_SIZE)
+  return shuffle(BINGO_SQUARES, seeded(`${tripId}:${userId}`)).slice(0, BINGO_SIZE * BINGO_SIZE)
 }
 
 /** Alle lijnen als posities op de kaart: rijen, kolommen en de twee diagonalen. */

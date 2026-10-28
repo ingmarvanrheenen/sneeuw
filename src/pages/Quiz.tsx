@@ -3,82 +3,15 @@ import { useNavigate } from 'react-router-dom'
 import { Button, Card, Page, PageHeader, Progress, cx } from '../components/ui'
 import { Icon } from '../design/icons'
 import { TrickAnimation } from '../anim/TrickAnimation'
-import { TERMS } from '../content/terms'
-import { TRICKS, TRICK_BY_ID } from '../content/tricks'
-import type { Anim } from '../anim/engine'
+import { quizRound } from '../lib/quizQuestions'
 import { kvGet, kvSet } from '../lib/db'
 import { sfx } from '../lib/sounds'
 import { celebrate } from '../lib/toast'
 
-interface Q {
-  prompt: string
-  anim?: Anim
-  options: string[]
-  answer: string
-  explain: string
-}
-
-const shuffle = <T,>(a: T[]) => [...a].sort(() => Math.random() - 0.5)
-const pick = <T,>(a: T[], n: number) => shuffle(a).slice(0, n)
-
-function makeQuestions(): Q[] {
-  const qs: Q[] = []
-  // 1. term → definitie
-  for (const t of pick(TERMS, 3)) {
-    const wrong = pick(
-      TERMS.filter((x) => x.id !== t.id && x.cat === t.cat),
-      3,
-    ).map((x) => x.def)
-    qs.push({ prompt: `Wat betekent “${t.term}”?`, options: shuffle([t.def, ...wrong]), answer: t.def, explain: `${t.term}: ${t.def}` })
-  }
-  // 2. definitie → term
-  for (const t of pick(TERMS, 3)) {
-    const wrong = pick(
-      TERMS.filter((x) => x.id !== t.id),
-      3,
-    ).map((x) => x.term)
-    qs.push({ prompt: t.def, options: shuffle([t.term, ...wrong]), answer: t.term, explain: `Dat is “${t.term}”.` })
-  }
-  // 3. welke trick zie je?
-  const animated = TRICKS.filter((t) => t.anim && (t.track === 'park' || t.track === 'flat'))
-  for (const t of pick(animated, 2)) {
-    const wrong = pick(
-      animated.filter((x) => x.id !== t.id),
-      3,
-    ).map((x) => x.name)
-    qs.push({
-      prompt: 'Welke trick zie je hier?',
-      anim: t.anim,
-      options: shuffle([t.name, ...wrong]),
-      answer: t.name,
-      explain: `Dit is een ${t.name}. ${t.summary}`,
-    })
-  }
-  // 4. wat moet je eerst kunnen?
-  for (const t of pick(
-    TRICKS.filter((t) => t.prereqs.length),
-    2,
-  )) {
-    const right = TRICK_BY_ID.get(t.prereqs[0])!.name
-    const wrong = pick(
-      TRICKS.filter((x) => !t.prereqs.includes(x.id) && x.id !== t.id && x.level >= t.level),
-      3,
-    ).map((x) => x.name)
-    if (wrong.length < 3) continue
-    qs.push({
-      prompt: `Wat kun je het best eerst leren vóór de ${t.name}?`,
-      options: shuffle([right, ...wrong]),
-      answer: right,
-      explain: `Voor de ${t.name} is ${right} de basis.`,
-    })
-  }
-  return shuffle(qs).slice(0, 10)
-}
-
 export default function Quiz() {
   const nav = useNavigate()
   const [round, setRound] = useState(0)
-  const questions = useMemo(() => makeQuestions(), [round])
+  const questions = useMemo(() => quizRound(), [round])
   const [i, setI] = useState(0)
   const [chosen, setChosen] = useState<string | null>(null)
   const [score, setScore] = useState(0)
