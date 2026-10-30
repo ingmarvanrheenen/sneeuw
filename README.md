@@ -68,6 +68,8 @@ supabase functions deploy coach
 
 **Automatisch deployen via GitHub:** de workflow `.github/workflows/deploy-functions.yml` zet de coach live zodra er op `main` iets in `supabase/functions/` verandert, of handmatig via Actions > Deploy Edge Functions > Run workflow. Eenmalig nodig: maak in Supabase (Account > Access Tokens) een token en zet het in GitHub als repository secret `SUPABASE_ACCESS_TOKEN` (Settings > Secrets and variables > Actions). De Anthropic-key blijft een Supabase secret.
 
+**Migraties via GitHub:** Actions > Run migration > Run workflow, met de bestandsnaam uit `supabase/migrations` (bijv. `20261105000000_crew_status.sql`). Die stuurt dat ene bestand via de Supabase Management API naar de database, met dezelfde `SUPABASE_ACCESS_TOKEN`. Alleen handmatig en per bestand; test eerst lokaal met `npm run test:db`. Je kunt ze ook nog steeds zelf in de SQL Editor plakken.
+
 Over de kosten: de coach gebruikt Claude Opus 5.5 met `effort: low` (snel en zuinig voor chat, `medium` bij een techniek-check met foto) en prompt caching. Een gemiddeld bericht met je logboek als context kost grofweg 1 à 2 cent, dus €100 aan credits is ruim duizenden berichten. Het daglimiet per gebruiker beschermt je budget als je crew de coach ook gebruikt. Verbruik per persoon per dag staat in de tabel `coach_usage`.
 
 ### Push-meldingen aanzetten
