@@ -142,6 +142,19 @@ function Art({
   )
 }
 
+/**
+ * Een sticker als losse SVG-tekst (voor canvas, zoals de deelkaart). `art`: een stemming 1-5 of een reactie-sleutel.
+ * Onbekend: een lege string.
+ */
+export function stickerSvg(art: number | string, size = 64): string {
+  const inner = typeof art === 'number' ? MOODS[Math.max(1, Math.min(5, Math.round(art || 3))) as 1 | 2 | 3 | 4 | 5] : REACTION_ART[art]
+  if (!inner) return ''
+  return (
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="${size}" height="${size}" fill="none" stroke="${INK}" ` +
+    `stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">${inner}</svg>`
+  )
+}
+
 /** Stemming 1-5 als sticker. */
 export function MoodSticker({ value, size = 26, label, className }: { value: number; size?: number; label?: string; className?: string }) {
   const v = Math.max(1, Math.min(5, Math.round(value || 3))) as 1 | 2 | 3 | 4 | 5
