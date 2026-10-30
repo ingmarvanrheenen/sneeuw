@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { Button, List, Page, PageHeader, Progress, Row, Section, Stat, Toggle, cx, inputCls, StatGroup } from '../components/ui'
 import { GroupList } from '../components/GroupList'
+import { CarPool } from '../components/CarPool'
 import { CrewGoals } from '../components/CrewGoals'
 import { TripRecap } from '../components/TripRecap'
 import { TripBingo } from '../components/TripBingo'
@@ -68,6 +69,7 @@ function CrewShare({ trip }: { trip: Trip }) {
           <TripBingo tripId={trip.id} crewId={shared.id} />
           <CrewGoals tripId={trip.id} crewId={shared.id} ownerId={trip.userId ?? user.id} ready={ready} />
           <GroupList tripId={trip.id} crewId={shared.id} ownerId={trip.userId ?? user.id} ready={ready} />
+          <CarPool tripId={trip.id} crewId={shared.id} ready={ready} />
         </>
       )}
     </>
