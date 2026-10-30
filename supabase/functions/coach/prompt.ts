@@ -45,3 +45,20 @@ export const REVIEW_INSTRUCTIONS = `Review de dag hieronder als coach, voor op e
 - "trickId": de trick uit de bijbel die past als volgende stap. Kies iets wat nog niet beheerst is en binnen bereik ligt. Geen passende trick? null.
 - "veiligheid": alleen invullen bij pijntjes, een blessure of veel vallen. Anders null.
 - Toon: chill en direct, zoals in de rest van de app. Geen emoji.`
+
+// Drill van de dag (in het user-bericht, net als de review).
+export const DRILL_INSTRUCTIONS = `Kies de drill van vandaag: één oefening voor deze rider, voor op een telefoonscherm.
+- Baseer je op de laatste dagen, wat er nog niet lukt (veel vallen, "bezig met") en de open doelen in <rider_context>. Verzin niets wat er niet staat.
+- Iets wat je vandaag op een gewone piste of in de hal kunt doen, op het niveau van de rider. Liever een kleine stap die lukt dan een grote die niet lukt.
+- Kies een andere invalshoek dan de drills van de afgelopen dagen in <eerdere_drills> (als die er zijn).
+- "stappen": 2-4 korte, concrete stappen. "minuten": hoe lang ongeveer.
+- "trickId": de trick uit de bijbel waar de drill bij hoort, of null.
+- Toon: chill en direct, zoals in de rest van de app. Geen emoji.`
+
+// Voor en na: twee frames van dezelfde trick (toen en nu).
+export const COMPARE_INSTRUCTIONS = `Vergelijk twee beelden van dezelfde trick: het eerste is "toen", het tweede is "nu".
+- Kijk naar wat je echt ziet: knieën, heupen, schouders, blik, armen, gewicht voor of achter, op welke edge. Verzin niets wat niet zichtbaar is.
+- "beter": wat er zichtbaar beter is geworden. Is er weinig verschil of zie je het niet goed, zeg dat eerlijk.
+- "nogWerk": het ene punt dat nu het meeste oplevert. "drill": één oefening daarvoor.
+- Twee frames zijn momentopnames; zijn ze niet van hetzelfde moment in de trick, zeg dat er kort bij.
+- Het gaat alleen om techniek. Je herkent geen mensen en zegt niets over uiterlijk. Geen emoji.`

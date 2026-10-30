@@ -9,7 +9,13 @@ import {
   checkImage,
   checkMessages,
   checkTricks,
+  checkCompareInput,
+  checkComparison,
+  checkDrill,
+  checkTrickIds,
+  COMPARE_SCHEMA,
   decodeEvents,
+  drillSchema,
   effortFor,
   encodeEvent,
   type CoachAction,
@@ -263,5 +269,57 @@ describe('fouten van de Claude API', () => {
     expect(apiErrorText(400, body('invalid_request_error', 'x'.repeat(500))).length).toBeLessThan(200)
     expect(apiErrorText(500, null)).toBe('Coach heeft een probleem (500).')
     expect(apiErrorText(undefined, 'rommel')).toBe('Coach heeft een probleem (?).')
+  })
+})
+
+describe('drill van de dag', () => {
+  it('schema: trick alleen uit de bijbel (of null); zonder tricks altijd null', () => {
+    const sch = drillSchema(['ollie'])
+    expect(sch.required).toEqual(['titel', 'waarom', 'stappen', 'minuten', 'trickId'])
+    expect(JSON.stringify(sch.properties.trickId)).toContain('"enum":["ollie"]')
+    expect(drillSchema([]).properties.trickId).toEqual({ type: 'null' })
+  })
+
+  it('checkt het antwoord: max 4 stappen, minuten tussen 5 en 45, onbekende trick wordt null', () => {
+    const d = checkDrill(
+      { titel: ' Garlands  op tempo ', waarom: 'Je viel veel.', stappen: ['a', 'b', '', 'c', 'd', 'e'], minuten: 90, trickId: 'kurk' },
+      IDS,
+    )
+    expect(d).toEqual({ titel: 'Garlands op tempo', waarom: 'Je viel veel.', stappen: ['a', 'b', 'c', 'd'], minuten: 45, trickId: null })
+    expect(checkDrill({ titel: 'x', stappen: ['y'], minuten: 'veel', trickId: 'ollie' }, IDS)).toMatchObject({
+      minuten: 15,
+      trickId: 'ollie',
+    })
+    expect(checkDrill({ titel: '', stappen: ['y'] }, IDS)).toBeNull()
+    expect(checkDrill({ titel: 'x', stappen: [] }, IDS)).toBeNull()
+    expect(checkDrill('rommel', IDS)).toBeNull()
+  })
+
+  it('trick-ids: alleen geldige, uniek, begrensd', () => {
+    expect(checkTrickIds(['ollie', 'ollie', 'Bad Id', 3, 'nollie'])).toEqual(['ollie', 'nollie'])
+    expect(checkTrickIds('nee')).toEqual([])
+    expect(checkTrickIds(Array.from({ length: 300 }, (_, i) => `t-${i}`))).toHaveLength(150)
+  })
+})
+
+describe('voor en na', () => {
+  it('input: twee geldige beelden en een trick; dagen begrensd', () => {
+    const ok = checkCompareInput({ before: img, after: img, trick: 'Ollie', days: 40.6 })
+    expect(ok).toMatchObject({ trick: 'Ollie', days: 41 })
+    expect(checkCompareInput({ before: img, trick: 'Ollie' })).toEqual({ error: 'Twee beelden nodig om te vergelijken' })
+    expect(checkCompareInput({ before: img, after: { mediaType: 'image/gif', data: B64 }, trick: 'Ollie' })).toHaveProperty('error')
+    expect(checkCompareInput({ before: img, after: img, trick: '' })).toEqual({ error: 'Welke trick?' })
+    expect(checkCompareInput({ before: img, after: img, trick: 'x', days: -5 })).toMatchObject({ days: 0 })
+  })
+
+  it('antwoord: beter en nog-werk zijn verplicht', () => {
+    expect(COMPARE_SCHEMA.required).toEqual(['beter', 'nogWerk', 'drill'])
+    expect(checkComparison({ beter: 'Knieën meer gebogen.', nogWerk: 'Schouders.', drill: 'Garlands.' })).toEqual({
+      beter: 'Knieën meer gebogen.',
+      nogWerk: 'Schouders.',
+      drill: 'Garlands.',
+    })
+    expect(checkComparison({ beter: '', nogWerk: 'x' })).toBeNull()
+    expect(checkComparison(null)).toBeNull()
   })
 })

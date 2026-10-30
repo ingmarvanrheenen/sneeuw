@@ -63,10 +63,14 @@ In `src/components/Poster.tsx`:
 
 Kaarten hebben een rand en hoek 8px, knoppen en velden 6px. Over het hele scherm ligt een lichte korrel. Tikdoelen zijn minimaal 44pt. Safe areas via `pt-safe` en `pb-safe`; de tabbalk zweeft boven de home-indicator.
 
+## Deelkaarten
+
+De story-kaarten (1080×1920) in `src/lib/shareCard.ts` volgen dezelfde stijl, met vaste kleuren omdat het een plaatje is: zwart met korrel, je foto als sticker met witte rand en tape (of een lime poster met bergen), het resort groot in smalle hoofdletters, cijfers in blokken met slams in oranje, je stemming als sticker op de hoek van het beeld, tricks als lime labels en de mascotte onderin. Season Wrapped: posters, om en om zwart en lime, met het icoon op een ster-sticker. Wat erop staat (`dayCardContent`, `wrappedColors`) is getest; het tekenen check je met een screenshot.
+
 ## Iconen en stickers
 
 - **Iconen** (`<Icon name="..." />`): 24-grid, stroke 1.8, square caps, miter joins. Voor bediening en rijen.
-- **Stickers** (`src/design/Stickers.tsx`): die-cut met witte rand, dikke inktlijnen, lime/oranje/ijsblauw. Stemmingen 1-5 (`MoodSticker`, `Mood`), crew-reacties (`ReactionSticker`, op de sleutel in de database), en `MoodPick` voor kiezers. Nieuwe sticker: in dat bestand, op het 64-grid. De lijn-iconen `mood1`-`mood5` blijven voor de share-kaart (canvas).
+- **Stickers** (`src/design/Stickers.tsx`): die-cut met witte rand, dikke inktlijnen, lime/oranje/ijsblauw. Stemmingen 1-5 (`MoodSticker`, `Mood`), crew-reacties (`ReactionSticker`, op de sleutel in de database), en `MoodPick` voor kiezers. Nieuwe sticker: in dat bestand, op het 64-grid. `stickerSvg` geeft een sticker als losse SVG, voor op canvas.
 - Landen als tekst-tag (`FR`, `AT`).
 
 ## Beweging

@@ -13,13 +13,17 @@ import { todayISO, uid } from './ids'
 import {
   LIMITS,
   STREAM_TYPE,
+  checkComparison,
+  checkDrill,
   decodeEvents,
   type CoachAction,
   type CoachImage,
+  type Comparison,
+  type Drill,
   type WireMessage,
 } from '../../supabase/functions/coach/protocol'
 
-export type { CoachAction, CoachImage, PlanDay } from '../../supabase/functions/coach/protocol'
+export type { CoachAction, CoachImage, Comparison, Drill, PlanDay } from '../../supabase/functions/coach/protocol'
 
 export interface CoachMessage extends WireMessage {
   /** indexen van `actions` waar de rider al op getikt heeft */
@@ -193,6 +197,59 @@ export async function reviewDay(s: Session): Promise<DayReview> {
   const r = (await res.json()) as Omit<DayReview, 'createdAt'>
   if (!r?.focus) throw new CoachError('Coach gaf geen bruikbare review terug.')
   return { ...r, trickId: r.trickId && TRICK_BY_ID.has(r.trickId) ? r.trickId : null, createdAt: Date.now() }
+}
+
+// ── Drill van de dag ──────────────────────────────────────────────────────────
+// Eén oefening per dag, op verzoek (kost één coach-bericht). Bewaard per datum, zodat hij die dag blijft staan
+// en de coach de volgende keer een andere invalshoek kan kiezen.
+
+const DRILL_KEY = 'coach:drills'
+export type SavedDrill = Drill & { date: string; createdAt: number }
+
+async function drillLog(): Promise<Record<string, SavedDrill>> {
+  return kvGet<Record<string, SavedDrill>>(DRILL_KEY, {})
+}
+
+/** De drill van deze dag, als je hem al opgehaald hebt. */
+export async function cachedDrill(date: string): Promise<SavedDrill | null> {
+  return (await drillLog())[date] ?? null
+}
+
+/** Vraag de coach om de drill van vandaag. Al opgehaald: die van vandaag (geen tweede call). */
+export async function askDrill(date: string): Promise<SavedDrill> {
+  const log = await drillLog()
+  if (log[date]) return log[date]
+  const [context, input] = await Promise.all([buildContext(), loadProgressInput()])
+  const done = new Set(input.tricks.filter((t) => t.status === 'beheerst').map((t) => t.trickId))
+  const trickIds = TRICKS.map((t) => t.id).filter((id) => !done.has(id))
+  const recent = Object.values(log)
+    .sort((a, b) => b.date.localeCompare(a.date))
+    .slice(0, 5)
+    .map((d) => d.titel)
+  const res = await coachRequest({ mode: 'drill', context, trickIds, recent })
+  const d = checkDrill(await res.json(), trickIds)
+  if (!d) throw new CoachError('Coach gaf geen bruikbare drill terug.')
+  const saved: SavedDrill = { ...d, trickId: d.trickId && TRICK_BY_ID.has(d.trickId) ? d.trickId : null, date, createdAt: Date.now() }
+  // alleen de laatste twee weken bewaren
+  const keep = Object.fromEntries(
+    Object.entries({ ...log, [date]: saved })
+      .sort(([a], [b]) => b.localeCompare(a))
+      .slice(0, 14),
+  )
+  await kvSet(DRILL_KEY, keep)
+  return saved
+}
+
+// ── Voor en na ────────────────────────────────────────────────────────────────
+
+/** Laat de coach twee frames van dezelfde trick vergelijken (toen en nu). Telt als één coach-bericht. */
+export async function compareClips(trickId: string, before: CoachImage, after: CoachImage, days: number): Promise<Comparison> {
+  const context = await buildContext()
+  const trick = TRICK_BY_ID.get(trickId)?.name ?? trickId
+  const res = await coachRequest({ mode: 'compare', context, trick, days, before, after })
+  const c = checkComparison(await res.json())
+  if (!c) throw new CoachError('Coach gaf geen bruikbare vergelijking terug.')
+  return c
 }
 
 /** Alleen wat de server nodig heeft, met alleen de laatste foto's (oudere zijn al besproken). */

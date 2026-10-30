@@ -9,6 +9,7 @@ import { useProgress } from '../lib/useProgress'
 import { seasonOf } from '../lib/format'
 import { LiftQuestion } from '../components/LiftQuestion'
 import { DailyChallenge } from '../components/DailyChallenge'
+import { DailyDrill } from '../components/DailyDrill'
 import { sessionsSorted, useKind } from '../lib/repo'
 import { getProfile } from '../lib/auth'
 import { TRICKS, TRICK_BY_ID } from '../content/tricks'
@@ -147,6 +148,7 @@ export default function Home() {
       )}
       <QuickLog open={quick} onClose={() => setQuick(false)} />
       <DailyChallenge />
+      <DailyDrill />
       <LiftQuestion />
 
       <List className="mt-3">
