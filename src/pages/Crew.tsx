@@ -33,6 +33,7 @@ import { RiderAvatar } from '../components/RiderParts'
 import { riderProfiles, type CrewRider } from '../lib/riders'
 import { SnowGames } from '../components/SnowParts'
 import { CrewLadder } from '../components/Ladder'
+import { CrewWeekGoal } from '../components/CrewWeekGoal'
 
 function NeedAccount() {
   const nav = useNavigate()
@@ -347,6 +348,9 @@ export default function Crew() {
             <div className="flex justify-center py-6 text-muted">
               <Spinner size={20} />
             </div>
+          )}
+          {tab === 'feed' && !loading && crew && members.length > 0 && (
+            <CrewWeekGoal crewId={crew.id} members={members} posts={posts} me={user.id} />
           )}
           {tab === 'feed' && !loading && (
             <div className="mt-4 space-y-3">
