@@ -71,6 +71,10 @@ Het crew-leaderboard per seizoen (dit seizoen, vorig seizoen, altijd). Geen eige
 
 Bovenaan de crew-feed: één gezamenlijk doel per crew per week (maandag t/m zondag), als poster. Geen eigen tabel: het doel wordt gekozen met een seed van crew + week (iedereen ziet hetzelfde), uit vijf soorten (samen uren, samen dagen, samen tricks geland, samen dagen rood of zwart, iedereen minstens één dag), en schaalt mee met de crew (rekent met minstens twee, behalve "iedereen"). De stand komt uit de gedeelde dagen in de feed; dezelfde rider op dezelfde datum telt één keer, een trick die je twee keer landt ook. Gehaald: stempel erop.
 
+## Waar is de crew (`src/lib/crewStatus.ts`)
+
+Boven in de crew-feed zet je met één tik je status: in de lift, op de piste, pauze, in het park, bij het huisje of klaar voor vandaag. Geen locatie, alleen de status en wanneer. Tabel `crew_status`: één rij per persoon, jij en je crewgenoten zien hem. Zetten gaat alleen via `set_crew_status()` (security definer), die ook de tijd invult, zodat niemand een tijd kan verzinnen; weghalen mag je eigen rij. Ouder dan 12 uur telt niet meer. Nog een keer op je status tikken haalt hem weg. RLS-scenario's: `supabase/tests/crew_status.sh`.
+
 ## Dagopdracht (`src/lib/challenges.ts`)
 
 Op Home: elke dag één challenge uit `src/content/challenges.ts` die bij je niveau past (hoogste gelande trick, ±1, en alleen met tricks die je al kunt). De opdracht van vandaag ligt vast zodra je hem ziet; één keer per dag kun je een andere vragen. Je lijst staat lokaal in kv (`dagopdracht`), dus het werkt offline. Gedaan gaat ook naar `daily_challenges` (één rij per persoon per dag, alleen het id), zodat je crewgenoten zien wie vandaag een opdracht deed. Offline afgevinkt gaat later alsnog mee (`flushChallenges`, tot een week terug). Telt mee voor XP (+15) en de badge "Opdrachtjesjager" (10). RLS-scenario's: `supabase/tests/daily_challenges.sh`.

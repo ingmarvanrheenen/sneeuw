@@ -34,6 +34,7 @@ import { riderProfiles, type CrewRider } from '../lib/riders'
 import { SnowGames } from '../components/SnowParts'
 import { CrewLadder } from '../components/Ladder'
 import { CrewWeekGoal } from '../components/CrewWeekGoal'
+import { CrewWhere } from '../components/CrewWhere'
 
 function NeedAccount() {
   const nav = useNavigate()
@@ -350,7 +351,10 @@ export default function Crew() {
             </div>
           )}
           {tab === 'feed' && !loading && crew && members.length > 0 && (
-            <CrewWeekGoal crewId={crew.id} members={members} posts={posts} me={user.id} />
+            <>
+              <CrewWhere members={members} me={user.id} />
+              <CrewWeekGoal crewId={crew.id} members={members} posts={posts} me={user.id} />
+            </>
           )}
           {tab === 'feed' && !loading && (
             <div className="mt-4 space-y-3">
