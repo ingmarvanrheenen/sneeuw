@@ -7,6 +7,9 @@ import {
   MEMORY_MAX,
   addMemory,
   applyAction,
+  askDrill,
+  cachedDrill,
+  compareClips,
   buildContext,
   dayText,
   imageSrc,
@@ -210,5 +213,57 @@ describe('foto voor de coach', () => {
   it('zonder canvas een nette fout', () => {
     vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(null)
     expect(() => toCoachImage(document.createElement('img'), 10, 10)).toThrow(CoachError)
+  })
+})
+
+describe('drill van de dag', () => {
+  beforeEach(async () => {
+    await db.kv.clear()
+    vi.stubEnv('VITE_SUPABASE_URL', 'https://x.supabase.co')
+    vi.stubEnv('VITE_SUPABASE_ANON_KEY', 'anon')
+    Object.defineProperty(navigator, 'onLine', { configurable: true, get: () => true })
+  })
+  afterEach(() => {
+    vi.unstubAllEnvs()
+    vi.unstubAllGlobals()
+  })
+  const answer = (over = {}) =>
+    new Response(JSON.stringify({ titel: 'Garlands', waarom: 'Rustig', stappen: ['Een', 'Twee'], minuten: 15, trickId: 'ollie', ...over }))
+
+  it('één call per dag: daarna komt hij uit de cache; eerdere drills gaan mee voor afwisseling', async () => {
+    const fetchMock = vi.fn(async () => answer())
+    vi.stubGlobal('fetch', fetchMock)
+    const d = await askDrill('2027-01-16')
+    expect(d).toMatchObject({ titel: 'Garlands', trickId: 'ollie', date: '2027-01-16' })
+    await askDrill('2027-01-16')
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(await cachedDrill('2027-01-16')).toMatchObject({ titel: 'Garlands' })
+    expect(await cachedDrill('2027-01-17')).toBeNull()
+
+    fetchMock.mockImplementation(async () => answer({ titel: 'Switch-bochten' }))
+    await askDrill('2027-01-17')
+    const body = JSON.parse((fetchMock.mock.calls[1] as unknown as [string, RequestInit])[1].body as string)
+    expect(body.mode).toBe('drill')
+    expect(body.recent).toEqual(['Garlands'])
+    expect(body.context).toContain('Laatste dagen')
+    expect(body.trickIds).toContain('ollie')
+  })
+
+  it('onbruikbaar antwoord: nette fout en niks bewaard', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => new Response(JSON.stringify({ titel: '' }))),
+    )
+    await expect(askDrill('2027-01-16')).rejects.toBeInstanceOf(CoachError)
+    expect(await cachedDrill('2027-01-16')).toBeNull()
+  })
+
+  it('voor en na: stuurt beide beelden, de tricknaam en het aantal dagen', async () => {
+    const fetchMock = vi.fn(async () => new Response(JSON.stringify({ beter: 'Lager', nogWerk: 'Blik', drill: 'Garlands' })))
+    vi.stubGlobal('fetch', fetchMock)
+    const pic = { mediaType: 'image/jpeg' as const, data: btoa('x'.repeat(300)) }
+    expect(await compareClips('ollie', pic, pic, 30)).toEqual({ beter: 'Lager', nogWerk: 'Blik', drill: 'Garlands' })
+    const body = JSON.parse((fetchMock.mock.calls[0] as unknown as [string, RequestInit])[1].body as string)
+    expect(body).toMatchObject({ mode: 'compare', trick: 'Ollie', days: 30, before: pic, after: pic })
   })
 })

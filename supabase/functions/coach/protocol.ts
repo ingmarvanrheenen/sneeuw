@@ -350,3 +350,100 @@ export function apiErrorText(status: number | undefined, body: unknown): string 
   if (status === 529 || err?.type === 'overloaded_error') return 'Claude is even overbelast, probeer het zo nog eens.'
   return `Coach heeft een probleem (${status ?? '?'})${msg ? `: ${msg.slice(0, 160)}` : '.'}`
 }
+
+// ── Drill van de dag ────────────────────────────────────────────────────────
+
+/** Eén oefening voor vandaag, gekozen uit je laatste dagen en doelen. */
+export interface Drill {
+  titel: string
+  waarom: string
+  stappen: string[]
+  minuten: number
+  trickId: string | null
+}
+
+/** Alleen geldige trick-ids, uniek en begrensd (de coach kiest alleen uit tricks die de app kent). */
+export function checkTrickIds(raw: unknown, max = 150): string[] {
+  return [...new Set((Array.isArray(raw) ? raw : []).filter((t): t is string => typeof t === 'string' && TRICK_ID.test(t)))].slice(0, max)
+}
+
+export function drillSchema(trickIds: readonly string[]) {
+  return {
+    type: 'object',
+    properties: {
+      titel: { type: 'string', description: 'Naam van de oefening, max 6 woorden.' },
+      waarom: { type: 'string', description: 'Waarom juist deze oefening nu, met verwijzing naar het logboek of de doelen. 1-2 zinnen.' },
+      stappen: { type: 'array', items: { type: 'string' }, description: '2-4 korte stappen, elk één zin.' },
+      minuten: { type: 'integer', description: 'Hoeveel minuten ongeveer, 5-45.' },
+      trickId: trickIds.length
+        ? {
+            anyOf: [{ type: 'string', enum: [...trickIds] }, { type: 'null' }],
+            description: 'De trick uit de bijbel waar dit bij hoort, of null.',
+          }
+        : { type: 'null' },
+    },
+    required: ['titel', 'waarom', 'stappen', 'minuten', 'trickId'],
+    additionalProperties: false,
+  }
+}
+
+/** Checkt en begrenst het antwoord van de coach; null als het niet bruikbaar is. */
+export function checkDrill(raw: unknown, trickIds: readonly string[]): Drill | null {
+  const r = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>
+  const titel = text(r.titel, 60)
+  const stappen = (Array.isArray(r.stappen) ? r.stappen : [])
+    .map((s) => text(s, 200))
+    .filter(Boolean)
+    .slice(0, 4)
+  if (!titel || !stappen.length) return null
+  const min = Math.round(Number(r.minuten))
+  return {
+    titel,
+    waarom: text(r.waarom, 300),
+    stappen,
+    minuten: Number.isFinite(min) ? Math.max(5, Math.min(45, min)) : 15,
+    trickId: typeof r.trickId === 'string' && trickIds.includes(r.trickId) ? r.trickId : null,
+  }
+}
+
+// ── Voor en na: twee frames van dezelfde trick vergelijken ──────────────────
+
+export interface Comparison {
+  beter: string
+  nogWerk: string
+  drill: string
+}
+
+export const COMPARE_SCHEMA = {
+  type: 'object',
+  properties: {
+    beter: {
+      type: 'string',
+      description: 'Wat er zichtbaar beter is in "nu" dan in "toen". 1-3 zinnen, concreet (knieën, schouders, gewicht, edge).',
+    },
+    nogWerk: { type: 'string', description: 'Het ene punt dat nog het meeste oplevert. 1-2 zinnen.' },
+    drill: { type: 'string', description: 'Eén drill om dat punt te oefenen. 1-2 zinnen.' },
+  },
+  required: ['beter', 'nogWerk', 'drill'],
+  additionalProperties: false,
+} as const
+
+/** Checkt wat de app meestuurt voor een vergelijking: twee geldige foto's en een trick. */
+export function checkCompareInput(
+  raw: unknown,
+): { before: CoachImage; after: CoachImage; trick: string; days: number } | { error: string } {
+  const r = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>
+  const before = checkImage(r.before)
+  const after = checkImage(r.after)
+  if (!before || !after) return { error: 'Twee beelden nodig om te vergelijken' }
+  const trick = text(r.trick, 60)
+  if (!trick) return { error: 'Welke trick?' }
+  const days = Math.max(0, Math.min(3650, Math.round(Number(r.days) || 0)))
+  return { before, after, trick, days }
+}
+
+export function checkComparison(raw: unknown): Comparison | null {
+  const r = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>
+  const out = { beter: text(r.beter, 400), nogWerk: text(r.nogWerk, 300), drill: text(r.drill, 300) }
+  return out.beter && out.nogWerk ? out : null
+}

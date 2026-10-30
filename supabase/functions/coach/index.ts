@@ -3,16 +3,22 @@
 // tekst, plus knoppen (doel, trick, oefenplan, geheugen) die de coach via tools voorstelt.
 import Anthropic from 'npm:@anthropic-ai/sdk@1.3.0'
 import { createClient } from 'npm:@supabase/supabase-js@2'
-import { REVIEW_INSTRUCTIONS, SYSTEM_PROMPT } from './prompt.ts'
+import { COMPARE_INSTRUCTIONS, DRILL_INSTRUCTIONS, REVIEW_INSTRUCTIONS, SYSTEM_PROMPT } from './prompt.ts'
 import {
+  COMPARE_SCHEMA,
   LIMITS,
   STREAM_TYPE,
   apiErrorText,
   buildMessages,
   buildTools,
   checkAction,
+  checkCompareInput,
+  checkComparison,
+  checkDrill,
   checkMessages,
+  checkTrickIds,
   checkTricks,
+  drillSchema,
   effortFor,
   encodeEvent,
   toolResult,
@@ -46,7 +52,19 @@ Deno.serve(async (req) => {
   if (userError || !user) return json(401, { error: 'Log eerst in' })
 
   // 2. Input checken
-  let body: { mode?: string; messages?: unknown; context?: string; day?: string; trickIds?: string[]; tricks?: unknown }
+  let body: {
+    mode?: string
+    messages?: unknown
+    context?: string
+    day?: string
+    trickIds?: string[]
+    tricks?: unknown
+    recent?: unknown
+    before?: unknown
+    after?: unknown
+    trick?: unknown
+    days?: unknown
+  }
   try {
     body = await req.json()
   } catch {
@@ -67,6 +85,8 @@ Deno.serve(async (req) => {
     })
 
   if (body.mode === 'review') return review(body, countUsage)
+  if (body.mode === 'drill') return drill(body, countUsage)
+  if (body.mode === 'compare') return compare(body, countUsage)
 
   const tricks = checkTricks(body.tricks)
   const trickIds = tricks.map((t) => t.id)
@@ -221,4 +241,88 @@ async function review(
       return json(e instanceof Anthropic.RateLimitError ? 503 : 502, { error: apiErrorText(e.status, e.error) })
     return json(500, { error: 'Coach is even weg, probeer het zo nog eens.' })
   }
+}
+
+// ── Eén gestructureerd antwoord (drill, vergelijking) ─────────────────────────
+
+type Content = Anthropic.Beta.BetaContentBlockParam[]
+
+/** Vraagt één JSON-antwoord volgens een schema. Geeft de geparste JSON, of een Response met een fout. */
+async function structured(
+  content: Content,
+  schema: Record<string, unknown>,
+  effort: 'low' | 'medium',
+  countUsage: (u: Anthropic.Beta.BetaUsage) => unknown,
+): Promise<unknown | Response> {
+  try {
+    const res = await anthropic.beta.messages.create({
+      model: MODEL,
+      max_tokens: 16000,
+      betas: ['server-side-fallback-2026-07-01'],
+      fallbacks: 'default',
+      output_config: { effort, format: { type: 'json_schema', schema } },
+      system: [{ type: 'text', text: SYSTEM_PROMPT, cache_control: { type: 'ephemeral' } }],
+      messages: [{ role: 'user', content }],
+    })
+    await countUsage(res.usage)
+    if (res.stop_reason === 'refusal') return json(422, { error: 'Coach kan hier niet mee helpen. Probeer het later nog eens.' })
+    if (res.stop_reason === 'max_tokens') return json(502, { error: 'Coach raakte de draad kwijt. Probeer het nog eens.' })
+    const text = res.content.find((b) => b.type === 'text')
+    if (!text || text.type !== 'text') return json(502, { error: 'Coach gaf geen antwoord terug.' })
+    return JSON.parse(text.text)
+  } catch (e) {
+    console.error(e)
+    if (e instanceof Anthropic.APIError)
+      return json(e instanceof Anthropic.RateLimitError ? 503 : 502, { error: apiErrorText(e.status, e.error) })
+    return json(500, { error: 'Coach is even weg, probeer het zo nog eens.' })
+  }
+}
+
+/** Drill van de dag: één oefening op basis van je laatste dagen en doelen. */
+async function drill(
+  body: { context?: string; trickIds?: unknown; recent?: unknown },
+  countUsage: (u: Anthropic.Beta.BetaUsage) => unknown,
+): Promise<Response> {
+  const context = (body.context ?? '').slice(0, LIMITS.context)
+  const trickIds = checkTrickIds(body.trickIds)
+  const recent = (Array.isArray(body.recent) ? body.recent : [])
+    .filter((t): t is string => typeof t === 'string')
+    .slice(0, 5)
+    .map((t) => `- ${t.slice(0, 80)}`)
+    .join('\n')
+  const out = await structured(
+    [
+      { type: 'text', text: `<rider_context>\n${context}\n</rider_context>` },
+      { type: 'text', text: `${DRILL_INSTRUCTIONS}\n\n<eerdere_drills>\n${recent || '- geen'}\n</eerdere_drills>` },
+    ],
+    drillSchema(trickIds),
+    'low',
+    countUsage,
+  )
+  if (out instanceof Response) return out
+  const d = checkDrill(out, trickIds)
+  return d ? json(200, d) : json(502, { error: 'Coach gaf geen bruikbare drill terug.' })
+}
+
+/** Voor en na: twee frames van dezelfde trick naast elkaar laten beoordelen. */
+async function compare(body: Record<string, unknown>, countUsage: (u: Anthropic.Beta.BetaUsage) => unknown): Promise<Response> {
+  const input = checkCompareInput(body)
+  if ('error' in input) return json(400, { error: input.error })
+  const context = (typeof body.context === 'string' ? body.context : '').slice(0, LIMITS.context)
+  const out = await structured(
+    [
+      { type: 'text', text: `<rider_context>\n${context}\n</rider_context>` },
+      { type: 'text', text: `Toen (${input.days} dagen eerder):` },
+      { type: 'image', source: { type: 'base64', media_type: input.before.mediaType, data: input.before.data } },
+      { type: 'text', text: 'Nu:' },
+      { type: 'image', source: { type: 'base64', media_type: input.after.mediaType, data: input.after.data } },
+      { type: 'text', text: `${COMPARE_INSTRUCTIONS}\n\nTrick: ${input.trick}` },
+    ],
+    COMPARE_SCHEMA as unknown as Record<string, unknown>,
+    'medium',
+    countUsage,
+  )
+  if (out instanceof Response) return out
+  const c = checkComparison(out)
+  return c ? json(200, c) : json(502, { error: 'Coach gaf geen bruikbare vergelijking terug.' })
 }

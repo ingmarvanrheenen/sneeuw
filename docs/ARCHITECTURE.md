@@ -139,6 +139,10 @@ De app leest ook nog gewone tekst als de functie (nog) de oude versie is.
 
 **Dagreview** (`mode: 'review'`): op verzoek vanuit het dagdetail. De app stuurt de rider-context, de dag als tekst (`dayText()`) en de trick-ids die je nog niet geland hebt. De functie vraagt één antwoord met structured outputs (`output_config.format`, JSON-schema): `goed`, `focus`, `oefening`, `trickId` (alleen uit de meegestuurde lijst, als `enum`) en `veiligheid`. De review wordt bij de dag bewaard (`session.review`) en synct mee. De voorgestelde trick zet je met één tik als doel. Een review telt als één coach-bericht voor de daglimiet.
 
+**Drill van de dag** (`mode: 'drill'`): op Home, op verzoek ("Geef me een drill"). De app stuurt de rider-context, de trick-ids die je nog niet beheerst en de titels van je laatste vijf drills (voor afwisseling). Structured output: `titel`, `waarom`, `stappen` (max 4), `minuten` (5-45) en `trickId` (alleen uit de lijst). `checkDrill` in `protocol.ts` begrenst het antwoord. De drill wordt per datum bewaard in kv `coach:drills` (laatste twee weken): één call per dag, daarna komt hij uit de cache. Telt als één coach-bericht.
+
+**Voor en na** (`mode: 'compare'`): in het vergelijkscherm van toen en nu ("Laat de coach vergelijken"). De app pakt van beide clips het beeld waar je staat (het huidige videoframe of de foto, via `toCoachImage`; de media hebben `crossOrigin` zodat dat mag) en stuurt ze met de tricknaam en het aantal dagen ertussen. Structured output: `beter`, `nogWerk`, `drill`. De uitslag wordt bewaard per paar clips (kv `coach:compare:<toen>:<nu>`), zodat hij bij opnieuw openen blijft staan zonder nieuwe call.
+
 ## Animaties (`src/anim`)
 
 - Een animatie is een lijst keyframes (`t` van 0 tot 1) plus stappen die synchroon meelopen.
