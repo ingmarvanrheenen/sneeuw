@@ -6,6 +6,7 @@ import { Icon, Spinner } from '../design/icons'
 import { GroupList } from '../components/GroupList'
 import { CarPool } from '../components/CarPool'
 import { HouseNote } from '../components/HouseNote'
+import { TripTournament } from '../components/TripTournament'
 import { CrewGoals } from '../components/CrewGoals'
 import { TripRecap } from '../components/TripRecap'
 import { TripBingo } from '../components/TripBingo'
@@ -74,6 +75,7 @@ export default function CrewTripDetail() {
         <Stat label="Tot" value={t.endDate ? fmtShort(t.endDate) : '–'} />
       </StatGroup>
       {t.startDate && t.startDate <= todayISO() && <TripRecap tripId={ct.id} crewId={ct.crewId} trip={t} />}
+      {t.startDate && t.startDate <= todayISO() && <TripTournament tripId={ct.id} crewId={ct.crewId} ownerId={ct.ownerId} trip={t} />}
       <TripBingo tripId={ct.id} crewId={ct.crewId} />
       <CrewGoals tripId={ct.id} crewId={ct.crewId} ownerId={ct.ownerId} />
       <GroupList tripId={ct.id} crewId={ct.crewId} ownerId={ct.ownerId} />

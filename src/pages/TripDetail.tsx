@@ -4,6 +4,7 @@ import { Button, List, Page, PageHeader, Progress, Row, Section, Stat, Toggle, c
 import { GroupList } from '../components/GroupList'
 import { CarPool } from '../components/CarPool'
 import { HouseNote } from '../components/HouseNote'
+import { TripTournament } from '../components/TripTournament'
 import { CrewGoals } from '../components/CrewGoals'
 import { TripRecap } from '../components/TripRecap'
 import { TripBingo } from '../components/TripBingo'
@@ -67,6 +68,9 @@ function CrewShare({ trip }: { trip: Trip }) {
       {shared && (
         <>
           {trip.startDate && trip.startDate <= todayISO() && <TripRecap tripId={trip.id} crewId={shared.id} trip={trip} />}
+          {trip.startDate && trip.startDate <= todayISO() && (
+            <TripTournament tripId={trip.id} crewId={shared.id} ownerId={trip.userId ?? user.id} trip={trip} ready={ready} />
+          )}
           <TripBingo tripId={trip.id} crewId={shared.id} />
           <CrewGoals tripId={trip.id} crewId={shared.id} ownerId={trip.userId ?? user.id} ready={ready} />
           <GroupList tripId={trip.id} crewId={shared.id} ownerId={trip.userId ?? user.id} ready={ready} />
