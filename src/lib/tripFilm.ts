@@ -24,6 +24,10 @@ import {
 } from './shareCard'
 import type { MediaMeta, Trip } from './types'
 import { scheduleMusic, TRACK_BY_ID, type TrackId } from './filmMusic'
+import { db } from './db'
+import { create } from './repo'
+import { uid } from './ids'
+import { MAX_VIDEO_MB } from './media'
 
 export const FILM = { w: 720, h: 1280, fps: 30 }
 export const MAX_CLIPS = 8
@@ -368,6 +372,8 @@ export interface FilmOptions {
   audio?: AudioContext | null
   /** meeluisteren terwijl hij gemaakt wordt */
   listen?: boolean
+  /** cover voor in je kluis: een klein plaatje van de intro-poster */
+  onThumb?: (dataUrl: string) => void
 }
 
 /**
@@ -472,6 +478,7 @@ export async function renderFilm(plan: FilmPlan, opts: FilmOptions = {}): Promis
   const clock = () => (ctx ? ctx.currentTime - audioStart : (performance.now() - t0) / 1000)
 
   let current = -1
+  let thumbed = false
   try {
     for (;;) {
       abort()
@@ -491,6 +498,11 @@ export async function renderFilm(plan: FilmPlan, opts: FilmOptions = {}): Promis
       const seg = segs[i]
       const src = seg.kind === 'clip' ? (loaded.get(seg.media.id)?.src ?? null) : null
       drawFrame(c, seg, Math.max(0, t - starts[i]) / seg.dur, { src, mascot })
+      // cover: de intro als de titel er staat
+      if (!thumbed && i === 0 && t - starts[0] >= seg.dur * 0.6 && opts.onThumb) {
+        thumbed = true
+        opts.onThumb(thumbOf(canvas))
+      }
       opts.onProgress?.({ phase: 'opnemen', done: Math.min(1, Math.max(0, t) / plan.total) })
       await new Promise((r) => requestAnimationFrame(() => r(null)))
     }
@@ -532,4 +544,38 @@ export function previewMusic(ctx: AudioContext, id: TrackId): () => void {
     out.gain.linearRampToValueAtTime(0.0001, ctx.currentTime + 0.08)
     setTimeout(() => out.disconnect(), 150)
   }
+}
+
+/** Klein plaatje van wat er nu op het canvas staat (180 breed), voor lijsten. */
+export function thumbOf(canvas: HTMLCanvasElement): string {
+  const t = document.createElement('canvas')
+  t.width = 180
+  t.height = Math.round((180 * canvas.height) / canvas.width)
+  t.getContext('2d')?.drawImage(canvas, 0, 0, t.width, t.height)
+  return t.toDataURL('image/jpeg', 0.75)
+}
+
+/** Film bewaren in je kluis: als video bij jou (niet gedeeld met de crew), met de trip erbij. */
+export async function saveFilm(blob: Blob, trip: FilmTrip & { id: string }, thumb?: string): Promise<MediaMeta> {
+  if (blob.size > MAX_VIDEO_MB * 1024 * 1024) throw new Error(`De film is groter dan ${MAX_VIDEO_MB} MB. Kies minder clips.`)
+  const id = uid()
+  await db.blobs.put({ id, blob })
+  return create('media', {
+    id,
+    type: 'video',
+    mime: blob.type || 'video/mp4',
+    size: blob.size,
+    thumb,
+    width: FILM.w,
+    height: FILM.h,
+    crewId: null,
+    caption: `Trip-film ${trip.name || trip.resortName || ''}`.trim(),
+    tripFilm: { tripId: trip.id, title: trip.name || trip.resortName || 'Trip-film' },
+  })
+}
+
+/** Je bewaarde trip-films, nieuwste eerst (van één trip, of allemaal). */
+export async function savedFilms(tripId?: string): Promise<MediaMeta[]> {
+  const all = (await db.records.where('kind').equals('media').toArray()) as MediaMeta[]
+  return all.filter((m) => !m.deleted && m.tripFilm && (!tripId || m.tripFilm.tripId === tripId)).sort((a, b) => b.createdAt - a.createdAt)
 }

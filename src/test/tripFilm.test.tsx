@@ -41,8 +41,12 @@ import {
   PHOTO_S,
   pickVideoMime,
   planFilm,
+  saveFilm,
+  savedFilms,
   type Segment,
 } from '../lib/tripFilm'
+import Vault from '../pages/Vault'
+import { MemoryRouter } from 'react-router-dom'
 import type { MediaMeta } from '../lib/types'
 import { db } from '../lib/db'
 
@@ -349,5 +353,76 @@ describe('zelf clips kiezen', () => {
     await user.click(within(clipsSheet()).getByRole('button', { name: 'Automatisch' }))
     await user.click(within(clipsSheet()).getByRole('button', { name: 'Klaar' }))
     expect(screen.getByRole('button', { name: /Automatisch: 8 van 10/ })).toBeTruthy()
+  })
+})
+
+describe('film bewaren in je kluis', () => {
+  const tripRef = { ...trip, id: 'trip-1' }
+  beforeEach(async () => {
+    await db.records.clear()
+    await db.blobs.clear()
+    Object.defineProperty(navigator, 'onLine', { configurable: true, get: () => true })
+    api.crewMembers.mockResolvedValue([{ user_id: 'u1', display_name: 'Sam', role: 'owner', stats: {} }])
+    api.tripDays.mockResolvedValue([])
+    api.tripMedia.mockResolvedValue([m('a', 'video', 'u1', 1)])
+    api.canMakeFilm.mockReturnValue(true)
+    api.previewMusic.mockReset().mockReturnValue(() => {})
+    vi.stubGlobal('URL', Object.assign(URL, { createObjectURL: () => 'blob:film', revokeObjectURL: () => {} }))
+    vi.stubGlobal(
+      'AudioContext',
+      class {
+        state = 'running'
+        resume = async () => {}
+        close = async () => {}
+      },
+    )
+  })
+  afterEach(() => {
+    cleanup()
+    vi.unstubAllGlobals()
+  })
+
+  it('als privé video bij jou, met de trip en een cover; te groot gaat niet', async () => {
+    const f = await saveFilm(new Blob([new Uint8Array(30_000)], { type: 'video/mp4' }), tripRef, 'data:image/jpeg;base64,x')
+    expect(f).toMatchObject({
+      kind: 'media',
+      type: 'video',
+      mime: 'video/mp4',
+      crewId: null,
+      thumb: 'data:image/jpeg;base64,x',
+      tripFilm: { tripId: 'trip-1', title: 'Tignes 2027' },
+    })
+    expect(await db.blobs.get(f.id)).toBeTruthy()
+    expect(f.size).toBe(30_000)
+    expect((await savedFilms('trip-1')).map((x) => x.id)).toEqual([f.id])
+    expect(await savedFilms('andere-trip')).toEqual([])
+    const big = { size: 60 * 1024 * 1024, type: 'video/mp4' } as Blob
+    await expect(saveFilm(big, tripRef)).rejects.toThrow(/groter dan 50 MB/)
+  })
+
+  it('na het maken: bewaren, dan staat hij bij de trip en in je kluis', async () => {
+    const user = userEvent.setup()
+    api.renderFilm.mockReset().mockImplementation(async (_p, opts) => {
+      opts.onThumb?.('data:image/jpeg;base64,cover')
+      return new Blob([new Uint8Array(20_000)], { type: 'video/mp4' })
+    })
+    render(<TripFilm tripId="trip-1" crewId="c1" trip={trip} />)
+    await user.click(await screen.findByRole('button', { name: 'Maak de film' }))
+    const sheet = screen.getByRole('dialog', { name: 'Trip-film' })
+    await user.click(await within(sheet).findByRole('button', { name: 'Bewaar in je kluis' }))
+    expect(await within(sheet).findByRole('button', { name: 'In je kluis' })).toBeTruthy()
+    const [film] = await savedFilms('trip-1')
+    expect(film.thumb).toBe('data:image/jpeg;base64,cover')
+    await user.click(within(sheet).getByRole('button', { name: 'Klaar' }))
+    expect(await screen.findByRole('button', { name: 'Bekijk Trip-film Tignes 2027' })).toBeTruthy()
+    cleanup()
+
+    render(
+      <MemoryRouter>
+        <Vault />
+      </MemoryRouter>,
+    )
+    expect(await screen.findByRole('heading', { name: 'Trip-films' })).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Bekijk Tignes 2027' })).toBeTruthy()
   })
 })
