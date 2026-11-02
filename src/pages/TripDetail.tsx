@@ -6,6 +6,7 @@ import { CarPool } from '../components/CarPool'
 import { HouseNote } from '../components/HouseNote'
 import { TripTournament } from '../components/TripTournament'
 import { TripFilm } from '../components/TripFilm'
+import { TripPot } from '../components/TripPot'
 import { CrewGoals } from '../components/CrewGoals'
 import { TripRecap } from '../components/TripRecap'
 import { TripBingo } from '../components/TripBingo'
@@ -78,6 +79,7 @@ function CrewShare({ trip }: { trip: Trip }) {
           <GroupList tripId={trip.id} crewId={shared.id} ownerId={trip.userId ?? user.id} ready={ready} />
           <CarPool tripId={trip.id} crewId={shared.id} ready={ready} />
           <HouseNote tripId={trip.id} crewId={shared.id} ownerId={trip.userId ?? user.id} trip={trip} ready={ready} />
+          <TripPot tripId={trip.id} crewId={shared.id} ownerId={trip.userId ?? user.id} ready={ready} />
         </>
       )}
     </>
