@@ -1,10 +1,12 @@
-// Trip-film (proef) op de trippagina: van de gedeelde clips van de crew een korte montage maken en delen.
+// Trip-film op de trippagina: van de gedeelde clips van de crew een korte montage maken en delen,
+// met muziek (tik een stijl om hem te horen) en het geluid van de clips.
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Button, Heading, Progress, Sheet } from './ui'
+import { Button, Chip, Heading, List, Progress, Sheet, Toggle } from './ui'
 import { Icon, Spinner } from '../design/icons'
 import { crewMembers } from '../lib/crew'
 import { tripDays, tripMedia } from '../lib/crewTrips'
-import { canMakeFilm, filmName, looksEmpty, MAX_CLIPS, planFilm, renderFilm, type FilmTrip } from '../lib/tripFilm'
+import { canMakeFilm, filmName, looksEmpty, MAX_CLIPS, planFilm, previewMusic, renderFilm, type FilmTrip } from '../lib/tripFilm'
+import { TRACK_BY_ID, TRACKS, type TrackId } from '../lib/filmMusic'
 import { shareFile } from '../lib/shareCard'
 import { errMsg } from '../lib/errors'
 import { sfx } from '../lib/sounds'
@@ -21,8 +23,12 @@ export function TripFilm({ tripId, crewId, trip, ready = true }: { tripId: strin
   const [names, setNames] = useState<Record<string, string>>({})
   const [open, setOpen] = useState(false)
   const [stage, setStage] = useState<Stage>({ kind: 'idle' })
+  const [music, setMusic] = useState<TrackId>('park')
+  const [clipAudio, setClipAudio] = useState(true)
   const canvas = useRef<HTMLCanvasElement>(null)
   const abort = useRef<AbortController | null>(null)
+  const audio = useRef<AudioContext | null>(null)
+  const stopPreview = useRef<(() => void) | null>(null)
   const { startDate, endDate } = trip
 
   const load = useCallback(async () => {
@@ -40,15 +46,44 @@ export function TripFilm({ tripId, crewId, trip, ready = true }: { tripId: strin
     void load()
   }, [load])
 
+  // weg van de pagina: geluid uit
+  useEffect(
+    () => () => {
+      stopPreview.current?.()
+      void audio.current?.close().catch(() => {})
+    },
+    [],
+  )
+
+  /** iOS laat pas geluid toe na een tik: de AudioContext maken we dus in de tik zelf. */
+  function audioCtx(): AudioContext | null {
+    if (audio.current) return audio.current
+    const AC = window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext
+    if (!AC) return null
+    audio.current = new AC()
+    return audio.current
+  }
+
+  function pickMusic(id: TrackId) {
+    setMusic(id)
+    stopPreview.current?.()
+    stopPreview.current = null
+    const ctx = id === 'geen' ? null : audioCtx()
+    if (ctx) stopPreview.current = previewMusic(ctx, id)
+  }
+
   // film-URL opruimen
   const url = stage.kind === 'klaar' ? stage.url : null
   useEffect(() => () => void (url && URL.revokeObjectURL(url)), [url])
 
   if (!canMakeFilm() || media === null || media.length === 0) return null
-  const plan = planFilm(media, names, trip, tripId)
+  const plan = planFilm(media, names, trip, tripId, { bpm: TRACK_BY_ID.get(music)?.bpm })
   const clips = plan.segments.length - 2
 
   async function make() {
+    stopPreview.current?.()
+    const ctx = music !== 'geen' || clipAudio ? audioCtx() : null
+    void ctx?.resume().catch(() => {})
     abort.current?.abort()
     const ctrl = new AbortController()
     abort.current = ctrl
@@ -59,6 +94,9 @@ export function TripFilm({ tripId, crewId, trip, ready = true }: { tripId: strin
       const blob = await renderFilm(plan, {
         canvas: canvas.current ?? undefined,
         signal: ctrl.signal,
+        music,
+        clipAudio,
+        audio: ctx,
         onProgress: (p) => setStage({ kind: 'busy', ...p }),
       })
       if (ctrl.signal.aborted) return
@@ -83,8 +121,28 @@ export function TripFilm({ tripId, crewId, trip, ready = true }: { tripId: strin
       <div className="card p-4">
         <p className="text-[15px] text-muted">
           {clips === 1 ? 'De gedeelde clip' : `${Math.min(clips, MAX_CLIPS)} gedeelde clips en foto's`} van de crew als film van{' '}
-          {Math.round(plan.total)} seconden, met titels erin. Een proef: nog zonder geluid.
+          {Math.round(plan.total)} seconden, met titels en muziek erin.
         </p>
+        <div className="mb-2 mt-4 text-[15px] font-medium">Muziek</div>
+        <div className="flex flex-wrap gap-2" role="group" aria-label="Muziek">
+          <Chip active={music === 'geen'} onClick={() => pickMusic('geen')}>
+            Geen
+          </Chip>
+          {TRACKS.map((t) => (
+            <Chip key={t.id} active={music === t.id} onClick={() => pickMusic(t.id)}>
+              {t.name}
+            </Chip>
+          ))}
+        </div>
+        <p className="mt-2 text-[13px] text-muted">Tik een stijl om hem even te horen. De cuts vallen op de beat.</p>
+        <List className="mt-3">
+          <Toggle
+            on={clipAudio}
+            onChange={setClipAudio}
+            label="Geluid van de clips"
+            sub={clipAudio ? 'De muziek gaat zachter als een clip geluid heeft' : 'Alleen muziek'}
+          />
+        </List>
         <Button
           className="mt-3 w-full"
           icon={<Icon name="video" size={18} />}
