@@ -75,6 +75,10 @@ Op een crew-trip (en je eigen gedeelde trip): auto's met plekken. Wie rijdt bied
 
 Op een crew-trip (en je eigen gedeelde trip): één gedeeld briefje met adres (link naar Kaarten), wifi-naam en -code (met kopieerknop), in- en uitchecken, eerste lift en vrije notities, plus een kookrooster per avond van de trip. Tabel `crew_trip_house` (één rij per trip): iedereen in de crew vult aan; de app stuurt alleen gewijzigde velden (`changedFields`), zodat twee mensen die tegelijk iets anders aanpassen elkaar niet overschrijven. `updated_by` en `updated_at` vult de database (trigger). Tabel `crew_trip_cooking` (één kok per avond): claimen alleen voor jezelf, het menu past de kok aan, vrijmaken doet de kok of de trip-eigenaar. Laatst bekende stand lokaal, zodat je de wifi-code ook zonder bereik ziet. RLS-scenario's: `supabase/tests/crew_trip_house.sh`.
 
+## Stickers cadeau doen (`src/lib/gifts.ts`)
+
+Op de skipas van een crewgenoot: "Geef een sticker", een van de tien stickers (de vijf stemmingen en de vijf crew-reacties) met een berichtje van max 60 tekens. Op je eigen skipas staan de gekregen stickers onder "Stickers van je crew": plakken (max 3) of weggooien. De geplakte stickers staan schuin op de pas, en die ziet je crew ook. Tabel `sticker_gifts`; een trigger bewaakt max 3 weggeven per 7 dagen (met een advisory lock tegen dubbel tikken) en max 3 geplakt. De ontvanger mag alleen `pinned` aanpassen. Badges kun je niet weggeven: die blijven iets wat je zelf verdient, en XP en badges tellen cadeaus niet mee. RLS-scenario's: `supabase/tests/sticker_gifts.sh`.
+
 ## Crew-doel van de week (`src/lib/crewGoal.ts`)
 
 Bovenaan de crew-feed: één gezamenlijk doel per crew per week (maandag t/m zondag), als poster. Geen eigen tabel: het doel wordt gekozen met een seed van crew + week (iedereen ziet hetzelfde), uit vijf soorten (samen uren, samen dagen, samen tricks geland, samen dagen rood of zwart, iedereen minstens één dag), en schaalt mee met de crew (rekent met minstens twee, behalve "iedereen"). De stand komt uit de gedeelde dagen in de feed; dezelfde rider op dezelfde datum telt één keer, een trick die je twee keer landt ook. Gehaald: stempel erop.

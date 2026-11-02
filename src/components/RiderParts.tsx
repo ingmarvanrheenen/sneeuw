@@ -19,6 +19,8 @@ import { fmtDate } from '../lib/format'
 import { RESORT_BY_ID } from '../content/resorts'
 import type { Profile } from '../lib/types'
 import { boardStyle, checkDesign, isDarkBoard } from '../lib/boardDesign'
+import { PassStickers } from './GiftParts'
+import type { Gift } from '../lib/gifts'
 
 export function RiderAvatar({ photo, name, size = 36, square }: { photo?: string; name: string; size?: number; square?: boolean }) {
   const shape = square ? 'rounded-[22%]' : 'rounded-full'
@@ -58,6 +60,7 @@ export function SkiPass({
   level,
   levelName,
   progress,
+  stickers = [],
   now = new Date(),
 }: {
   userId: string | null
@@ -65,6 +68,8 @@ export function SkiPass({
   profile: Partial<Profile>
   level: number
   levelName: string
+  /** stickers van de crew die op de pas geplakt zijn (max 3) */
+  stickers?: Pick<Gift, 'id' | 'sticker'>[]
   /** 0..1 naar het volgende level; undefined = onbekend (crewgenoot) */
   progress?: number
   now?: Date
@@ -110,6 +115,7 @@ export function SkiPass({
         </svg>
         <span className="num text-[13px] text-muted">{passNumber(userId)}</span>
       </div>
+      <PassStickers gifts={stickers} size={44} className="absolute bottom-2 right-[78px]" />
     </div>
   )
 }
