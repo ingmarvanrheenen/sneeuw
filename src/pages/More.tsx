@@ -20,6 +20,7 @@ const GROUPS: Item[][] = [
     { to: '/gear', label: 'Gear en stance', icon: 'board' },
     { to: '/quiz', label: 'Quiz', icon: 'quiz' },
   ],
+  [{ to: '/nood', label: 'Noodkaart', icon: 'phone' }],
   [
     { to: '/instellingen', label: 'Instellingen', icon: 'sliders' },
     // ontwikkelaarspagina: alleen in dev zichtbaar
