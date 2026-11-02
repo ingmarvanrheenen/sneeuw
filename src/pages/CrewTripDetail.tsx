@@ -8,6 +8,7 @@ import { CarPool } from '../components/CarPool'
 import { HouseNote } from '../components/HouseNote'
 import { TripTournament } from '../components/TripTournament'
 import { TripFilm } from '../components/TripFilm'
+import { TripPot } from '../components/TripPot'
 import { CrewGoals } from '../components/CrewGoals'
 import { TripRecap } from '../components/TripRecap'
 import { TripBingo } from '../components/TripBingo'
@@ -83,6 +84,7 @@ export default function CrewTripDetail() {
       <GroupList tripId={ct.id} crewId={ct.crewId} ownerId={ct.ownerId} />
       <CarPool tripId={ct.id} crewId={ct.crewId} />
       <HouseNote tripId={ct.id} crewId={ct.crewId} ownerId={ct.ownerId} trip={t} />
+      <TripPot tripId={ct.id} crewId={ct.crewId} ownerId={ct.ownerId} />
     </Page>
   )
 }

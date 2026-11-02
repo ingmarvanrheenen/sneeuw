@@ -137,6 +137,12 @@ S.K.A.T.E., maar op de piste, binnen een crew. Wie aan de beurt is zet een trick
 - **Zelf kiezen** (rij "Clips" → `ClipPicker`): tik clips aan of uit, max 8, met een nummer op volgorde van de trip. Je keuze wordt per trip op je toestel onthouden (`kv: filmPick:<tripId>`); "Automatisch" zet hem terug. `pickClips()`: eigen keuze gaat voor, verdwenen clips tellen niet, niks gekozen = automatisch.
 - Getest in Chromium met testclips met testtonen (ffmpeg): elke toon zit precies in zijn eigen clip (FFT-check); op een iPhone nog proberen.
 
+## Potje van de trip (`src/lib/pot.ts`, `src/components/TripPot.tsx`)
+
+- Tabel `crew_trip_expenses` (migratie `20261110000000`): per uitgave wie betaalde (`paid_by`), voor wie (`split_between`, gelijk verdeeld), bedrag in centen, wat en wanneer. Een terugbetaling is `kind = 'transfer'` met precies één ontvanger. De database bewaakt dat iedereen in de crew zit, niemand dubbel, en max 300 per trip; aanpassen doet wie hem toevoegde of wie betaalde, weghalen ook de trip-eigenaar. 24 scenario's in `test:db`.
+- De app rekent: `shares()` verdeelt in centen (de rest cent voor cent op id, overal hetzelfde), `balances()` geeft de stand (telt op tot 0), `settle()` maakt "wie betaalt wie" (grootste schuld naar grootste tegoed). "Betaald" legt een terugbetaling vast.
+- Op beide trippagina's. Laatst bekende stand met namen in `kv: pot:<tripId>`, zodat je hem op de berg ook zonder bereik ziet. Alleen euro.
+
 ## Push-meldingen
 
 ```
