@@ -166,6 +166,12 @@ S.K.A.T.E., maar op de piste, binnen een crew. Wie aan de beurt is zet een trick
 - Route `/stickerboek` (Meer, de badge-pagina en je skipas). Per seizoen een albumpagina: poster met dagen, uren en aantal stickers, de badges die je dat seizoen haalde (als medaille erop geplakt) en je trick-stickers in pistekleur.
 - Helemaal afgeleid, niks opgeslagen: `album()` speelt je data seizoen voor seizoen af (`inputUntil()`: dagen, gelande tricks, doelen en spullen tot het eind van dat seizoen) en zet een badge in het seizoen waarin hij er voor het eerst bij kwam. Samen is dat precies wat de badge-pagina laat zien. Trick-stickers op het seizoen van `firstLandedAt`; wat geen datum heeft (quiz, liftvragen, crew, oude tricks) telt in het huidige seizoen.
 
+## Programma's (`src/content/programs.ts`, `src/lib/programs.ts`, `src/pages/Programs.tsx`)
+
+- Routes `/programmas` en `/programmas/:id` (Meer en Home). Kant-en-klare reeksen van 3 tot 5 dagen: Eerste week op de plank, Van groen naar rood, Park in vier dagen, Leren carven. Per dag een doel, de piste, concrete oefeningen en de tricks erbij (link naar de trick met animatie). Volgt de standaard lesvolgorde.
+- Voortgang alleen op dit toestel (`kv: programs`): je actieve programma en per dag de datum waarop je hem deed. Dag gedaan / toch nog niet, stoppen, opnieuw beginnen; de laatste dag maakt hem af (poster). Home laat de dag van vandaag zien. Geen XP: dat blijft uit je gelogde dagen komen.
+- Nieuw programma: in `src/content/programs.ts`; de content-test checkt dat alle tricks bestaan en elke dag een doel en oefeningen heeft.
+
 ## Push-meldingen
 
 ```

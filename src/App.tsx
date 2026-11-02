@@ -16,6 +16,7 @@ const Runs = lazy(() => import('./pages/Runs'))
 const Emergency = lazy(() => import('./pages/Emergency'))
 const Warmup = lazy(() => import('./pages/Warmup'))
 const StickerBook = lazy(() => import('./pages/StickerBook'))
+const Programs = lazy(() => import('./pages/Programs'))
 const Tricks = lazy(() => import('./pages/Tricks'))
 const TrickDetail = lazy(() => import('./pages/TrickDetail'))
 const Quiz = lazy(() => import('./pages/Quiz'))
@@ -177,6 +178,8 @@ export default function App() {
               <Route path="/nood" element={<Emergency />} />
               <Route path="/warming-up" element={<Warmup />} />
               <Route path="/stickerboek" element={<StickerBook />} />
+              <Route path="/programmas" element={<Programs />} />
+              <Route path="/programmas/:id" element={<Programs />} />
               <Route path="/tricks" element={<Tricks />} />
               <Route path="/tricks/:id" element={<TrickDetail />} />
               <Route path="/quiz" element={<Quiz />} />
