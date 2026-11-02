@@ -1,6 +1,6 @@
 // Rider-profiel: je skipas, signature trick, eerlijke stats, stickerboek, badges en highlights.
 // Je eigen profiel werkt ook zonder account; dat van een crewgenoot komt van de server (laatst bekende offline).
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { useParams } from 'react-router-dom'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { Button, Chip, Empty, Field, List, Page, PageHeader, Row, Section, Sheet, Stat, StatGroup, inputCls } from '../components/ui'
@@ -22,6 +22,7 @@ import {
   makeAvatar,
   nicknameInbox,
   riderMedia,
+  riderProfiles,
   suggestNickname,
   type CrewRider,
   type NicknameSuggestion,
@@ -35,6 +36,8 @@ import { fmtDate, plural } from '../lib/format'
 import { toast } from '../lib/toast'
 import { errMsg } from '../lib/errors'
 import type { MediaMeta, Profile } from '../lib/types'
+import { GiveSheet, ReceivedStickers } from '../components/GiftParts'
+import { cachedGifts, giftsLeft, myGifts, pinnedFor, removeGift, setPinned, type Gift } from '../lib/gifts'
 
 export default function Rider() {
   const { id = 'ik' } = useParams()
@@ -70,6 +73,7 @@ function RiderView({
   progress,
   media,
   isMe,
+  pinned = [],
   children,
 }: {
   userId: string | null
@@ -79,6 +83,8 @@ function RiderView({
   progress?: number
   media: MediaMeta[]
   isMe: boolean
+  /** stickers die de rider op de pas plakte */
+  pinned?: Gift[]
   children?: ReactNode
 }) {
   const landed = stats.landed ?? []
@@ -97,6 +103,7 @@ function RiderView({
         level={stats.level ?? 1}
         levelName={stats.levelName ?? 'Groentje'}
         progress={progress}
+        stickers={pinned}
       />
       {children}
 
@@ -198,13 +205,50 @@ function MyRider() {
   }, [])
   const [editing, setEditing] = useState(false)
   const [inbox, setInbox] = useState<NicknameSuggestion[]>([])
+  const [gifts, setGifts] = useState<Gift[]>([])
+  const [giverNames, setGiverNames] = useState<Record<string, string>>({})
+
+  const loadGifts = useCallback(async () => {
+    setGifts(await cachedGifts())
+    if (!user || !navigator.onLine) return
+    try {
+      const list = await myGifts()
+      setGifts(list)
+      const ids = [...new Set(list.map((g) => g.from_user))]
+      const profiles = await riderProfiles(ids).catch(() => ({}) as Record<string, CrewRider>)
+      setGiverNames(Object.fromEntries(Object.values(profiles).map((p) => [p.userId, p.name])))
+    } catch {
+      /* laatst bekende blijft staan */
+    }
+  }, [user])
 
   useEffect(() => {
+    void loadGifts()
     if (!user || !navigator.onLine) return
     nicknameInbox()
       .then(setInbox)
       .catch(() => {})
-  }, [user])
+  }, [user, loadGifts])
+
+  async function pin(g: Gift) {
+    setGifts((cur) => cur.map((x) => (x.id === g.id ? { ...x, pinned: !g.pinned } : x)))
+    try {
+      await setPinned(g.id, !g.pinned)
+    } catch (e) {
+      toast({ title: 'Niet gelukt', body: errMsg(e), tone: 'error', icon: 'alert' })
+    }
+    await loadGifts()
+  }
+
+  async function dropGift(g: Gift) {
+    setGifts((cur) => cur.filter((x) => x.id !== g.id))
+    try {
+      await removeGift(g.id)
+    } catch (e) {
+      toast({ title: 'Niet gelukt', body: errMsg(e), tone: 'error', icon: 'alert' })
+      await loadGifts()
+    }
+  }
 
   if (!progress || !profile)
     return (
@@ -249,7 +293,9 @@ function MyRider() {
         progress={progress.level.progress}
         media={media ?? []}
         isMe
+        pinned={gifts.filter((g) => g.pinned)}
       >
+        <ReceivedStickers gifts={gifts} names={giverNames} onPin={(g) => void pin(g)} onRemove={(g) => void dropGift(g)} />
         {inbox.length > 0 && (
           <Section title="Bijnaam-voorstellen">
             <List>
@@ -414,6 +460,9 @@ function CrewRiderPage({ userId }: { userId: string }) {
   const [media, setMedia] = useState<MediaMeta[]>([])
   const [suggest, setSuggest] = useState(false)
   const [nick, setNick] = useState('')
+  const [pinned, setPinnedList] = useState<Gift[]>([])
+  const [giving, setGiving] = useState(false)
+  const [left, setLeft] = useState<number | null>(null)
 
   useEffect(() => {
     let alive = true
@@ -424,6 +473,9 @@ function CrewRiderPage({ userId }: { userId: string }) {
         .catch(() => alive && setRider((cur) => cur ?? null))
       riderMedia(userId)
         .then((m) => alive && setMedia(m))
+        .catch(() => {})
+      pinnedFor(userId)
+        .then((p) => alive && setPinnedList(p))
         .catch(() => {})
     }
     return () => {
@@ -466,13 +518,46 @@ function CrewRiderPage({ userId }: { userId: string }) {
   return (
     <Page>
       <PageHeader title="Skipas" back />
-      <RiderView userId={rider.userId} name={rider.name} profile={rider.profile} stats={rider.stats} media={media} isMe={false}>
+      <RiderView
+        userId={rider.userId}
+        name={rider.name}
+        profile={rider.profile}
+        stats={rider.stats}
+        media={media}
+        isMe={false}
+        pinned={pinned}
+      >
         {navigator.onLine && (
-          <Button variant="ghost" className="mt-3 w-full" onClick={() => setSuggest(true)}>
-            Bijnaam voorstellen
-          </Button>
+          <div className="mt-3 grid grid-cols-2 gap-2">
+            <Button
+              variant="ghost"
+              icon={<Icon name="sparkle" size={18} />}
+              onClick={() => {
+                setGiving(true)
+                giftsLeft()
+                  .then(setLeft)
+                  .catch(() => setLeft(null))
+              }}
+            >
+              Geef een sticker
+            </Button>
+            <Button variant="ghost" onClick={() => setSuggest(true)}>
+              Bijnaam voorstellen
+            </Button>
+          </div>
         )}
       </RiderView>
+      <GiveSheet
+        open={giving}
+        name={rider.name}
+        toUser={rider.userId}
+        left={left}
+        onClose={() => setGiving(false)}
+        onSent={() => {
+          setGiving(false)
+          toast({ title: 'Sticker gegeven', body: `${rider.name} kan hem nu op de skipas plakken.`, icon: 'sparkle', tone: 'success' })
+        }}
+      />
       <Sheet open={suggest} onClose={() => setSuggest(false)} title="Bijnaam voorstellen" closeLabel="Annuleer">
         <Field label="Bijnaam" hint={`${rider.name} krijgt je voorstel en kiest zelf of hij op de skipas komt.`}>
           <input
