@@ -161,6 +161,11 @@ S.K.A.T.E., maar op de piste, binnen een crew. Wie aan de beurt is zet een trick
 - Route `/warming-up` (Home voor je eerste run, Meer, en de run-teller). Acht oefeningen met je board aan, samen precies 5 minuten (de content-test bewaakt dat). De echte 3D-rider doet elke oefening voor: `src/anim3d/warmup.ts` (pose-to-pose met `perform()` op snelheid 0, armen en hopjes per frame, vlakke sneeuw, zijaanzicht) in een lus via `src/anim3d/Loop3D.tsx` (één scène die blijft staan bij een wissel). Zonder WebGL valt hij terug op de 2D-animatie uit `src/content/warmup.ts`. Tests checken per frame dat de rider op zijn plek blijft, het board niet door de sneeuw gaat en elke lus naadloos sluit.
 - De klok draait op tijdstempels (`startClock`, `pause`, `resume`, `skip`, `position`), dus pauze en een scherm dat even uit ging kloppen. Piepje bij een nieuwe oefening en de laatste drie tellen. Het scherm blijft aan via de Wake Lock API waar die er is. Klaar: een poster en door naar de run-teller.
 
+## Stickerboek (`src/lib/album.ts`, `src/pages/StickerBook.tsx`)
+
+- Route `/stickerboek` (Meer, de badge-pagina en je skipas). Per seizoen een albumpagina: poster met dagen, uren en aantal stickers, de badges die je dat seizoen haalde (als medaille erop geplakt) en je trick-stickers in pistekleur.
+- Helemaal afgeleid, niks opgeslagen: `album()` speelt je data seizoen voor seizoen af (`inputUntil()`: dagen, gelande tricks, doelen en spullen tot het eind van dat seizoen) en zet een badge in het seizoen waarin hij er voor het eerst bij kwam. Samen is dat precies wat de badge-pagina laat zien. Trick-stickers op het seizoen van `firstLandedAt`; wat geen datum heeft (quiz, liftvragen, crew, oude tricks) telt in het huidige seizoen.
+
 ## Push-meldingen
 
 ```

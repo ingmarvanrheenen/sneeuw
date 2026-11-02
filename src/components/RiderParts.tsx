@@ -152,7 +152,17 @@ function PassField({ label, value }: { label: string; value: string }) {
 
 const pisteColor = (id: string) => PISTES.find((p) => p.id === id)?.color
 
-function Sticker({ trick, rotate = 0, className, style }: { trick: Trick; rotate?: number; className?: string; style?: CSSProperties }) {
+export function TrickSticker({
+  trick,
+  rotate = 0,
+  className,
+  style,
+}: {
+  trick: Trick
+  rotate?: number
+  className?: string
+  style?: CSSProperties
+}) {
   return (
     <span
       className={cx(
@@ -201,7 +211,7 @@ export function StickerBoard({ landed, design: raw }: { landed: string[]; design
       {shown.map((t, i) => {
         const at = stickerSlot(i, t.id)
         return (
-          <Sticker
+          <TrickSticker
             key={t.id}
             trick={t}
             rotate={at.rotate}
@@ -262,7 +272,7 @@ export function StickerTracks({ landed }: { landed: string[] }) {
             {open.stickers.map(({ trick, landed: got }) =>
               got ? (
                 <Link key={trick.id} to={`/tricks/${trick.id}`} aria-label={trick.name}>
-                  <Sticker trick={trick} className="max-w-none text-[13px]" />
+                  <TrickSticker trick={trick} className="max-w-none text-[13px]" />
                 </Link>
               ) : (
                 <Link
