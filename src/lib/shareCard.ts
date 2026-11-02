@@ -14,16 +14,16 @@ import { mediaUrl } from './sync'
 
 const W = 1080
 const H = 1920
-const INK = '#0d0d0f'
-const PAPER = '#f5f5ef'
-const MUTED = '#9d9d97'
+export const INK = '#0d0d0f'
+export const PAPER = '#f5f5ef'
+export const MUTED = '#9d9d97'
 const SURFACE = '#18181b'
 const LINE = '#2e2e33'
-const LIME = '#d7ff3c'
-const HOT = '#ff5b22'
-const WHITE = '#ffffff'
-const SANS = '-apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif'
-const DISPLAY = '"Archivo Variable", -apple-system, system-ui, sans-serif'
+export const LIME = '#d7ff3c'
+export const HOT = '#ff5b22'
+export const WHITE = '#ffffff'
+export const SANS = '-apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif'
+export const DISPLAY = '"Archivo Variable", -apple-system, system-ui, sans-serif'
 
 // ── Inhoud (puur, getest) ────────────────────────────────────────────────────
 
@@ -79,7 +79,7 @@ function drawIcon(c: CanvasRenderingContext2D, name: IconName, x: number, y: num
   c.restore()
 }
 
-async function loadImg(src: string): Promise<HTMLImageElement | null> {
+export async function loadImg(src: string): Promise<HTMLImageElement | null> {
   return new Promise((resolve) => {
     const img = new Image()
     img.crossOrigin = 'anonymous'
@@ -102,7 +102,7 @@ export async function cardMascotSvg(size: number): Promise<string> {
   return mascotSvg(mascot, size)
 }
 
-async function mascotImg(size: number) {
+export async function mascotImg(size: number) {
   return loadImg('data:image/svg+xml;charset=utf-8,' + encodeURIComponent(await cardMascotSvg(size)))
 }
 
@@ -118,7 +118,7 @@ async function coverPhoto(s: Session): Promise<HTMLImageElement | null> {
   return null
 }
 
-function cover(c: CanvasRenderingContext2D, img: HTMLImageElement, x: number, y: number, w: number, h: number) {
+export function cover(c: CanvasRenderingContext2D, img: HTMLImageElement, x: number, y: number, w: number, h: number) {
   const r = Math.max(w / img.width, h / img.height)
   const iw = img.width * r
   const ih = img.height * r
@@ -126,18 +126,18 @@ function cover(c: CanvasRenderingContext2D, img: HTMLImageElement, x: number, y:
 }
 
 /** Smal en zwaar, zoals de titels in de app. Smal via het font-shorthand (`condensed`), plus fontStretch waar de browser dat kent. */
-function display(c: CanvasRenderingContext2D, size: number) {
+export function display(c: CanvasRenderingContext2D, size: number) {
   c.font = `condensed 800 ${size}px ${DISPLAY}`
   const cc = c as CanvasRenderingContext2D & { fontStretch?: string }
   if ('fontStretch' in cc) cc.fontStretch = 'condensed'
 }
 
-function caps(c: CanvasRenderingContext2D, size: number) {
+export function caps(c: CanvasRenderingContext2D, size: number) {
   c.font = `800 ${size}px ${SANS}`
   const cc = c as CanvasRenderingContext2D & { letterSpacing?: string }
   if ('letterSpacing' in cc) cc.letterSpacing = `${Math.round(size * 0.1)}px`
 }
-function resetSpacing(c: CanvasRenderingContext2D) {
+export function resetSpacing(c: CanvasRenderingContext2D) {
   const cc = c as CanvasRenderingContext2D & { letterSpacing?: string; fontStretch?: string }
   if ('letterSpacing' in cc) cc.letterSpacing = '0px'
   if ('fontStretch' in cc) cc.fontStretch = 'normal'
@@ -160,7 +160,7 @@ function grain(c: CanvasRenderingContext2D, alpha = 0.07) {
 }
 
 /** Bergvorm (twee toppen) in een kleur. */
-function peaks(c: CanvasRenderingContext2D, x: number, y: number, w: number, color: string) {
+export function peaks(c: CanvasRenderingContext2D, x: number, y: number, w: number, color: string) {
   const s = w / 190
   c.save()
   c.translate(x, y)
@@ -171,7 +171,7 @@ function peaks(c: CanvasRenderingContext2D, x: number, y: number, w: number, col
 }
 
 /** Ster-sticker met witte rand, gekanteld; tekst in het midden. */
-function burst(c: CanvasRenderingContext2D, cx: number, cy: number, r: number, fill: string, tilt: number) {
+export function burst(c: CanvasRenderingContext2D, cx: number, cy: number, r: number, fill: string, tilt: number) {
   const path = () => {
     c.beginPath()
     for (let i = 0; i < 24; i++) {
@@ -190,7 +190,7 @@ function burst(c: CanvasRenderingContext2D, cx: number, cy: number, r: number, f
   c.fill()
 }
 
-function rotated(c: CanvasRenderingContext2D, cx: number, cy: number, deg: number, draw: () => void) {
+export function rotated(c: CanvasRenderingContext2D, cx: number, cy: number, deg: number, draw: () => void) {
   c.save()
   c.translate(cx, cy)
   c.rotate((deg * Math.PI) / 180)
@@ -200,7 +200,7 @@ function rotated(c: CanvasRenderingContext2D, cx: number, cy: number, deg: numbe
 }
 
 /** Grootste lettergrootte (tot max) waarbij de tekst op één regel past. */
-function fitDisplay(c: CanvasRenderingContext2D, text: string, max: number, maxW: number, min = 60) {
+export function fitDisplay(c: CanvasRenderingContext2D, text: string, max: number, maxW: number, min = 60) {
   let size = max
   for (; size > min; size -= 6) {
     display(c, size)
@@ -238,7 +238,7 @@ function wrapText(c: CanvasRenderingContext2D, text: string, x: number, y: numbe
 }
 
 /** Archivo staat niet altijd al geladen (canvas laadt geen fonts zelf): vooraf ophalen, smal en zwaar. */
-async function fontsReady() {
+export async function fontsReady() {
   await Promise.all([
     document.fonts.load(`condensed 800 100px ${DISPLAY}`).catch(() => []),
     document.fonts.load(`800 100px ${DISPLAY}`).catch(() => []),
@@ -410,7 +410,12 @@ export async function shareSession(s: Session) {
 
 /** Deelt een afbeelding via het iOS-deelmenu, of downloadt hem als dat niet kan. */
 export async function shareImage(blob: Blob, name: string, title?: string) {
-  const file = new File([blob], name, { type: 'image/png' })
+  await shareFile(new Blob([blob], { type: 'image/png' }), name, title)
+}
+
+/** Deelt een bestand (plaatje of film) via het iOS-deelmenu, of downloadt hem als dat niet kan. */
+export async function shareFile(blob: Blob, name: string, title?: string) {
+  const file = new File([blob], name, { type: blob.type || 'application/octet-stream' })
   const nav = navigator as Navigator & { canShare?: (d: ShareData) => boolean }
   if (nav.canShare?.({ files: [file] })) {
     try {
