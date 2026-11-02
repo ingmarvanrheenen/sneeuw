@@ -131,7 +131,10 @@ S.K.A.T.E., maar op de piste, binnen een crew. Wie aan de beurt is zet een trick
 - Op de trippagina (na het toernooi, zodra de trip begonnen is): de gedeelde clips en foto's van de crew (`tripMedia`) als korte film om te delen. Max 8, op tijd; zijn er meer, dan gaan video's voor (vaste keuze per trip via `planFilm`).
 - Alles op het toestel: een canvas van 720x1280 tekent intro (tripnaam, resort, datums), per clip ~2,6 s (foto 1,8 s, met een langzame zoom) met de naam van de rider als sticker, en een outro met de crew en je mascotte. `MediaRecorder` neemt `canvas.captureStream(30)` op (iPhone: mp4/H.264, anders webm). Dat gaat in echte tijd: hou het scherm aan.
 - De tekenhulpjes (fonts, `display`, `caps`, `peaks`, kleuren) komen uit `shareCard.ts`. Delen via `shareFile` (deelmenu of download). De film wordt niet opgeslagen.
-- Nog niet: geluid, muziek, kiezen welke clips. Getest in Chromium met testclips (ffmpeg); op een iPhone nog proberen.
+- **Geluid**: muziek uit `src/lib/filmMusic.ts`, in de app gemaakt met WebAudio (geen bestanden, geen licenties): Boom bap (92 bpm), Park (108), Pow day (124) of geen. Tik een stijl om 4 maten te horen (`previewMusic`). Met muziek vallen de cuts op de beat (`planFilm(..., { bpm })`: intro en clips 4 tellen, foto's 3, outro 6).
+- Het geluid van de clips komt uit het bestand zelf (`decodeAudioData`, één download voor beeld en geluid) en wordt op de klok van de AudioContext ingepland; de muziek gaat dan zachter. Beeld volgt dezelfde klok, dus beeld en geluid blijven gelijk. Alles via een limiter naar een `MediaStreamAudioDestinationNode`, samen met het canvas opgenomen.
+- iOS start geluid alleen na een tik: de AudioContext wordt in de tik op "Maak de film" (of op een muziekstijl) gemaakt. Lukt dat niet, dan wordt het een stille film.
+- Nog niet: kiezen welke clips. Getest in Chromium met testclips met testtonen (ffmpeg): elke toon zit precies in zijn eigen clip (FFT-check); op een iPhone nog proberen.
 
 ## Push-meldingen
 

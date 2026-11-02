@@ -10,6 +10,7 @@ const api = vi.hoisted(() => ({
   tripMedia: vi.fn(),
   renderFilm: vi.fn(),
   canMakeFilm: vi.fn(() => true),
+  previewMusic: vi.fn(),
   shareFile: vi.fn(),
 }))
 vi.mock('../lib/crew', async (orig) => ({ ...(await orig<typeof import('../lib/crew')>()), crewMembers: api.crewMembers }))
@@ -18,15 +19,29 @@ vi.mock('../lib/crewTrips', async (orig) => ({
   tripDays: api.tripDays,
   tripMedia: api.tripMedia,
 }))
+vi.mock('../lib/sounds', () => ({ sfx: new Proxy({}, { get: () => () => {} }) }))
 vi.mock('../lib/shareCard', async (orig) => ({ ...(await orig<typeof import('../lib/shareCard')>()), shareFile: api.shareFile }))
 vi.mock('../lib/tripFilm', async (orig) => ({
   ...(await orig<typeof import('../lib/tripFilm')>()),
   renderFilm: api.renderFilm,
   canMakeFilm: api.canMakeFilm,
+  previewMusic: api.previewMusic,
 }))
 
 import { TripFilm } from '../components/TripFilm'
-import { CLIP_S, filmName, INTRO_S, MAX_CLIPS, OUTRO_S, PHOTO_S, pickVideoMime, planFilm, type Segment } from '../lib/tripFilm'
+import {
+  clipStart,
+  timeline,
+  CLIP_S,
+  filmName,
+  INTRO_S,
+  MAX_CLIPS,
+  OUTRO_S,
+  PHOTO_S,
+  pickVideoMime,
+  planFilm,
+  type Segment,
+} from '../lib/tripFilm'
 import type { MediaMeta } from '../lib/types'
 
 const m = (id: string, type: MediaMeta['type'], userId: string, createdAt: number, over: Partial<MediaMeta> = {}) =>
@@ -81,6 +96,28 @@ describe('film plannen', () => {
     expect(filmName({ ...trip, name: '' }, 'video/webm')).toBe('trip-film-tignes.webm')
   })
 
+  it('met muziek vallen de cuts op de beat (intro en clips 4 tellen, foto 3, outro 6)', () => {
+    const beat = 60 / 120
+    const plan = planFilm([m('a', 'video', 'u1', 1), m('b', 'image', 'u2', 2)], names, trip, 't', { bpm: 120 })
+    expect(plan.segments.map((s) => s.dur)).toEqual([4 * beat, 4 * beat, 3 * beat, 6 * beat])
+    expect(plan.total).toBe(17 * beat)
+    expect(timeline(plan)).toEqual([0, 2, 4, 5.5])
+  })
+
+  it('clip start iets na het begin, maar nooit voorbij het eind', () => {
+    expect(clipStart(10, 2)).toBe(0.4)
+    expect(clipStart(2.2, 2)).toBeCloseTo(0.2)
+    expect(clipStart(1, 2)).toBe(0)
+    expect(clipStart(NaN, 2)).toBe(0)
+  })
+
+  it('met geluid een formaat met audio-codec', () => {
+    vi.stubGlobal('MediaRecorder', class {})
+    expect(pickVideoMime((t) => t.includes('mp4a'), true)).toBe('video/mp4;codecs=avc1,mp4a.40.2')
+    expect(pickVideoMime((t) => t.includes('opus'), true)).toBe('video/webm;codecs=vp9,opus')
+    vi.unstubAllGlobals()
+  })
+
   it('zonder MediaRecorder of canvas-opname: geen film', async () => {
     const real = await vi.importActual<typeof import('../lib/tripFilm')>('../lib/tripFilm')
     expect(real.canMakeFilm()).toBe(false) // jsdom heeft geen MediaRecorder
@@ -102,6 +139,15 @@ describe('trip-film op de trippagina', () => {
     api.canMakeFilm.mockReturnValue(true)
     api.renderFilm.mockReset()
     api.shareFile.mockReset()
+    api.previewMusic.mockReset().mockReturnValue(() => {})
+    vi.stubGlobal(
+      'AudioContext',
+      class {
+        state = 'running'
+        resume = async () => {}
+        close = async () => {}
+      },
+    )
     vi.stubGlobal('URL', Object.assign(URL, { createObjectURL: () => 'blob:film', revokeObjectURL: () => {} }))
   })
   afterEach(() => {
@@ -121,8 +167,11 @@ describe('trip-film op de trippagina', () => {
     const sheet = screen.getByRole('dialog', { name: 'Trip-film' })
     const film = await within(sheet).findByLabelText('Je trip-film')
     expect(film.getAttribute('src')).toBe('blob:film')
-    const plan = api.renderFilm.mock.calls[0][0]
+    const [plan, opts] = api.renderFilm.mock.calls[0]
     expect(plan.segments.map((s: Segment) => s.kind)).toEqual(['intro', 'clip', 'clip', 'outro'])
+    // standaard: Park en het geluid van de clips, met een AudioContext uit de tik
+    expect(opts).toMatchObject({ music: 'park', clipAudio: true })
+    expect(opts.audio).toBeTruthy()
     await user.click(within(sheet).getByRole('button', { name: 'Deel' }))
     expect(api.shareFile).toHaveBeenCalledWith(expect.any(Blob), 'trip-film-tignes-2027.mp4', 'Tignes 2027')
   })
@@ -148,5 +197,59 @@ describe('trip-film op de trippagina', () => {
     const r = render(<TripFilm tripId="t1" crewId="c1" trip={trip} />)
     await waitFor(() => expect(api.tripMedia).toHaveBeenCalledTimes(2))
     expect(r.container.textContent).toBe('')
+  })
+})
+
+describe('muziek kiezen', () => {
+  beforeEach(() => {
+    Object.defineProperty(navigator, 'onLine', { configurable: true, get: () => true })
+    api.crewMembers.mockResolvedValue([])
+    api.tripDays.mockResolvedValue([])
+    api.tripMedia.mockResolvedValue([m('a', 'video', 'u1', 1)])
+    api.canMakeFilm.mockReturnValue(true)
+    api.renderFilm.mockReset().mockResolvedValue(new Blob([new Uint8Array(20_000)], { type: 'video/mp4' }))
+    api.previewMusic.mockReset()
+    vi.stubGlobal('URL', Object.assign(URL, { createObjectURL: () => 'blob:film', revokeObjectURL: () => {} }))
+    vi.stubGlobal(
+      'AudioContext',
+      class {
+        state = 'running'
+        resume = async () => {}
+        close = async () => {}
+      },
+    )
+  })
+  afterEach(() => {
+    cleanup()
+    vi.unstubAllGlobals()
+  })
+
+  it('tik een stijl: je hoort hem even, de vorige stopt; de lengte past zich aan de beat aan', async () => {
+    const user = userEvent.setup()
+    const stops = [vi.fn(), vi.fn()]
+    api.previewMusic.mockReturnValueOnce(stops[0]).mockReturnValueOnce(stops[1])
+    render(<TripFilm tripId="t1" crewId="c1" trip={trip} />)
+    const group = await screen.findByRole('group', { name: 'Muziek' })
+    const seconds = () => screen.getByText(/seconden/).textContent
+    const before = seconds()
+    await user.click(within(group).getByRole('button', { name: 'Boom bap' }))
+    expect(api.previewMusic).toHaveBeenLastCalledWith(expect.anything(), 'boombap')
+    expect(within(group).getByRole('button', { name: 'Boom bap' }).getAttribute('aria-pressed')).toBe('true')
+    expect(seconds()).not.toBe(before) // 92 bpm: langere cuts dan Park
+    await user.click(within(group).getByRole('button', { name: 'Pow day' }))
+    expect(stops[0]).toHaveBeenCalled()
+    await user.click(within(group).getByRole('button', { name: 'Geen' }))
+    expect(stops[1]).toHaveBeenCalled()
+    expect(api.previewMusic).toHaveBeenCalledTimes(2)
+  })
+
+  it('zonder muziek en zonder clipgeluid: een stille film, geen AudioContext nodig', async () => {
+    const user = userEvent.setup()
+    render(<TripFilm tripId="t1" crewId="c1" trip={trip} />)
+    await user.click(within(await screen.findByRole('group', { name: 'Muziek' })).getByRole('button', { name: 'Geen' }))
+    await user.click(screen.getByRole('switch', { name: /Geluid van de clips/ }))
+    await user.click(screen.getByRole('button', { name: 'Maak de film' }))
+    await waitFor(() => expect(api.renderFilm).toHaveBeenCalled())
+    expect(api.renderFilm.mock.calls[0][1]).toMatchObject({ music: 'geen', clipAudio: false, audio: null })
   })
 })

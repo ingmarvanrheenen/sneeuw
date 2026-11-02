@@ -23,6 +23,7 @@ import {
   WHITE,
 } from './shareCard'
 import type { MediaMeta, Trip } from './types'
+import { scheduleMusic, TRACK_BY_ID, type TrackId } from './filmMusic'
 
 export const FILM = { w: 720, h: 1280, fps: 30 }
 export const MAX_CLIPS = 8
@@ -47,7 +48,16 @@ export interface FilmPlan {
  * Welke clips erin komen en in welke volgorde: op tijd (zoals de trip ging), max 8. Zijn er meer, dan gaan
  * video's voor foto's, en per soort een vaste maar gehusselde keuze per trip (zelfde trip = zelfde film).
  */
-export function planFilm(media: MediaMeta[], names: Record<string, string>, trip: FilmTrip, seed: string): FilmPlan {
+export function planFilm(
+  media: MediaMeta[],
+  names: Record<string, string>,
+  trip: FilmTrip,
+  seed: string,
+  opts: { bpm?: number } = {},
+): FilmPlan {
+  // met muziek: elke cut op de beat (intro en clips 4 tellen, foto's 3, outro 4 plus een uitloop)
+  const beat = opts.bpm ? 60 / opts.bpm : 0
+  const snap = (s: number, beats: number) => (beat ? Math.round(beats * beat * 1000) / 1000 : s)
   const visual = media.filter((m) => isVisual(m) && !m.deleted)
   let picked = visual
   if (visual.length > MAX_CLIPS) {
@@ -71,27 +81,33 @@ export function planFilm(media: MediaMeta[], names: Record<string, string>, trip
   const segments: Segment[] = [
     {
       kind: 'intro',
-      dur: INTRO_S,
+      dur: snap(INTRO_S, 4),
       title: trip.name || trip.resortName || 'De trip',
       sub: [trip.resortName, dates].filter(Boolean).join(' · '),
     },
     ...picked.map((m, i): Segment => ({
       kind: 'clip',
-      dur: m.type === 'video' ? CLIP_S : PHOTO_S,
+      dur: m.type === 'video' ? snap(CLIP_S, 4) : snap(PHOTO_S, 3),
       media: m,
       rider: who(m.userId),
       index: i + 1,
       total: picked.length,
     })),
-    { kind: 'outro', dur: OUTRO_S, riders: [...new Set(picked.map((m) => who(m.userId)))] },
+    { kind: 'outro', dur: snap(OUTRO_S, 6), riders: [...new Set(picked.map((m) => who(m.userId)))] },
   ]
-  return { segments, total: Math.round(segments.reduce((n, s) => n + s.dur, 0) * 10) / 10 }
+  return { segments, total: Math.round(segments.reduce((n, s) => n + s.dur, 0) * 1000) / 1000 }
 }
 
 /** Welk filmformaat de browser kan opnemen. iPhone: mp4 (H.264); Chrome en Firefox: webm. */
-export function pickVideoMime(supports: (t: string) => boolean = (t) => MediaRecorder.isTypeSupported(t)): string | null {
+export function pickVideoMime(
+  supports: (t: string) => boolean = (t) => MediaRecorder.isTypeSupported(t),
+  withAudio = false,
+): string | null {
   if (typeof MediaRecorder === 'undefined') return null
-  for (const t of ['video/mp4;codecs=avc1', 'video/mp4', 'video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm'])
+  const list = withAudio
+    ? ['video/mp4;codecs=avc1,mp4a.40.2', 'video/mp4', 'video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm']
+    : ['video/mp4;codecs=avc1', 'video/mp4', 'video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm']
+  for (const t of list)
     try {
       if (supports(t)) return t
     } catch {
@@ -264,10 +280,22 @@ export function drawFrame(
 
 // ── Opnemen ─────────────────────────────────────────────────────────────────
 
+/** Wanneer elk stuk begint (seconden vanaf het begin van de film). */
+export function timeline(plan: FilmPlan): number[] {
+  let at = 0
+  return plan.segments.map((s) => {
+    const start = at
+    at += s.dur
+    return start
+  })
+}
+
+/** Vanaf waar in een clip we beginnen: iets na het begin (de eerste tel is vaak schudden), niet voorbij het eind. */
+export const clipStart = (clipDuration: number, dur: number) => Math.max(0, Math.min(0.4, (clipDuration || 0) - dur))
+
 function loadVideo(url: string): Promise<HTMLVideoElement | null> {
   return new Promise((resolve) => {
     const v = document.createElement('video')
-    v.crossOrigin = 'anonymous'
     v.muted = true
     v.playsInline = true
     v.preload = 'auto'
@@ -288,80 +316,190 @@ function loadVideo(url: string): Promise<HTMLVideoElement | null> {
   })
 }
 
-async function loadSource(m: MediaMeta): Promise<Source | null> {
-  const url = await mediaUrl(m).catch(() => null)
-  if (!url) return m.thumb ? loadImg(m.thumb) : null
-  if (m.type === 'video') return (await loadVideo(url)) ?? (m.thumb ? loadImg(m.thumb) : null)
-  return loadImg(url)
+interface Loaded {
+  src: Source | null
+  audio: AudioBuffer | null
+  url?: string
+}
+
+/** Clip ophalen als bestand: één keer downloaden voor beeld én geluid (en geen cross-origin gedoe op het canvas). */
+async function loadClip(m: MediaMeta, ctx: BaseAudioContext | null): Promise<Loaded> {
+  const thumb = async (): Promise<Loaded> => ({ src: m.thumb ? await loadImg(m.thumb) : null, audio: null })
+  const remote = await mediaUrl(m).catch(() => null)
+  if (!remote) return thumb()
+  const blob = await fetch(remote)
+    .then((r) => (r.ok ? r.blob() : null))
+    .catch(() => null)
+  if (!blob) return thumb()
+  const url = URL.createObjectURL(blob)
+  if (m.type !== 'video') return { src: await loadImg(url), audio: null, url }
+  const [video, audio] = await Promise.all([
+    loadVideo(url),
+    ctx
+      ? blob
+          .arrayBuffer()
+          .then((b) => ctx.decodeAudioData(b))
+          .catch(() => null)
+      : Promise.resolve(null),
+  ])
+  return { src: video ?? (await thumb()).src, audio, url }
 }
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
+export interface FilmOptions {
+  canvas?: HTMLCanvasElement
+  onProgress?: (p: { phase: 'laden' | 'opnemen'; done: number }) => void
+  signal?: AbortSignal
+  /** muziek eronder ('geen' of weglaten = zonder) */
+  music?: TrackId
+  /** geluid van de clips zelf erin */
+  clipAudio?: boolean
+  /** AudioContext, aangemaakt bij de tik (iOS start geluid alleen na een tik). Zonder: een film zonder geluid. */
+  audio?: AudioContext | null
+  /** meeluisteren terwijl hij gemaakt wordt */
+  listen?: boolean
+}
+
 /**
- * De film maken: alles laden, dan in echte tijd tekenen en opnemen. `canvas` mag je zelf meegeven om het
- * live te laten zien. Afbreken via `signal`.
+ * De film maken: alles laden, dan in echte tijd tekenen en opnemen, met geluid. Beeld en geluid lopen op dezelfde
+ * klok (die van de AudioContext), zodat ze gelijk blijven ook als een clip traag start.
  */
-export async function renderFilm(
-  plan: FilmPlan,
-  opts: { canvas?: HTMLCanvasElement; onProgress?: (p: { phase: 'laden' | 'opnemen'; done: number }) => void; signal?: AbortSignal } = {},
-): Promise<Blob> {
-  const mime = pickVideoMime()
+export async function renderFilm(plan: FilmPlan, opts: FilmOptions = {}): Promise<Blob> {
+  const track = opts.music && opts.music !== 'geen' ? TRACK_BY_ID.get(opts.music) : undefined
+  let ctx = opts.audio ?? null
+  if (ctx && ctx.state !== 'running') await ctx.resume().catch(() => {})
+  if (ctx && ctx.state !== 'running') ctx = null // geen geluid mogelijk: dan maar stil
+  const wantAudio = !!ctx && (!!track || !!opts.clipAudio)
+  const mime = pickVideoMime(undefined, wantAudio)
   if (mime === null || !canMakeFilm()) throw new Error('Deze browser kan geen film maken.')
   await fontsReady()
   const canvas = opts.canvas ?? document.createElement('canvas')
   canvas.width = W
   canvas.height = H
   const c = canvas.getContext('2d')!
-
-  const clips = plan.segments.filter((s): s is Extract<Segment, { kind: 'clip' }> => s.kind === 'clip')
-  const sources = new Map<string, Source | null>()
-  let loaded = 0
-  for (const s of clips) {
+  const abort = () => {
     if (opts.signal?.aborted) throw new DOMException('afgebroken', 'AbortError')
-    sources.set(s.media.id, await loadSource(s.media))
-    opts.onProgress?.({ phase: 'laden', done: ++loaded / Math.max(1, clips.length) })
+  }
+
+  const segs = plan.segments
+  const starts = timeline(plan)
+  const loaded = new Map<string, Loaded>()
+  let n = 0
+  const clips = segs.filter((s): s is Extract<Segment, { kind: 'clip' }> => s.kind === 'clip')
+  for (const s of clips) {
+    abort()
+    loaded.set(s.media.id, await loadClip(s.media, opts.clipAudio ? ctx : null))
+    opts.onProgress?.({ phase: 'laden', done: ++n / Math.max(1, clips.length) })
   }
   const mascot = await mascotImg(300)
+  // alle video's alvast op hun beginpunt, zodat een cut meteen beeld heeft
+  for (const s of clips) {
+    const v = loaded.get(s.media.id)?.src
+    if (v instanceof HTMLVideoElement) {
+      v.currentTime = clipStart(v.duration, s.dur)
+      await Promise.race([new Promise((r) => (v.onseeked = r)), sleep(1500)])
+    }
+  }
+  abort()
 
-  const stream = (canvas as HTMLCanvasElement & { captureStream: (fps?: number) => MediaStream }).captureStream(FILM.fps)
+  const canvasStream = (canvas as HTMLCanvasElement & { captureStream: (fps?: number) => MediaStream }).captureStream(FILM.fps)
+  const tracks: MediaStreamTrack[] = [...canvasStream.getVideoTracks()]
+  let master: GainNode | null = null
+  if (ctx && wantAudio) {
+    const dest = ctx.createMediaStreamDestination()
+    master = ctx.createGain()
+    master.gain.value = 0.6
+    // limiter: muziek plus clipgeluid mag nooit oversturen
+    const limit = ctx.createDynamicsCompressor()
+    limit.threshold.value = -6
+    limit.knee.value = 4
+    limit.ratio.value = 12
+    limit.attack.value = 0.003
+    limit.release.value = 0.15
+    master.connect(limit)
+    limit.connect(dest)
+    if (opts.listen !== false) limit.connect(ctx.destination)
+    tracks.push(...dest.stream.getAudioTracks())
+  }
+  const stream = new MediaStream(tracks)
   const rec = new MediaRecorder(stream, { ...(mime ? { mimeType: mime } : {}), videoBitsPerSecond: 4_000_000 })
   const chunks: Blob[] = []
   rec.ondataavailable = (e) => e.data.size && chunks.push(e.data)
   const stopped = new Promise<void>((r) => (rec.onstop = () => r()))
-  drawFrame(c, plan.segments[0], 0, {})
+  drawFrame(c, segs[0], 0, {})
   rec.start(500)
 
-  let elapsed = 0
+  // geluid inplannen op de klok van de AudioContext
+  const lead = 0.15
+  const audioStart = ctx ? ctx.currentTime + lead : 0
+  if (ctx && master) {
+    const music = track ? scheduleMusic(ctx, master, track, audioStart, plan.total) : null
+    segs.forEach((seg, i) => {
+      if (seg.kind !== 'clip') return
+      const l = loaded.get(seg.media.id)
+      if (!l?.audio || !(l.src instanceof HTMLVideoElement)) return
+      const at = audioStart + starts[i]
+      const src = ctx!.createBufferSource()
+      src.buffer = l.audio
+      const g = ctx!.createGain()
+      g.gain.setValueAtTime(0.0001, at)
+      g.gain.linearRampToValueAtTime(1, at + 0.06)
+      g.gain.setValueAtTime(1, at + seg.dur - 0.08)
+      g.gain.linearRampToValueAtTime(0.0001, at + seg.dur)
+      src.connect(g)
+      g.connect(master!)
+      src.start(at, clipStart(l.src.duration, seg.dur), seg.dur)
+      // muziek zachter onder het geluid van de clip
+      if (music) {
+        music.gain.setValueAtTime(1, at)
+        music.gain.linearRampToValueAtTime(0.35, at + 0.12)
+        music.gain.setValueAtTime(0.35, at + seg.dur - 0.12)
+        music.gain.linearRampToValueAtTime(1, at + seg.dur)
+      }
+    })
+  }
+  const t0 = performance.now() + lead * 1000
+  const clock = () => (ctx ? ctx.currentTime - audioStart : (performance.now() - t0) / 1000)
+
+  let current = -1
   try {
-    for (const seg of plan.segments) {
-      const src = seg.kind === 'clip' ? (sources.get(seg.media.id) ?? null) : null
-      if (src instanceof HTMLVideoElement) {
-        // vanaf iets na het begin (de eerste tel is vaak schudden), niet voorbij het eind
-        const start = Math.max(0, Math.min(0.4, (src.duration || 0) - seg.dur))
-        src.currentTime = start
-        await Promise.race([new Promise((r) => (src.onseeked = r)), sleep(1500)])
-        await src.play().catch(() => {})
+    for (;;) {
+      abort()
+      const t = clock()
+      if (t >= plan.total) break
+      let i = 0
+      while (i < segs.length - 1 && t >= starts[i + 1]) i++
+      if (i !== current) {
+        const prev = segs[current]
+        const pv = prev?.kind === 'clip' ? loaded.get(prev.media.id)?.src : null
+        if (pv instanceof HTMLVideoElement) pv.pause()
+        const seg = segs[i]
+        const v = seg.kind === 'clip' ? loaded.get(seg.media.id)?.src : null
+        if (v instanceof HTMLVideoElement) void v.play().catch(() => {})
+        current = i
       }
-      const t0 = performance.now()
-      for (;;) {
-        if (opts.signal?.aborted) throw new DOMException('afgebroken', 'AbortError')
-        const t = (performance.now() - t0) / 1000
-        if (t >= seg.dur) break
-        drawFrame(c, seg, t / seg.dur, { src, mascot })
-        opts.onProgress?.({ phase: 'opnemen', done: Math.min(1, (elapsed + t) / plan.total) })
-        await new Promise((r) => requestAnimationFrame(() => r(null)))
-      }
-      if (src instanceof HTMLVideoElement) src.pause()
-      elapsed += seg.dur
+      const seg = segs[i]
+      const src = seg.kind === 'clip' ? (loaded.get(seg.media.id)?.src ?? null) : null
+      drawFrame(c, seg, Math.max(0, t - starts[i]) / seg.dur, { src, mascot })
+      opts.onProgress?.({ phase: 'opnemen', done: Math.min(1, Math.max(0, t) / plan.total) })
+      await new Promise((r) => requestAnimationFrame(() => r(null)))
     }
+    // laatste stukje geluid (fade-out) nog meenemen
+    await sleep(150)
   } finally {
     rec.stop()
-    stream.getTracks().forEach((t) => t.stop())
-    for (const s of sources.values())
-      if (s instanceof HTMLVideoElement) {
-        s.removeAttribute('src')
-        s.remove()
+    stream.getTracks().forEach((tr) => tr.stop())
+    canvasStream.getTracks().forEach((tr) => tr.stop())
+    master?.disconnect()
+    for (const l of loaded.values()) {
+      if (l.src instanceof HTMLVideoElement) {
+        l.src.pause()
+        l.src.removeAttribute('src')
+        l.src.remove()
       }
+      if (l.url) URL.revokeObjectURL(l.url)
+    }
   }
   await stopped
   const type = (rec.mimeType || mime || 'video/webm').split(';')[0]
@@ -370,3 +508,19 @@ export async function renderFilm(
 
 /** Stil of gestopt? Een film van een paar KB is mislukt. */
 export const looksEmpty = (b: Blob) => b.size < 10_000
+
+/** Een stukje van een track laten horen (4 maten), naar de speakers. Geeft een stop-functie terug. */
+export function previewMusic(ctx: AudioContext, id: TrackId): () => void {
+  const track = TRACK_BY_ID.get(id)
+  if (!track) return () => {}
+  const out = ctx.createGain()
+  out.connect(ctx.destination)
+  void ctx.resume().catch(() => {})
+  const len = (60 / track.bpm) * 16
+  scheduleMusic(ctx, out, track, ctx.currentTime + 0.05, len)
+  return () => {
+    out.gain.setValueAtTime(out.gain.value, ctx.currentTime)
+    out.gain.linearRampToValueAtTime(0.0001, ctx.currentTime + 0.08)
+    setTimeout(() => out.disconnect(), 150)
+  }
+}
