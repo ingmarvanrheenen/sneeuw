@@ -172,6 +172,12 @@ S.K.A.T.E., maar op de piste, binnen een crew. Wie aan de beurt is zet een trick
 - Voortgang alleen op dit toestel (`kv: programs`): je actieve programma en per dag de datum waarop je hem deed. Dag gedaan / toch nog niet, stoppen, opnieuw beginnen; de laatste dag maakt hem af (poster). Home laat de dag van vandaag zien. Geen XP: dat blijft uit je gelogde dagen komen.
 - Nieuw programma: in `src/content/programs.ts`; de content-test checkt dat alle tricks bestaan en elke dag een doel en oefeningen heeft.
 
+## Tekenen op je clip (`src/lib/sketch.ts`, `src/components/ClipDraw.tsx`)
+
+- In de media-viewer, bij je eigen foto's en video's: "Teken". Kies het frame (schuif plus frame terug/vooruit), teken een lijn, pijl, hoek (drie tikken, met graden en een boogje, bijv. heup-knie-enkel) of vrij, in lime, oranje of wit. Ongedaan maken per vorm.
+- Punten staan in pixels van het beeld (`toImage()`), dus de tekening klopt op elk scherm en in de export. Het bestand wordt eerst lokaal opgehaald, zodat het canvas het frame mag exporteren.
+- Bewaar: frame plus tekening als jpg (`exportSketch`), als nieuwe foto bij dezelfde dag of trick (via `addMediaFiles`, synct mee). Of deel hem direct.
+
 ## Push-meldingen
 
 ```

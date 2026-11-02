@@ -8,6 +8,7 @@ import { remove } from '../lib/repo'
 import { toast } from '../lib/toast'
 import type { MediaMeta } from '../lib/types'
 import { cx } from './ui'
+import { ClipDraw } from './ClipDraw'
 
 export function useMediaUrl(m: MediaMeta | undefined) {
   const [url, setUrl] = useState<string | null>(null)
@@ -66,9 +67,13 @@ export function MediaThumb({
 
 export function MediaViewer({ m, onClose, onDelete }: { m: MediaMeta | null; onClose: () => void; onDelete?: (m: MediaMeta) => void }) {
   const url = useMediaUrl(m ?? undefined)
+  const [drawing, setDrawing] = useState(false)
+  useEffect(() => setDrawing(false), [m])
   if (!m) return null
+  const mine = !m.userId || m.userId === getCurrentUserId()
   return (
     <div className="fixed inset-0 z-[70] flex flex-col bg-black" onClick={onClose}>
+      {drawing && <ClipDraw m={m} onClose={() => setDrawing(false)} />}
       <div className="pt-safe flex justify-between px-4 pb-2" onClick={(e) => e.stopPropagation()}>
         {onDelete ? (
           <button
@@ -82,7 +87,17 @@ export function MediaViewer({ m, onClose, onDelete }: { m: MediaMeta | null; onC
           <span />
         )}
         <div className="flex gap-2">
-          {(!m.userId || m.userId === getCurrentUserId()) && (
+          {mine && (
+            <button
+              type="button"
+              onClick={() => setDrawing(true)}
+              className="flex h-10 items-center gap-1.5 rounded-full bg-white/10 px-3.5 text-[15px] font-medium text-white"
+            >
+              <Icon name="edit" size={16} />
+              Teken
+            </button>
+          )}
+          {mine && (
             <Link
               to={`/coach?media=${m.id}`}
               className="flex h-10 items-center gap-1.5 rounded-full bg-white/10 px-3.5 text-[15px] font-medium text-white"
