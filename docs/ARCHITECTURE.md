@@ -126,6 +126,13 @@ S.K.A.T.E., maar op de piste, binnen een crew. Wie aan de beurt is zet een trick
 - Je crew hoort de memo's bij een gedeelde dag in de feed (`FeedPost.memos`).
 - **Nooit tussen foto's en video's**: `isVisual()` filtert ze uit de kluis, je skipas, de coach, het toernooi, de trip-media en `riderMedia` (server-side `data->>type <> 'audio'`). Nieuwe plek met een media-grid? Filter met `isVisual`.
 
+## Trip-film (proef) (`src/lib/tripFilm.ts`, `src/components/TripFilm.tsx`)
+
+- Op de trippagina (na het toernooi, zodra de trip begonnen is): de gedeelde clips en foto's van de crew (`tripMedia`) als korte film om te delen. Max 8, op tijd; zijn er meer, dan gaan video's voor (vaste keuze per trip via `planFilm`).
+- Alles op het toestel: een canvas van 720x1280 tekent intro (tripnaam, resort, datums), per clip ~2,6 s (foto 1,8 s, met een langzame zoom) met de naam van de rider als sticker, en een outro met de crew en je mascotte. `MediaRecorder` neemt `canvas.captureStream(30)` op (iPhone: mp4/H.264, anders webm). Dat gaat in echte tijd: hou het scherm aan.
+- De tekenhulpjes (fonts, `display`, `caps`, `peaks`, kleuren) komen uit `shareCard.ts`. Delen via `shareFile` (deelmenu of download). De film wordt niet opgeslagen.
+- Nog niet: geluid, muziek, kiezen welke clips. Getest in Chromium met testclips (ffmpeg); op een iPhone nog proberen.
+
 ## Push-meldingen
 
 ```
