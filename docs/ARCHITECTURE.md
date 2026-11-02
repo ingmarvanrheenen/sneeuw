@@ -143,6 +143,12 @@ S.K.A.T.E., maar op de piste, binnen een crew. Wie aan de beurt is zet een trick
 - De app rekent: `shares()` verdeelt in centen (de rest cent voor cent op id, overal hetzelfde), `balances()` geeft de stand (telt op tot 0), `settle()` maakt "wie betaalt wie" (grootste schuld naar grootste tegoed). "Betaald" legt een terugbetaling vast.
 - Op beide trippagina's. Laatst bekende stand met namen in `kv: pot:<tripId>`, zodat je hem op de berg ook zonder bereik ziet. Alleen euro.
 
+## Run-teller (`src/lib/runs.ts`, `src/pages/Runs.tsx`)
+
+- Route `/runs`. Eén grote knop: Start boven aan de piste, Beneden onder. De tijd tussen twee runs is lift en wachten; een gat van meer dan 45 minuten is pauze. "Oeps, terug" draait de laatste tik terug; een run die langer dan 40 minuten loopt vraagt of je vergat te stoppen.
+- Alleen lokaal, op tijdstempels (`kv: runs:<datum>`), dus het klopt ook als de app dicht was of je scherm uit stond. `runStore` houdt Home en de pagina live gelijk.
+- Op Home: een live blok (run of lift, met de klok) terwijl je telt, anders een rij. Je dag: `smartDraft` neemt het aantal runs en de uren op de berg (op een half uur) over; "Zet in je dag" zet de runs in een al gelogde dag. `Session.runs` staat op de dagpagina en in de editor. XP verandert niet.
+
 ## Push-meldingen
 
 ```
