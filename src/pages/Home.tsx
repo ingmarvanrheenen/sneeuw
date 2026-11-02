@@ -226,6 +226,9 @@ export default function Home() {
             to="/runs"
           />
         )}
+        {!loggedToday && !runDay.runs.length && (
+          <Row icon="bolt" title="Warming-up" detail="5 minuten voor de eerste lift" to="/warming-up" />
+        )}
         <Row icon="replay" title="Trick-roulette" detail="Weet je niet wat je moet oefenen?" to="/tricks?roulette=1" />
         <Row icon="chat" title="Coach Daddy" detail="Vraag om tips of een oefenplan" to="/coach" />
         {nextTrip && (

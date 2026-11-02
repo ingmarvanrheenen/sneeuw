@@ -156,6 +156,11 @@ S.K.A.T.E., maar op de piste, binnen een crew. Wie aan de beurt is zet een trick
 - "Waar ben ik": je coördinaten (GPS, ook zonder bereik) om voor te lezen. "Bij een ongeluk": wat te doen, in volgorde.
 - Je gegevens (allergieën, medicijnen, wie ze moeten bellen, verzekering) staan alleen op dit toestel (`kv: emergency:card`), niet in je profiel en nooit op de server. "Laat zien aan hulp" toont ze groot, in het Nederlands en Engels.
 
+## Warming-up (`src/content/warmup.ts`, `src/lib/warmup.ts`, `src/pages/Warmup.tsx`)
+
+- Route `/warming-up` (Home voor je eerste run, Meer, en de run-teller). Acht oefeningen met je board aan, samen precies 5 minuten (de content-test bewaakt dat). Elke oefening is een animatie op het 2D-zijaanzicht (`TrickAnimation compact`) waarin de rider op zijn plek blijft.
+- De klok draait op tijdstempels (`startClock`, `pause`, `resume`, `skip`, `position`), dus pauze en een scherm dat even uit ging kloppen. Piepje bij een nieuwe oefening en de laatste drie tellen. Het scherm blijft aan via de Wake Lock API waar die er is. Klaar: een poster en door naar de run-teller.
+
 ## Push-meldingen
 
 ```
