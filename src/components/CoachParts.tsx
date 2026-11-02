@@ -11,6 +11,7 @@ import { getCurrentUserId } from '../lib/auth-state'
 import { TRICKS, TRICK_BY_ID } from '../content/tricks'
 import { CoachError, toCoachImage, type CoachAction, type CoachImage, type MemoryItem } from '../lib/coach'
 import type { MediaMeta } from '../lib/types'
+import { isVisual } from '../lib/memo'
 
 /** Piepkleine markdown: **vet**, lijstjes, kopjes en alinea's. Genoeg voor chat. */
 export function Rich({ text }: { text: string }) {
@@ -223,16 +224,17 @@ export function TechniqueSheet({
   const media = useLiveQuery(
     async () =>
       ((await db.records.where('kind').equals('media').toArray()) as MediaMeta[])
-        .filter((m) => !m.deleted && (!m.userId || m.userId === me))
+        .filter((m) => !m.deleted && isVisual(m) && (!m.userId || m.userId === me))
         .sort((a, b) => b.createdAt - a.createdAt),
     [me],
   )
 
   async function choose(m: MediaMeta) {
     setError(null)
+    if (!isVisual(m)) return
     const url = await mediaUrl(m)
     if (!url) return setError('Deze kan ik nu niet laden. Offline? Media uit de cloud heeft internet nodig.')
-    setPicked({ type: m.type, url, trickId: m.trickId })
+    setPicked({ type: m.type as 'image' | 'video', url, trickId: m.trickId })
     if (m.trickId) setTrickId(m.trickId)
   }
 

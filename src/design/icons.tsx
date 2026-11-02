@@ -93,6 +93,7 @@ const P = {
   mood2: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM9 10v1M15 10v1M8.5 16.2c2-.8 5-.8 7 .4',
   mood3: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM9 10v1M15 10v1M8.5 14.5c1.5 1.3 5.5 1.3 7 0',
   mood4: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM6.5 9h4.5v2.5H6.5zM13 9h4.5v2.5H13zM11 10h2M8.5 15c1.5 1.5 5.5 1.5 7 0',
+  mic: 'M9 4h6v10H9zM5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v3M8.5 21h7',
   mood5: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM7.5 13.5h9a4.5 4.5 0 0 1-9 0zM8 10c.7-1 1.8-1 2.5 0M13.5 10c.7-1 1.8-1 2.5 0',
 } as const
 
@@ -100,6 +101,7 @@ const SOLID = {
   play: 'M7 4v16l13-8z',
   pause: 'M6.5 4h4v16h-4zM13.5 4h4v16h-4z',
   dot: 'M12 8a4 4 0 1 1 0 8 4 4 0 0 1 0-8z',
+  stop: 'M6 6h12v12H6z',
 } as const
 
 export type IconName = keyof typeof P | keyof typeof SOLID

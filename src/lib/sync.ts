@@ -45,7 +45,10 @@ export async function refreshPending() {
   syncStore.set((s) => ({ ...s, pending }))
 }
 
-function extFor(mime: string) {
+export function extFor(mime: string) {
+  if (mime.startsWith('audio/mp4') || mime.includes('aac')) return 'm4a'
+  if (mime.startsWith('audio/webm')) return 'weba'
+  if (mime.includes('ogg')) return 'ogg'
   if (mime.includes('quicktime')) return 'mov'
   if (mime.includes('mp4')) return 'mp4'
   if (mime.includes('png')) return 'png'
@@ -281,8 +284,8 @@ export async function mediaUrl(m: MediaMeta): Promise<string | null> {
   const { data } = await supabase.storage.from(MEDIA_BUCKET).createSignedUrl(m.path, 60 * 60 * 6)
   if (!data?.signedUrl) return null
   urlCache.set(m.id, data.signedUrl)
-  // Foto's van jezelf lokaal cachen zodat ze offline werken.
-  if (m.type === 'image' && m.userId === getCurrentUserId()) {
+  // Foto's en spraakmemo's van jezelf lokaal cachen zodat ze offline werken.
+  if ((m.type === 'image' || m.type === 'audio') && m.userId === getCurrentUserId()) {
     fetch(data.signedUrl)
       .then((r) => r.blob())
       .then((blob) => db.blobs.put({ id: m.id, blob }))

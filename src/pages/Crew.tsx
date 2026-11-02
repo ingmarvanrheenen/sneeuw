@@ -4,6 +4,7 @@ import { Button, Card, Empty, Field, Page, PageHeader, Segmented, Sheet, cx, inp
 import { Icon, Mood, Spinner } from '../design/icons'
 import { ReactionSticker } from '../design/Stickers'
 import { MediaThumb, MediaViewer } from '../components/Media'
+import { MemoList } from '../components/VoiceMemos'
 import { authStore } from '../lib/auth'
 import { hasBackend } from '../lib/supabase'
 import {
@@ -121,6 +122,11 @@ function Post({
               className={cx('w-full rounded-none', post.media.length === 1 ? 'aspect-[4/3]' : 'aspect-square')}
             />
           ))}
+        </div>
+      )}
+      {!!post.memos?.length && (
+        <div className="px-3 pt-3">
+          <MemoList items={post.memos} />
         </div>
       )}
       <div className="flex gap-1.5 p-3">

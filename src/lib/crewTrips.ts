@@ -229,7 +229,11 @@ export async function tripMedia(crewId: string, trip: Pick<Trip, 'startDate' | '
     .eq('deleted', false)
   if (error) throw error
   const media = ((data ?? []) as { user_id: string; data: MediaMeta }[]).map((r) => ({ ...r.data, userId: r.data.userId ?? r.user_id }))
-  return mediaOnTrip(media, days, trip)
+  return mediaOnTrip(
+    media.filter((m) => m.type !== 'audio'),
+    days,
+    trip,
+  )
 }
 
 export interface RecapPerson {

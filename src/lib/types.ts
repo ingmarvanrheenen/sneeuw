@@ -104,7 +104,8 @@ export interface Gear extends BaseRecord {
 
 export interface MediaMeta extends BaseRecord {
   kind: 'media'
-  type: 'image' | 'video'
+  /** audio = spraakmemo bij je dag (zie src/lib/memo.ts); nooit in foto/video-lijsten */
+  type: 'image' | 'video' | 'audio'
   mime: string
   /** Pad in Supabase Storage, gezet na upload. */
   path?: string
@@ -117,6 +118,8 @@ export interface MediaMeta extends BaseRecord {
   /** bytes van wat er opgeslagen/geüpload wordt (na verkleinen) */
   size?: number
   caption?: string
+  /** lengte in seconden (spraakmemo's) */
+  duration?: number
 }
 
 /** Profiel staat lokaal in kv en wordt naar de `profiles` tabel gesynct (met stats voor de crew). */

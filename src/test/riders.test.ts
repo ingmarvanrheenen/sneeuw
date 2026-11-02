@@ -54,7 +54,7 @@ describe('profiel van een crewgenoot', () => {
     expect(await riderProfiles([])).toEqual({})
   })
 
-  it('highlights: alleen wat met een crew gedeeld is', async () => {
+  it("highlights: alleen foto's en video's die met een crew gedeeld zijn (geen spraakmemo's)", async () => {
     fake().respond(() => ({ data: [{ data: { id: 'm1', type: 'image' } }] }))
     expect(await riderMedia('daan')).toEqual([{ id: 'm1', type: 'image' }])
     expect(fake().calls[0].filters).toEqual([
@@ -62,6 +62,7 @@ describe('profiel van een crewgenoot', () => {
       ['eq', 'kind', 'media'],
       ['eq', 'deleted', false],
       ['not.is', 'crew_id', null],
+      ['neq', 'data->>type', 'audio'],
     ])
   })
 })

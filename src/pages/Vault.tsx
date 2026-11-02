@@ -11,12 +11,13 @@ import { db } from '../lib/db'
 import { TRACKS, TRICKS, TRICK_BY_ID, type Track } from '../content/tricks'
 import { fmtShort } from '../lib/format'
 import type { MediaMeta } from '../lib/types'
+import { isVisual } from '../lib/memo'
 
 export default function Vault() {
   const progress = useKind('trick')
   const [track, setTrack] = useState<Track | 'alle'>('alle')
   const media = useLiveQuery(
-    async () => (await db.records.where('kind').equals('media').toArray()).filter((m) => !m.deleted) as MediaMeta[],
+    async () => ((await db.records.where('kind').equals('media').toArray()) as MediaMeta[]).filter((m) => !m.deleted && isVisual(m)),
     [],
   )
   const landed = useMemo(

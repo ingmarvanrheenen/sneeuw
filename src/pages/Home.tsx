@@ -5,6 +5,10 @@ import { Button, List, Page, PageHeader, Row, Section, SectionLink, LevelDots, c
 import { LevelPoster } from '../components/Poster'
 import { SyncBadge } from '../components/SyncBadge'
 import { QuickLog } from '../components/QuickLog'
+import { MemoRecorder } from '../components/VoiceMemos'
+import { looseMemos } from '../lib/memo'
+import { toast } from '../lib/toast'
+import { useLiveQuery } from 'dexie-react-hooks'
 import { useProgress } from '../lib/useProgress'
 import { seasonOf } from '../lib/format'
 import { LiftQuestion } from '../components/LiftQuestion'
@@ -15,7 +19,7 @@ import { getProfile } from '../lib/auth'
 import { TRICKS, TRICK_BY_ID } from '../content/tricks'
 import { isIOS, isStandalone } from '../lib/pwa'
 import { todayISO } from '../lib/ids'
-import { fmtDate, daysUntil } from '../lib/format'
+import { fmtDate, daysUntil, plural } from '../lib/format'
 
 function InstallHint() {
   const [show, setShow] = useState(false)
@@ -94,6 +98,7 @@ export default function Home() {
   const openGoals = (goals ?? []).filter((g) => !g.done).slice(0, 3)
   const recent = sessionsSorted(sessions ?? []).slice(0, 3)
   const loggedToday = (sessions ?? []).find((s) => s.date === today)
+  const waiting = useLiveQuery(() => looseMemos(today), [today, sessions?.length])
 
   const landedIds = new Set((trickRows ?? []).filter((t) => t.status === 'geland' || t.status === 'beheerst').map((t) => t.trickId))
   // Eerst wat net ontgrendeld is door iets wat je al kunt, dan de rest op niveau
@@ -145,6 +150,22 @@ export default function Home() {
         <Button size="lg" className="mt-6 w-full" icon={<Icon name="plus" size={20} stroke={2.2} />} onClick={() => setQuick(true)}>
           Log je dag
         </Button>
+      )}
+      <MemoRecorder
+        className="mt-2"
+        label="Spraakmemo"
+        link={loggedToday ? { sessionId: loggedToday.id, crewId: loggedToday.crewId ?? null } : {}}
+        onSaved={() =>
+          toast({
+            title: 'Memo bewaard',
+            body: loggedToday ? 'Staat bij je dag van vandaag.' : 'Komt bij je dag zodra je die logt.',
+            icon: 'mic',
+            tone: 'success',
+          })
+        }
+      />
+      {!loggedToday && !!waiting?.length && (
+        <p className="mt-2 text-center text-[13px] text-muted">{plural(waiting.length, 'memo wacht', "memo's wachten")} op je dag</p>
       )}
       <QuickLog open={quick} onClose={() => setQuick(false)} />
       <DailyChallenge />

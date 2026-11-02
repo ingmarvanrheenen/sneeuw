@@ -6,6 +6,8 @@ import { Icon, MOOD_LABELS } from '../design/icons'
 import { MoodPick } from '../design/Stickers'
 import { ResortPicker, TrickPicker } from '../components/Pickers'
 import { MediaAddButton, MediaGrid } from '../components/Media'
+import { VoiceMemos } from '../components/VoiceMemos'
+import { isMemo, isVisual, looseMemos } from '../lib/memo'
 import { remove, useKind, useRecord } from '../lib/repo'
 import { db } from '../lib/db'
 import { uid } from '../lib/ids'
@@ -86,6 +88,8 @@ export default function LogEditor() {
     async () => (await db.records.where('sessionId').equals(id).toArray()).filter((r) => r.kind === 'media' && !r.deleted) as MediaMeta[],
     [id],
   )
+  // al ingesproken voordat je de dag logde: komen erbij bij opslaan
+  const loose = useLiveQuery(async () => (editId ? [] : looseMemos(d.date)), [editId, d.date])
 
   const set = <K extends keyof Draft>(k: K, v: Draft[K]) => setD((x) => ({ ...x, [k]: v }))
   const toggleIn = <K extends 'pistes' | 'pains'>(k: K, v: string) =>
@@ -315,11 +319,13 @@ export default function LogEditor() {
       </Section>
 
       <Section title="Foto's & video's">
-        <MediaGrid items={media ?? []} editable />
+        <MediaGrid items={(media ?? []).filter(isVisual)} editable />
         <div className="mt-2">
           <MediaAddButton link={{ sessionId: id, crewId: d.crewId ?? null }} />
         </div>
       </Section>
+
+      <VoiceMemos items={[...(loose ?? []), ...(media ?? []).filter(isMemo)]} link={{ sessionId: id, crewId: d.crewId ?? null }} />
 
       <Section title="Notities">
         <textarea

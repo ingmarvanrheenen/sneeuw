@@ -4,6 +4,8 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { Button, Card, Page, PageHeader, Section, Stat, Sheet, StatGroup } from '../components/ui'
 import { Icon, Mood, MOOD_LABELS } from '../design/icons'
 import { MediaGrid } from '../components/Media'
+import { VoiceMemos } from '../components/VoiceMemos'
+import { isMemo, isVisual } from '../lib/memo'
 import { DayReview } from '../components/DayReview'
 import { remove, useRecord } from '../lib/repo'
 import { db } from '../lib/db'
@@ -146,11 +148,13 @@ export default function LogDetail() {
         </Section>
       )}
 
-      {!!media?.length && (
+      {!!media?.some(isVisual) && (
         <Section title="Media">
-          <MediaGrid items={media} editable />
+          <MediaGrid items={media.filter(isVisual)} editable />
         </Section>
       )}
+
+      <VoiceMemos items={(media ?? []).filter(isMemo)} link={{ sessionId: s.id, crewId: s.crewId ?? null }} />
 
       {s.notes && (
         <Section title="Notities">

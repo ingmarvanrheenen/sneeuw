@@ -62,6 +62,7 @@ export async function riderMedia(userId: string, limit = 9): Promise<MediaMeta[]
     .eq('kind', 'media')
     .eq('deleted', false)
     .not('crew_id', 'is', null)
+    .neq('data->>type', 'audio')
     .order('updated_at', { ascending: false })
     .limit(limit)
   if (error) throw error
