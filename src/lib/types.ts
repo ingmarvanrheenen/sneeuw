@@ -1,5 +1,6 @@
 // Alle records die lokaal (IndexedDB) én in de cloud (Supabase) leven delen deze basis.
 // `dirty` = 1 betekent: nog niet naar de server gesynct.
+import type { Mascot } from './mascot'
 export interface BaseRecord {
   id: string
   userId: string | null
@@ -137,6 +138,8 @@ export interface Profile {
   nickname?: string
   /** ontwerp van je board op je skipas (ids uit src/content/boards.ts) */
   board?: { pattern: string; base: string; accent: string }
+  /** je mascotte (ids uit src/lib/mascot.ts) */
+  mascot?: Mascot
 }
 
 export type AnyRecord = Session | TrickProgress | Goal | Trip | Gear | MediaMeta

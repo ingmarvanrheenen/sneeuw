@@ -21,8 +21,23 @@ import type { Profile } from '../lib/types'
 import { boardStyle, checkDesign, isDarkBoard } from '../lib/boardDesign'
 import { PassStickers } from './GiftParts'
 import type { Gift } from '../lib/gifts'
+import { MascotSticker } from '../design/Mascot'
+import { DEFAULT_MASCOT, type Mascot } from '../lib/mascot'
 
-export function RiderAvatar({ photo, name, size = 36, square }: { photo?: string; name: string; size?: number; square?: boolean }) {
+export function RiderAvatar({
+  photo,
+  name,
+  size = 36,
+  square,
+  mascot,
+}: {
+  photo?: string
+  name: string
+  size?: number
+  square?: boolean
+  /** zonder foto: je mascotte in plaats van je voorletter */
+  mascot?: Partial<Mascot>
+}) {
   const shape = square ? 'rounded-[22%]' : 'rounded-full'
   if (photo)
     return (
@@ -34,6 +49,12 @@ export function RiderAvatar({ photo, name, size = 36, square }: { photo?: string
         className={cx('shrink-0 object-cover', shape)}
         style={{ width: size, height: size }}
       />
+    )
+  if (mascot)
+    return (
+      <span aria-hidden className={cx('grid shrink-0 place-items-center bg-block', shape)} style={{ width: size, height: size }}>
+        <MascotSticker mascot={mascot} size={Math.round(size * 0.92)} />
+      </span>
     )
   return (
     <span
@@ -82,7 +103,7 @@ export function SkiPass({
   return (
     <div className="card relative overflow-hidden" aria-label={`Skipas van ${name}`} role="group">
       <div className="flex gap-4 p-4">
-        <RiderAvatar photo={profile.photo} name={name} size={84} square />
+        <RiderAvatar photo={profile.photo} name={name} size={84} square mascot={profile.mascot ?? DEFAULT_MASCOT} />
         <div className="min-w-0 flex-1">
           <div className="display truncate text-[32px]">{name}</div>
           {profile.nickname && <div className="mt-1 truncate text-[15px] text-muted">“{profile.nickname}”</div>}

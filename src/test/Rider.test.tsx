@@ -206,6 +206,47 @@ describe('je eigen skipas', () => {
     expect(screen.getByRole('img', { name: 'Je board met stickers: Ollie' }).getAttribute('data-pattern')).toBe('stippen')
   })
 
+  it('mascotte aanpassen: live in het voorbeeld, opgeslagen in je profiel en op je skipas', async () => {
+    const user = userEvent.setup()
+    await seed()
+    at('/rider/ik')
+    await user.click(await screen.findByRole('button', { name: 'Bewerk' }))
+    await user.click(screen.getByRole('button', { name: /Je mascotte/ }))
+    const sheet = screen.getByRole('dialog', { name: 'Je mascotte' })
+    const art = () => within(sheet).getByRole('img', { name: 'Je mascotte' }).innerHTML
+    expect(art()).toContain('#d7ff3c')
+    await user.click(within(within(sheet).getByRole('group', { name: 'Gezicht' })).getByRole('button', { name: 'Oranje' }))
+    // gezicht in de kleur van de ster: de ster schuift door, en die kleur kun je niet meer kiezen
+    const star = within(sheet).getByRole('group', { name: 'Ster' })
+    expect((within(star).getByRole('button', { name: 'Oranje' }) as HTMLButtonElement).disabled).toBe(true)
+    expect(within(star).getByRole('button', { name: 'Lime' }).getAttribute('aria-pressed')).toBe('true')
+    await user.click(within(sheet).getByRole('button', { name: 'Muts' }))
+    await user.click(within(sheet).getByRole('button', { name: 'Tong' }))
+    await user.click(within(within(sheet).getByRole('group', { name: 'Goggles' })).getByRole('button', { name: 'Spiegel' }))
+    expect(art()).toContain('#ffa463')
+    await user.click(within(sheet).getByRole('button', { name: 'Klaar' }))
+    await user.click(within(screen.getByRole('dialog', { name: 'Profiel bewerken' })).getByRole('button', { name: 'Klaar' }))
+    await waitFor(async () =>
+      expect((await getProfile()).mascot).toEqual({ face: 'oranje', ster: 'lime', goggles: 'spiegel', hoofd: 'muts', mond: 'tong' }),
+    )
+    expect(screen.getByRole('group', { name: /Skipas/ }).innerHTML).toContain('#ffa463')
+  })
+
+  it('mascotte: standaard haalt je eigen weer weg', async () => {
+    const user = userEvent.setup()
+    await seed()
+    at('/rider/ik')
+    await user.click(await screen.findByRole('button', { name: 'Bewerk' }))
+    await user.click(screen.getByRole('button', { name: /Je mascotte/ }))
+    const sheet = screen.getByRole('dialog', { name: 'Je mascotte' })
+    expect((within(sheet).getByRole('button', { name: 'Standaard' }) as HTMLButtonElement).disabled).toBe(true)
+    await user.click(within(sheet).getByRole('button', { name: 'Verras me' }))
+    await user.click(within(sheet).getByRole('button', { name: 'Standaard' }))
+    await user.click(within(sheet).getByRole('button', { name: 'Klaar' }))
+    await user.click(within(screen.getByRole('dialog', { name: 'Profiel bewerken' })).getByRole('button', { name: 'Klaar' }))
+    await waitFor(async () => expect('mascot' in (await getProfile()) && (await getProfile()).mascot).toBeFalsy())
+  })
+
   it('verras me geeft een ontwerp, standaard haalt het weer weg', async () => {
     const user = userEvent.setup()
     await seed()

@@ -116,6 +116,7 @@ S.K.A.T.E., maar op de piste, binnen een crew. Wie aan de beurt is zet een trick
 - **Stickerboek**: je board met de moeilijkste gelande tricks als stickers (`boardStickers()`, vaste plekken per trick via `stickerSlot()`, de rest als "+N"), kleur = moeilijkheid als pistekleur. Daaronder per track één regel met de volgende sticker; tik voor alle stickers van die track, ook de lege plekken.
 - **Bijnamen** (`nicknames`, migratie `20261029000000`): een crewgenoot stelt voor (max 3 open per persoon, niet dezelfde twee keer), alleen jij zet de status op ja/nee; bij ja komt hij in je profiel. 20 scenario's in `test:db`.
 - Feed, leaderboard en trip-recap linken naar de skipas; de feed toont profielfoto's.
+- **Mascotte** (`src/lib/mascot.ts`, tekening in `src/design/Mascot.tsx`): de Episch-sticker van het app-icoon met jouw gezichts-, ster- en gogglekleur, muts/pet/helm en lach. Opgeslagen als ids in `profiles.data.mascot` (geen migratie; synct met het profiel), `checkMascot()` maakt van alles wat niet klopt de standaard. Staat op de skipas als je geen foto hebt (ook bij je crew) en onderaan je deelkaarten en Season Wrapped (`cardMascotSvg`). Aanpassen: Bewerk → Je mascotte.
 
 ## Push-meldingen
 

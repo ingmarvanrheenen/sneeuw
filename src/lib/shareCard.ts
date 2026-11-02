@@ -4,6 +4,8 @@
 // licht en donker hetzelfde uitzien.
 import { iconPath, MOOD_LABELS, type IconName } from '../design/icons'
 import { stickerSvg } from '../design/Stickers'
+import { mascotSvg } from '../design/Mascot'
+import { getProfile } from './auth'
 import { TRICK_BY_ID } from '../content/tricks'
 import { fmtDate } from './format'
 import { db } from './db'
@@ -90,6 +92,18 @@ async function loadImg(src: string): Promise<HTMLImageElement | null> {
 /** Een sticker (stemming of reactie) als plaatje voor op het canvas. */
 function stickerImg(art: number | string, size: number) {
   return loadImg('data:image/svg+xml;charset=utf-8,' + encodeURIComponent(stickerSvg(art, size)))
+}
+
+/** Jouw mascotte (of de standaard) als svg voor onderaan de kaart. */
+export async function cardMascotSvg(size: number): Promise<string> {
+  const mascot = await getProfile()
+    .then((p) => p.mascot)
+    .catch(() => undefined)
+  return mascotSvg(mascot, size)
+}
+
+async function mascotImg(size: number) {
+  return loadImg('data:image/svg+xml;charset=utf-8,' + encodeURIComponent(await cardMascotSvg(size)))
 }
 
 async function coverPhoto(s: Session): Promise<HTMLImageElement | null> {
@@ -244,7 +258,7 @@ export async function renderShareCard(s: Session): Promise<Blob> {
   canvas.width = W
   canvas.height = H
   const c = canvas.getContext('2d')!
-  const [photo, mood, mascot] = await Promise.all([coverPhoto(s), stickerImg(k.mood, 260), stickerImg(5, 150)])
+  const [photo, mood, mascot] = await Promise.all([coverPhoto(s), stickerImg(k.mood, 260), mascotImg(150)])
 
   c.fillStyle = INK
   c.fillRect(0, 0, W, H)
@@ -429,7 +443,7 @@ export async function renderWrappedCard(
   canvas.height = H
   const c = canvas.getContext('2d')!
   const col = wrappedColors(index)
-  const mascot = await stickerImg(5, 170)
+  const mascot = await mascotImg(170)
 
   c.fillStyle = col.bg
   c.fillRect(0, 0, W, H)
