@@ -40,6 +40,7 @@ import { errMsg } from '../lib/errors'
 import type { MediaMeta, Profile } from '../lib/types'
 import { GiveSheet, ReceivedStickers } from '../components/GiftParts'
 import { cachedGifts, giftsLeft, myGifts, pinnedFor, removeGift, setPinned, type Gift } from '../lib/gifts'
+import { isVisual } from '../lib/memo'
 
 export default function Rider() {
   const { id = 'ik' } = useParams()
@@ -202,7 +203,7 @@ function MyRider() {
   const progress = useProgress()
   const profile = useLiveQuery(() => getProfile(), [])
   const media = useLiveQuery(async () => {
-    const all = (await db.records.where('kind').equals('media').toArray()).filter((m) => !m.deleted) as MediaMeta[]
+    const all = ((await db.records.where('kind').equals('media').toArray()) as MediaMeta[]).filter((m) => !m.deleted && isVisual(m))
     return all.sort((a, b) => b.createdAt - a.createdAt).slice(0, 9)
   }, [])
   const [editing, setEditing] = useState(false)

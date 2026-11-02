@@ -8,6 +8,7 @@ import { cachedCrews } from './crew'
 import { TRICK_BY_ID } from '../content/tricks'
 import { RESORTS } from '../content/resorts'
 import type { MediaMeta, Session } from './types'
+import { adoptMemos } from './memo'
 
 export type SessionDraft = Omit<Session, 'id' | 'userId' | 'createdAt' | 'updatedAt' | 'kind'>
 
@@ -69,6 +70,8 @@ export async function saveSession(opts: { id: string; draft: SessionDraft; exist
   await kvSet('lastCrewId', draft.crewId ?? null)
   // media volgt de zichtbaarheid van de dag
   for (const m of media) if ((m.crewId ?? null) !== (draft.crewId ?? null)) await update(m, { crewId: draft.crewId ?? null })
+  // spraakmemo's die je die dag al insprak (voordat je de dag logde) horen er nu bij
+  if (!existing) await adoptMemos(id, draft.date, draft.crewId ?? null)
 
   for (const tid of draft.landed) {
     const prev = await getTrickProgress(tid)

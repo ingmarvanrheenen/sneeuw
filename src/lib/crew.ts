@@ -143,6 +143,8 @@ export interface FeedPost {
   session?: Session
   trick?: TrickProgress
   media: MediaMeta[]
+  /** spraakmemo's bij die dag */
+  memos?: MediaMeta[]
 }
 
 export function toPosts(items: FeedItem[]): FeedPost[] {
@@ -151,7 +153,15 @@ export function toPosts(items: FeedItem[]): FeedPost[] {
   for (const i of items) {
     if (i.kind === 'session') {
       const s = i.data as Session
-      posts.push({ id: i.id, userId: i.user_id, at: s.date, session: s, media: media.filter((m) => m.sessionId === s.id) })
+      const mine = media.filter((m) => m.sessionId === s.id)
+      posts.push({
+        id: i.id,
+        userId: i.user_id,
+        at: s.date,
+        session: s,
+        media: mine.filter((m) => m.type !== 'audio'),
+        memos: mine.filter((m) => m.type === 'audio'),
+      })
     } else if (i.kind === 'trick') {
       const t = i.data as TrickProgress
       if (t.status !== 'geland' && t.status !== 'beheerst') continue

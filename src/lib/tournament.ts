@@ -46,7 +46,7 @@ export function pickEntries(media: Pick<MediaMeta, 'id' | 'type'>[], seed: strin
     rng,
   )
   const photos = shuffle(
-    media.filter((m) => m.type !== 'video'),
+    media.filter((m) => m.type === 'image'),
     rng,
   )
   return [...videos, ...photos].slice(0, max).map((m) => m.id)

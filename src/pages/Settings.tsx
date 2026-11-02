@@ -175,14 +175,19 @@ function MediaUsage() {
     const media = (await db.records.where('kind').equals('media').toArray()).filter((r) => !r.deleted) as MediaMeta[]
     let bytes = 0
     for (const m of media) bytes += m.size ?? (await db.blobs.get(m.id))?.blob.size ?? 0
-    return { photos: media.filter((m) => m.type === 'image').length, videos: media.filter((m) => m.type === 'video').length, bytes }
+    return {
+      photos: media.filter((m) => m.type === 'image').length,
+      videos: media.filter((m) => m.type === 'video').length,
+      memos: media.filter((m) => m.type === 'audio').length,
+      bytes,
+    }
   })
   if (!usage) return null
   return (
     <Row
       icon="image"
       title={`Je media: ${fmtBytes(usage.bytes)}`}
-      detail={`${plural(usage.photos, 'foto', "foto's")} · ${plural(usage.videos, 'video', "video's")}${hasBackend ? ' · gratis opslag is 1 GB voor de hele app' : ''}`}
+      detail={`${plural(usage.photos, 'foto', "foto's")} · ${plural(usage.videos, 'video', "video's")}${usage.memos ? ` · ${plural(usage.memos, 'memo', "memo's")}` : ''}${hasBackend ? ' · gratis opslag is 1 GB voor de hele app' : ''}`}
     />
   )
 }

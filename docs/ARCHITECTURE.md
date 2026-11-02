@@ -118,6 +118,14 @@ S.K.A.T.E., maar op de piste, binnen een crew. Wie aan de beurt is zet een trick
 - Feed, leaderboard en trip-recap linken naar de skipas; de feed toont profielfoto's.
 - **Mascotte** (`src/lib/mascot.ts`, tekening in `src/design/Mascot.tsx`): de Episch-sticker van het app-icoon met jouw gezichts-, ster- en gogglekleur, muts/pet/helm en lach. Opgeslagen als ids in `profiles.data.mascot` (geen migratie; synct met het profiel), `checkMascot()` maakt van alles wat niet klopt de standaard. Staat op de skipas als je geen foto hebt (ook bij je crew) en onderaan je deelkaarten en Season Wrapped (`cardMascotSvg`). Aanpassen: Bewerk → Je mascotte.
 
+## Spraakmemo's (`src/lib/memo.ts`, `src/components/VoiceMemos.tsx`)
+
+- Een memo is een media-record met `type: 'audio'` (plus `duration`), dus upload, sync, zacht verwijderen en de leesregel voor je crew (storage-policy op `records.kind = 'media'`) werken zoals bij foto's en video's. Geen migratie.
+- Opnemen met `getUserMedia` + `MediaRecorder` (iPhone: `audio/mp4`, elders webm/opus), max 1 minuut, korter dan 0,8 s wordt niet bewaard. Microfoon-fouten in gewone taal (`micError`).
+- Waar: op je dag (LogDetail en de editor), en de knop "Spraakmemo" op Home. Nog geen dag gelogd? Dan is de memo los en komt hij bij de dag van die datum zodra je die logt (`adoptMemos` in `saveSession`, alleen bij een nieuwe dag).
+- Je crew hoort de memo's bij een gedeelde dag in de feed (`FeedPost.memos`).
+- **Nooit tussen foto's en video's**: `isVisual()` filtert ze uit de kluis, je skipas, de coach, het toernooi, de trip-media en `riderMedia` (server-side `data->>type <> 'audio'`). Nieuwe plek met een media-grid? Filter met `isVisual`.
+
 ## Push-meldingen
 
 ```
