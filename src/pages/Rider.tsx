@@ -6,7 +6,9 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { Button, Chip, Empty, Field, List, Page, PageHeader, Row, Section, Sheet, Stat, StatGroup, inputCls } from '../components/ui'
 import { RiderAvatar, SkiPass, StickerBoard, StickerLegend, StickerTracks, resortName } from '../components/RiderParts'
 import { BoardDesigner } from '../components/BoardDesigner'
+import { MascotDesigner } from '../components/MascotDesigner'
 import { checkDesign } from '../lib/boardDesign'
+import { DEFAULT_MASCOT } from '../lib/mascot'
 import { cachedPodiums, loadPodiums, type Podium } from '../lib/ladder'
 import { hasBackend } from '../lib/supabase'
 import { MediaGrid } from '../components/Media'
@@ -326,6 +328,7 @@ function ProfileEditor({ open, onClose, profile, landed }: { open: boolean; onCl
   const [p, setP] = useState(profile)
   const [resorts, setResorts] = useState(false)
   const [designing, setDesigning] = useState(false)
+  const [mascotOpen, setMascotOpen] = useState(false)
   const file = useRef<HTMLInputElement>(null)
   useEffect(() => {
     if (open) setP(profile)
@@ -352,7 +355,7 @@ function ProfileEditor({ open, onClose, profile, landed }: { open: boolean; onCl
   return (
     <Sheet open={open} onClose={() => void close()} title="Profiel bewerken">
       <div className="mb-4 flex items-center gap-4">
-        <RiderAvatar photo={p.photo} name={p.displayName} size={72} square />
+        <RiderAvatar photo={p.photo} name={p.displayName} size={72} square mascot={p.mascot ?? DEFAULT_MASCOT} />
         <div className="flex flex-wrap gap-2">
           <Button size="sm" variant="ghost" onClick={() => file.current?.click()}>
             {p.photo ? 'Andere foto' : 'Foto kiezen'}
@@ -419,6 +422,12 @@ function ProfileEditor({ open, onClose, profile, landed }: { open: boolean; onCl
             detail={checkDesign(p.board) ? 'Eigen ontwerp op je skipas' : 'Kies patroon en kleuren'}
             onClick={() => setDesigning(true)}
           />
+          <Row
+            icon="sparkle"
+            title="Je mascotte"
+            detail={p.mascot ? 'Eigen mascotte op je skipas en deelkaarten' : 'Kleuren, goggles, muts en lach'}
+            onClick={() => setMascotOpen(true)}
+          />
           <Row icon="board" title="Stance en bindingen" detail="Staat op je pas, stel je in bij Gear" to="/gear" />
         </List>
         {p.nickname && (
@@ -439,6 +448,12 @@ function ProfileEditor({ open, onClose, profile, landed }: { open: boolean; onCl
         value={p.board}
         landed={landed}
         onChange={(board) => setP((cur) => ({ ...cur, board }))}
+      />
+      <MascotDesigner
+        open={mascotOpen}
+        onClose={() => setMascotOpen(false)}
+        value={p.mascot}
+        onChange={(mascot) => setP((cur) => ({ ...cur, mascot }))}
       />
       <ResortPicker
         open={resorts}

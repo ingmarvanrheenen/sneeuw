@@ -70,7 +70,7 @@ De story-kaarten (1080×1920) in `src/lib/shareCard.ts` volgen dezelfde stijl, m
 ## Iconen en stickers
 
 - **Iconen** (`<Icon name="..." />`): 24-grid, stroke 1.8, square caps, miter joins. Voor bediening en rijen.
-- **Stickers** (`src/design/Stickers.tsx`): die-cut met witte rand, dikke inktlijnen, lime/oranje/ijsblauw. Stemmingen 1-5 (`MoodSticker`, `Mood`), crew-reacties (`ReactionSticker`, op de sleutel in de database), en `MoodPick` voor kiezers. Nieuwe sticker: in dat bestand, op het 64-grid. `stickerSvg` geeft een sticker als losse SVG, voor op canvas.
+- **Stickers** (`src/design/Stickers.tsx`): die-cut met witte rand, dikke inktlijnen, lime/oranje/ijsblauw. Stemmingen 1-5 (`MoodSticker`, `Mood`), crew-reacties (`ReactionSticker`, op de sleutel in de database), en `MoodPick` voor kiezers. Nieuwe sticker: in dat bestand, op het 64-grid. `stickerSvg` geeft een sticker als losse SVG, voor op canvas. De mascotte (`src/design/Mascot.tsx`, kleuren in `src/lib/mascot.ts`) is dezelfde Episch-sticker in de kleuren die de rider kiest; ook artwork, dus vaste kleuren.
 - Landen als tekst-tag (`FR`, `AT`).
 
 ## Beweging

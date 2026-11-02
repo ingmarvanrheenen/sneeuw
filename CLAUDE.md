@@ -23,7 +23,7 @@ Draai vóór elke commit `npm run lint && npm test && npm run build`.
 ## Afspraken
 
 - **Nooit emoji** in UI, content of toasts. Iconen komen uit `src/design/icons.tsx` (24-grid, stroke 1.8, square caps, miter joins). Nieuw icoon nodig? Daar toevoegen. `src/test/design.test.ts` bewaakt dit.
-- Kleuren alleen via tokens (`bg-surface`, `text-muted`, `text-accent-text`, `bg-hot`, ...), nooit hardcoded, behalve de pistekleuren en de stickers in `src/design/Stickers.tsx` (artwork).
+- Kleuren alleen via tokens (`bg-surface`, `text-muted`, `text-accent-text`, `bg-hot`, ...), nooit hardcoded, behalve de pistekleuren en de stickers in `src/design/Stickers.tsx` en de mascotte (`src/design/Mascot.tsx`, `src/lib/mascot.ts`) (artwork).
 - Volg docs/DESIGN.md (Impeccable craft-floor): park-stijl (poster, stickers, stempels), geen kickers/eyebrows boven titels (gebruik `subtitle`), geen sectienummers, geen mono-font, lijsten als `List`/`Row` in plaats van losse kaarten, losse koppen via `Heading`. UI in systeemfont, Archivo (`.display`, in hoofdletters) alleen voor titels en grote getallen.
 - Alle UI-tekst in het Nederlands, chill en direct, met Engelse snowboardtermen waar dat normaal is.
 - Data altijd via `src/lib/repo.ts` (`create`/`update`/`remove`/`setTrickStatus`), zodat de dirty-vlag en sync kloppen. Nooit hard deleten.
