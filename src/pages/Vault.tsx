@@ -3,10 +3,10 @@ import { Link } from 'react-router-dom'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { Chip, Empty, Heading, Page, PageHeader, Progress, LevelDots } from '../components/ui'
 import { Icon } from '../design/icons'
-import { MediaThumb } from '../components/Media'
+import { MediaThumb, MediaViewer } from '../components/Media'
 import { ThenNowCard } from '../components/ThenNow'
 import { allThenAndNow } from '../lib/thenNow'
-import { useKind } from '../lib/repo'
+import { remove, useKind } from '../lib/repo'
 import { db } from '../lib/db'
 import { TRACKS, TRICKS, TRICK_BY_ID, type Track } from '../content/tricks'
 import { fmtShort } from '../lib/format'
@@ -28,6 +28,8 @@ export default function Vault() {
     [progress],
   )
   const compare = useMemo(() => allThenAndNow(media ?? []), [media])
+  const films = (media ?? []).filter((m) => m.tripFilm).sort((a, b) => b.createdAt - a.createdAt)
+  const [watching, setWatching] = useState<MediaMeta | null>(null)
   const shown = landed.filter((p) => track === 'alle' || TRICK_BY_ID.get(p.trickId)!.track === track)
 
   return (
@@ -37,6 +39,29 @@ export default function Vault() {
         <span className="font-semibold text-text">{landed.length}</span> van {TRICKS.length} tricks geland
       </p>
       <Progress value={landed.length / TRICKS.length} className="mt-2" />
+      {films.length > 0 && (
+        <section className="mt-6">
+          <Heading className="mb-3">Trip-films</Heading>
+          <div className="no-scrollbar -mx-4 flex gap-3 overflow-x-auto px-4 pb-1">
+            {films.map((f) => (
+              <div key={f.id} className="w-28 shrink-0">
+                <MediaThumb m={f} onClick={() => setWatching(f)} label={`Bekijk ${f.tripFilm!.title}`} className="aspect-[9/16] w-full" />
+                <div className="mt-1.5 truncate text-[13px] font-semibold">{f.tripFilm!.title}</div>
+                <div className="text-[12px] text-muted">{fmtShort(new Date(f.createdAt).toISOString().slice(0, 10))}</div>
+              </div>
+            ))}
+          </div>
+          <MediaViewer
+            m={watching}
+            onClose={() => setWatching(null)}
+            onDelete={async (m) => {
+              if (!confirm('Deze film weggooien?')) return
+              await remove(m)
+              setWatching(null)
+            }}
+          />
+        </section>
+      )}
       {compare.length > 0 && (
         <section className="mt-6">
           <Heading className="mb-1">Toen en nu</Heading>
@@ -64,7 +89,7 @@ export default function Vault() {
         <div className="mt-4">
           <Empty
             icon={<Icon name="vault" size={40} className="text-muted" />}
-            title="Kluis is nog leeg"
+            title={films.length ? 'Nog geen tricks in je kluis' : 'Kluis is nog leeg'}
             body="Zet een trick op 'geland' (of log hem bij je dag) en hij komt hier, met je clips erbij."
           />
         </div>

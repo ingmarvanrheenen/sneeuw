@@ -133,6 +133,8 @@ export interface MediaMeta extends BaseRecord {
   caption?: string
   /** lengte in seconden (spraakmemo's) */
   duration?: number
+  /** een trip-film die je zelf maakte (privé, niet gedeeld met de crew) */
+  tripFilm?: { tripId: string; title: string }
 }
 
 /** Profiel staat lokaal in kv en wordt naar de `profiles` tabel gesynct (met stats voor de crew). */

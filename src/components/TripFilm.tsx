@@ -2,7 +2,8 @@
 // met muziek (tik een stijl om hem te horen) en het geluid van de clips.
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Button, Chip, Heading, List, Progress, Row, Sheet, Toggle, cx } from './ui'
-import { MediaThumb } from './Media'
+import { MediaThumb, MediaViewer } from './Media'
+import { useLiveQuery } from 'dexie-react-hooks'
 import { kvGet, kvSet } from '../lib/db'
 import { Icon, Spinner } from '../design/icons'
 import { crewMembers } from '../lib/crew'
@@ -17,6 +18,8 @@ import {
   planFilm,
   previewMusic,
   renderFilm,
+  saveFilm,
+  savedFilms,
   type FilmTrip,
 } from '../lib/tripFilm'
 import { TRACK_BY_ID, TRACKS, type TrackId } from '../lib/filmMusic'
@@ -28,7 +31,7 @@ import type { MediaMeta } from '../lib/types'
 type Stage =
   | { kind: 'idle' }
   | { kind: 'busy'; phase: 'laden' | 'opnemen'; done: number }
-  | { kind: 'klaar'; blob: Blob; url: string }
+  | { kind: 'klaar'; blob: Blob; url: string; saved?: boolean }
   | { kind: 'fout'; msg: string }
 
 export function TripFilm({ tripId, crewId, trip, ready = true }: { tripId: string; crewId: string; trip: FilmTrip; ready?: boolean }) {
@@ -36,6 +39,10 @@ export function TripFilm({ tripId, crewId, trip, ready = true }: { tripId: strin
   const [names, setNames] = useState<Record<string, string>>({})
   const [open, setOpen] = useState(false)
   const [stage, setStage] = useState<Stage>({ kind: 'idle' })
+  const thumb = useRef<string | undefined>(undefined)
+  const [saving, setSaving] = useState(false)
+  const [watching, setWatching] = useState<MediaMeta | null>(null)
+  const films = useLiveQuery(() => savedFilms(tripId), [tripId])
   const [music, setMusic] = useState<TrackId>('park')
   const [clipAudio, setClipAudio] = useState(true)
   /** eigen keuze van clips (ids), per trip onthouden op dit toestel; null = automatisch */
@@ -127,6 +134,7 @@ export function TripFilm({ tripId, crewId, trip, ready = true }: { tripId: strin
         clipAudio,
         audio: ctx,
         onProgress: (p) => setStage({ kind: 'busy', ...p }),
+        onThumb: (t) => (thumb.current = t),
       })
       if (ctrl.signal.aborted) return
       if (looksEmpty(blob)) throw new Error('De film bleef leeg. Hou het scherm aan en blijf in de app tot hij klaar is.')
@@ -135,6 +143,19 @@ export function TripFilm({ tripId, crewId, trip, ready = true }: { tripId: strin
     } catch (e) {
       if ((e as Error).name === 'AbortError') return
       setStage({ kind: 'fout', msg: errMsg(e) })
+    }
+  }
+
+  async function save(s: Extract<Stage, { kind: 'klaar' }>) {
+    setSaving(true)
+    try {
+      await saveFilm(s.blob, { ...trip, id: tripId }, thumb.current)
+      sfx.success()
+      setStage({ ...s, saved: true })
+    } catch (e) {
+      setStage({ kind: 'fout', msg: errMsg(e) })
+    } finally {
+      setSaving(false)
     }
   }
 
@@ -189,6 +210,22 @@ export function TripFilm({ tripId, crewId, trip, ready = true }: { tripId: strin
         >
           Maak de film
         </Button>
+        {!!films?.length && (
+          <div className="mt-4">
+            <div className="mb-2 text-[13px] text-muted">In je kluis</div>
+            <div className="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4">
+              {films.map((f) => (
+                <MediaThumb
+                  key={f.id}
+                  m={f}
+                  onClick={() => setWatching(f)}
+                  label={`Bekijk ${f.caption ?? 'trip-film'}`}
+                  className="aspect-[9/16] w-20 shrink-0"
+                />
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       <ClipPicker
@@ -239,9 +276,21 @@ export function TripFilm({ tripId, crewId, trip, ready = true }: { tripId: strin
           </p>
         )}
 
-        <div className="mb-6 mt-5 flex gap-2">
+        {stage.kind === 'klaar' && (
+          <Button
+            variant={stage.saved ? 'ghost' : 'primary'}
+            className="mt-5 w-full"
+            icon={<Icon name={stage.saved ? 'check' : 'vault'} size={18} />}
+            disabled={stage.saved || saving}
+            onClick={() => void save(stage)}
+          >
+            {stage.saved ? 'In je kluis' : 'Bewaar in je kluis'}
+          </Button>
+        )}
+        <div className="mb-6 mt-2 flex gap-2">
           {stage.kind === 'klaar' && (
             <Button
+              variant="ghost"
               className="flex-1"
               icon={<Icon name="share" size={18} />}
               onClick={() => void shareFile(stage.blob, filmName(trip, stage.blob.type), trip.name)}
@@ -256,6 +305,7 @@ export function TripFilm({ tripId, crewId, trip, ready = true }: { tripId: strin
           )}
         </div>
       </Sheet>
+      <MediaViewer m={watching} onClose={() => setWatching(null)} />
     </section>
   )
 }
