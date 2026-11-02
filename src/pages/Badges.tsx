@@ -1,5 +1,5 @@
 import type { CSSProperties } from 'react'
-import { Page, PageHeader, Section, cx } from '../components/ui'
+import { List, Page, PageHeader, Row, Section, cx } from '../components/ui'
 import { LevelPoster } from '../components/Poster'
 import { seasonOf } from '../lib/format'
 import { todayISO } from '../lib/ids'
@@ -22,6 +22,10 @@ export default function Badges() {
     <Page>
       <PageHeader title="Levels & badges" back />
       <LevelPoster level={p.level} badges={p.badges.length} season={seasonOf(todayISO())} className="mt-4" />
+
+      <List className="mt-3">
+        <Row icon="star" title="Stickerboek" detail="Wat je per seizoen haalde, als album" to="/stickerboek" />
+      </List>
 
       <Section title="Ladder">
         <ol className="card divide-y divide-[var(--line)] overflow-hidden p-0">

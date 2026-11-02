@@ -11,6 +11,7 @@ const GROUPS: Item[][] = [
     { to: '/coach', label: 'Coach Daddy', icon: 'chat' },
     { to: '/stats', label: 'Stats', icon: 'chart' },
     { to: '/badges', label: 'Levels en badges', icon: 'trophy' },
+    { to: '/stickerboek', label: 'Stickerboek', icon: 'star' },
     { to: '/kluis', label: 'Kluis', icon: 'vault' },
   ],
   [

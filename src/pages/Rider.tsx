@@ -152,6 +152,11 @@ function RiderView({
         <div className="mt-4">
           <StickerTracks landed={landed} />
         </div>
+        {isMe && (
+          <List className="mt-2">
+            <Row icon="star" title="Per seizoen" detail="Je badges en stickers als album" to="/stickerboek" />
+          </List>
+        )}
       </Section>
 
       {podiumList.length > 0 && (

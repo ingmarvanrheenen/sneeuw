@@ -62,7 +62,7 @@ export function levelFor(xp: number): LevelInfo {
   }
 }
 
-const isLanded = (t: TrickProgress) => t.status === 'geland' || t.status === 'beheerst'
+export const isLanded = (t: TrickProgress) => t.status === 'geland' || t.status === 'beheerst'
 
 export function sessionXP(s: Session) {
   return 50 + Math.round(Math.min(s.hours, 8) * 10) + (s.mediaIds.length ? 10 : 0) + (s.notes || s.highlight ? 5 : 0)
