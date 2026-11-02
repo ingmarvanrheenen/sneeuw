@@ -23,6 +23,9 @@ import {
   type FilmTrip,
 } from '../lib/tripFilm'
 import { TRACK_BY_ID, TRACKS, type TrackId } from '../lib/filmMusic'
+import { drawFrame, FILM_STYLES, isFilmStyle, type FilmStyle } from '../lib/tripFilm'
+import { loadBracket, layout } from '../lib/tournament'
+import { fontsReady } from '../lib/shareCard'
 import { shareFile } from '../lib/shareCard'
 import { errMsg } from '../lib/errors'
 import { sfx } from '../lib/sounds'
@@ -45,6 +48,9 @@ export function TripFilm({ tripId, crewId, trip, ready = true }: { tripId: strin
   const films = useLiveQuery(() => savedFilms(tripId), [tripId])
   const [music, setMusic] = useState<TrackId>('park')
   const [clipAudio, setClipAudio] = useState(true)
+  const [style, setStyle] = useState<FilmStyle>('park')
+  const [champion, setChampion] = useState<string | null>(null)
+  const preview = useRef<HTMLCanvasElement>(null)
   /** eigen keuze van clips (ids), per trip onthouden op dit toestel; null = automatisch */
   const [pick, setPick] = useState<string[] | null>(null)
   const [choosing, setChoosing] = useState(false)
@@ -60,14 +66,26 @@ export function TripFilm({ tripId, crewId, trip, ready = true }: { tripId: strin
       const [mem, days] = await Promise.all([crewMembers(crewId), tripDays(crewId, { startDate, endDate })])
       setNames(Object.fromEntries(mem.map((m) => [m.user_id, m.display_name])))
       setMedia(await tripMedia(crewId, { startDate, endDate }, days))
+      // winnaar van het toernooi: die opent de film
+      const b = await loadBracket(tripId).catch(() => null)
+      setChampion(b?.bracket ? layout(b.bracket.entries, b.votes, Math.max(1, mem.length)).champion : null)
     } catch {
       setMedia((cur) => cur ?? [])
     }
-  }, [crewId, startDate, endDate, ready])
+  }, [crewId, tripId, startDate, endDate, ready])
 
   useEffect(() => {
     void load()
   }, [load])
+
+  // laatst gekozen stijl
+  useEffect(() => {
+    void kvGet<string>('film:style', 'park').then((s) => isFilmStyle(s) && setStyle(s))
+  }, [])
+  function pickStyle(s: FilmStyle) {
+    setStyle(s)
+    void kvSet('film:style', s)
+  }
 
   const pickKey = `filmPick:${tripId}`
   useEffect(() => {
@@ -108,8 +126,23 @@ export function TripFilm({ tripId, crewId, trip, ready = true }: { tripId: strin
   const url = stage.kind === 'klaar' ? stage.url : null
   useEffect(() => () => void (url && URL.revokeObjectURL(url)), [url])
 
+  // voorbeeld van de intro in de gekozen stijl
+  const introTitle = trip.name || trip.resortName || 'De trip'
+  useEffect(() => {
+    const c = preview.current?.getContext('2d')
+    if (!c) return
+    let alive = true
+    void fontsReady().then(
+      () => alive && drawFrame(c, { kind: 'intro', dur: 1, title: introTitle, sub: trip.resortName ?? '' }, 0.9, {}, style),
+    )
+    return () => {
+      alive = false
+    }
+  }, [style, introTitle, trip.resortName, media])
+
   if (!canMakeFilm() || media === null || media.length === 0) return null
-  const plan = planFilm(media, names, trip, tripId, { bpm: TRACK_BY_ID.get(music)?.bpm, pick })
+  const plan = planFilm(media, names, trip, tripId, { bpm: TRACK_BY_ID.get(music)?.bpm, pick, opener: champion })
+  const opens = plan.segments.some((s) => s.kind === 'clip' && s.opener)
   const all = filmable(media)
   const chosen = pickClips(media, tripId, pick).map((m) => m.id)
   // wat jij koos (en nog bestaat); null = automatisch. Leeg gekozen = in de film toch automatisch.
@@ -131,6 +164,7 @@ export function TripFilm({ tripId, crewId, trip, ready = true }: { tripId: strin
         canvas: canvas.current ?? undefined,
         signal: ctrl.signal,
         music,
+        style,
         clipAudio,
         audio: ctx,
         onProgress: (p) => setStage({ kind: 'busy', ...p }),
@@ -173,6 +207,21 @@ export function TripFilm({ tripId, crewId, trip, ready = true }: { tripId: strin
           {clips === 1 ? 'De gedeelde clip' : `${Math.min(clips, MAX_CLIPS)} gedeelde clips en foto's`} van de crew als film van{' '}
           {Math.round(plan.total)} seconden, met titels en muziek erin.
         </p>
+        <div className="mb-2 mt-4 text-[15px] font-medium">Stijl</div>
+        <div className="flex items-center gap-3">
+          <canvas ref={preview} width={720} height={1280} aria-hidden className="aspect-[9/16] w-[64px] shrink-0 rounded-[4px] bg-block" />
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap gap-2" role="group" aria-label="Stijl">
+              {FILM_STYLES.map((s) => (
+                <Chip key={s.id} active={style === s.id} onClick={() => pickStyle(s.id)}>
+                  {s.name}
+                </Chip>
+              ))}
+            </div>
+            <p className="mt-2 text-[13px] text-muted">{FILM_STYLES.find((s) => s.id === style)!.blurb}</p>
+          </div>
+        </div>
+        {opens && <p className="mt-3 text-[13px] text-muted">De film opent met de clip van de trip: de winnaar van het toernooi.</p>}
         <div className="mb-2 mt-4 text-[15px] font-medium">Muziek</div>
         <div className="flex flex-wrap gap-2" role="group" aria-label="Muziek">
           <Chip active={music === 'geen'} onClick={() => pickMusic('geen')}>
