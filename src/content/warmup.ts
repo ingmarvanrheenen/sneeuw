@@ -1,5 +1,5 @@
 // Warming-up voor de eerste lift: 5 minuten, met je board aan (boven bij de lift of op de vlakte).
-// Elke oefening heeft een animatie op het 2D-zijaanzicht die in een lus speelt; de rider blijft op zijn plek.
+// De 3D-rider doet ze voor (src/anim3d/warmup.ts); de 2D-animatie hieronder is de terugval zonder WebGL.
 import type { SideAnim, SideKey } from '../anim/engine'
 
 export interface Exercise {

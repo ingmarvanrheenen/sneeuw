@@ -158,7 +158,7 @@ S.K.A.T.E., maar op de piste, binnen een crew. Wie aan de beurt is zet een trick
 
 ## Warming-up (`src/content/warmup.ts`, `src/lib/warmup.ts`, `src/pages/Warmup.tsx`)
 
-- Route `/warming-up` (Home voor je eerste run, Meer, en de run-teller). Acht oefeningen met je board aan, samen precies 5 minuten (de content-test bewaakt dat). Elke oefening is een animatie op het 2D-zijaanzicht (`TrickAnimation compact`) waarin de rider op zijn plek blijft.
+- Route `/warming-up` (Home voor je eerste run, Meer, en de run-teller). Acht oefeningen met je board aan, samen precies 5 minuten (de content-test bewaakt dat). De echte 3D-rider doet elke oefening voor: `src/anim3d/warmup.ts` (pose-to-pose met `perform()` op snelheid 0, armen en hopjes per frame, vlakke sneeuw, zijaanzicht) in een lus via `src/anim3d/Loop3D.tsx` (één scène die blijft staan bij een wissel). Zonder WebGL valt hij terug op de 2D-animatie uit `src/content/warmup.ts`. Tests checken per frame dat de rider op zijn plek blijft, het board niet door de sneeuw gaat en elke lus naadloos sluit.
 - De klok draait op tijdstempels (`startClock`, `pause`, `resume`, `skip`, `position`), dus pauze en een scherm dat even uit ging kloppen. Piepje bij een nieuwe oefening en de laatste drie tellen. Het scherm blijft aan via de Wake Lock API waar die er is. Klaar: een poster en door naar de run-teller.
 
 ## Push-meldingen

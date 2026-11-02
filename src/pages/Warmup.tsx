@@ -1,6 +1,6 @@
 // Warming-up voor de eerste lift: 5 minuten, de rider doet elke oefening voor, met een klok en een piepje
 // bij de wissel. Scherm blijft aan waar dat kan. Werkt offline.
-import { useEffect, useRef, useState, type CSSProperties } from 'react'
+import { lazy, Suspense, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Button, List, Page, PageHeader, cx } from '../components/ui'
 import { Segments, Stamp } from '../components/Poster'
@@ -9,12 +9,17 @@ import { Icon } from '../design/icons'
 import { WARMUP, WARMUP_SECS } from '../content/warmup'
 import { elapsed, fmtSecs, keepAwake, pause, position, resume, skip, startClock, type WarmupClock } from '../lib/warmup'
 import { sfx } from '../lib/sounds'
+import { WARMUP_3D } from '../anim3d/warmup'
+
+const Loop3D = lazy(() => import('../anim3d/Loop3D'))
 
 export default function Warmup() {
   const nav = useNavigate()
   const [clock, setClock] = useState<WarmupClock | null>(null)
   const [now, setNow] = useState(Date.now())
   const last = useRef({ index: -1, sec: -1 })
+  // 3D-rider; lukt WebGL niet, dan de 2D-versie
+  const [flat, setFlat] = useState(false)
 
   // loopt de klok: elke kwart seconde bijwerken, en het scherm aan houden
   const running = !!clock && clock.pausedAt === null
@@ -108,14 +113,21 @@ export default function Warmup() {
 
   const e = WARMUP[p.index]
   const next = WARMUP[p.index + 1]
+  const flatAnim = <TrickAnimation anim={e.anim} compact />
   const paused = clock.pausedAt !== null
   return (
     <Page>
       <PageHeader title="Warming-up" subtitle={`${p.index + 1} van ${WARMUP.length}`} back />
       <Segments value={p.total} count={WARMUP.length * 3} className="mb-3 text-text" />
-      <div key={e.id} className="rise">
-        <TrickAnimation anim={e.anim} compact />
-      </div>
+      {flat ? (
+        <div key={e.id} className="rise">
+          {flatAnim}
+        </div>
+      ) : (
+        <Suspense fallback={flatAnim}>
+          <Rider3D id={e.id} name={e.name} onFail={() => setFlat(true)} />
+        </Suspense>
+      )}
       <div className="mt-4 flex items-end justify-between gap-3">
         <h2 key={e.id} className="display rise min-w-0 text-[34px] uppercase leading-[0.95]">
           {e.name}
@@ -146,4 +158,10 @@ export default function Warmup() {
       </button>
     </Page>
   )
+}
+
+/** De 3D-rider voor één oefening; de beweging wordt één keer gebouwd per oefening. */
+function Rider3D({ id, name, onFail }: { id: string; name: string; onFail: () => void }) {
+  const motion = useMemo(() => WARMUP_3D[id](), [id])
+  return <Loop3D motion={motion} onFail={onFail} label={`De rider doet ${name.toLowerCase()} voor`} />
 }
