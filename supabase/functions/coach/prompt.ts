@@ -62,3 +62,17 @@ export const COMPARE_INSTRUCTIONS = `Vergelijk twee beelden van dezelfde trick: 
 - "nogWerk": het ene punt dat nu het meeste oplevert. "drill": één oefening daarvoor.
 - Twee frames zijn momentopnames; zijn ze niet van hetzelfde moment in de trick, zeg dat er kort bij.
 - Het gaat alleen om techniek. Je herkent geen mensen en zegt niets over uiterlijk. Geen emoji.`
+
+// Coach op de trip: een plan per dag voor de hele trip.
+export const TRIPPLAN_INSTRUCTIONS = `Maak een plan voor deze trip: per dag één thema, voor op een telefoonscherm.
+- Baseer je op het niveau, wat al lukt, wat nog niet lukt en de doelen in <rider_context>, en op de trip in <trip>. Verzin niets wat er niet staat.
+- Bouw op: begin rustig (eerste dag benen wennen, terug in je ritme), leg het zwaartepunt in het midden, en houd de laatste dag rustiger (vermoeidheid, de meeste blessures gebeuren op de laatste dag).
+- Elke dag 2-3 oefeningen die je op een gewone piste kunt doen, op het niveau van de rider. Liever kleine stappen die lukken.
+- Past het bij het resort en het niveau, dan mag er een park- of freeride-dag in; nooit off-piste voor beginners.
+- "trickId": de trick uit de bijbel waar die dag om draait, of null. Kies iets wat nog niet beheerst is en binnen bereik ligt.
+- Een wens van de rider in <wens> weegt zwaar mee.
+- Toon: chill en direct, zoals in de rest van de app. Geen emoji.`
+
+// Avondterugblik op een tripdag: zelfde als de dagreview, met het plan erbij.
+export const EVENING_INSTRUCTIONS = `Dit is een dag van een trip met een plan (zie <plan>). Vergelijk wat er gelogd is met het plan van vandaag.
+- "morgen": hoe je het plan van morgen aanpast op wat er vandaag gebeurde (sneller door, of juist een stap terug, of rust bij pijn). 1-2 zinnen. Geen plan voor morgen (laatste dag)? Zeg kort hoe je de trip afsluit.`

@@ -228,6 +228,11 @@ De app leest ook nog gewone tekst als de functie (nog) de oude versie is.
 
 **Voor en na** (`mode: 'compare'`): in het vergelijkscherm van toen en nu ("Laat de coach vergelijken"). De app pakt van beide clips het beeld waar je staat (het huidige videoframe of de foto, via `toCoachImage`; de media hebben `crossOrigin` zodat dat mag) en stuurt ze met de tricknaam en het aantal dagen ertussen. Structured output: `beter`, `nogWerk`, `drill`. De uitslag wordt bewaard per paar clips (kv `coach:compare:<toen>:<nu>`), zodat hij bij opnieuw openen blijft staan zonder nieuwe call.
 
+### Coach op de trip
+
+- Op je eigen trip (`TripCoach`): "Maak een plan", met een optionele wens. De edge function (modus `tripplan`, `TRIPPLAN_INSTRUCTIONS`) geeft per tripdag een titel, focus, 2-3 oefeningen en een trick uit de bijbel; `checkTripPlan()` eist precies zoveel dagen als de trip heeft (max 14) en gooit verzonnen tricks weg. Het plan staat in `Trip.coachPlan` (synct mee, je crew ziet het op de crew-trip, alleen lezen). Eén coach-bericht.
+- Vandaag staat open op de trippagina en als rij op Home. Elke avond: de dagreview van een tripdag stuurt het plan van vandaag en morgen mee (`planText`, `EVENING_INSTRUCTIONS`) en geeft een extra veld "morgen" terug: hoe je het plan van morgen bijstuurt.
+
 ## Animaties (`src/anim`)
 
 - Een animatie is een lijst keyframes (`t` van 0 tot 1) plus stappen die synchroon meelopen.

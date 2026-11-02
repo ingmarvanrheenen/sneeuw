@@ -447,3 +447,95 @@ export function checkComparison(raw: unknown): Comparison | null {
   const out = { beter: text(r.beter, 400), nogWerk: text(r.nogWerk, 300), drill: text(r.drill, 300) }
   return out.beter && out.nogWerk ? out : null
 }
+
+// ── Coach op de trip: een plan per dag ───────────────────────────────────────
+
+export const TRIP_MAX_DAYS = 14
+
+export interface TripPlanDay {
+  /** 1 = eerste dag van de trip */
+  dag: number
+  titel: string
+  focus: string
+  oefeningen: string[]
+  trickId: string | null
+}
+
+export interface TripPlanOut {
+  intro: string
+  dagen: TripPlanDay[]
+}
+
+/** Input voor het tripplan: een korte beschrijving van de trip en het aantal dagen (1..14). */
+export function checkTripInput(body: Record<string, unknown>): { trip: string; days: number; wish: string } | { error: string } {
+  const trip = text(body.trip, 1500)
+  const days = Math.round(Number(body.days))
+  if (!trip) return { error: 'Geen trip meegestuurd' }
+  if (!Number.isFinite(days) || days < 1 || days > TRIP_MAX_DAYS) return { error: `Een trip van 1 tot ${TRIP_MAX_DAYS} dagen` }
+  return { trip, days, wish: text(body.wish, 300) }
+}
+
+export function tripPlanSchema(trickIds: readonly string[], days: number) {
+  return {
+    type: 'object',
+    properties: {
+      intro: { type: 'string', description: 'De lijn van de trip in 1-2 zinnen: waar je naartoe werkt.' },
+      dagen: {
+        type: 'array',
+        description: `Precies ${days} dagen, in volgorde, dag 1 tot en met ${days}.`,
+        items: {
+          type: 'object',
+          properties: {
+            dag: { type: 'integer', description: 'Dagnummer, 1 = eerste dag.' },
+            titel: { type: 'string', description: 'Thema van de dag, max 5 woorden.' },
+            focus: { type: 'string', description: 'Waar het die dag om draait, één zin.' },
+            oefeningen: { type: 'array', items: { type: 'string' }, description: '2-3 concrete oefeningen, elk één zin.' },
+            trickId: trickIds.length
+              ? {
+                  anyOf: [{ type: 'string', enum: [...trickIds] }, { type: 'null' }],
+                  description: 'De trick uit de bijbel van die dag, of null.',
+                }
+              : { type: 'null' },
+          },
+          required: ['dag', 'titel', 'focus', 'oefeningen', 'trickId'],
+          additionalProperties: false,
+        },
+      },
+    },
+    required: ['intro', 'dagen'],
+    additionalProperties: false,
+  }
+}
+
+/** Checkt en begrenst het plan; precies `days` dagen (te veel eraf, te weinig = onbruikbaar). */
+export function checkTripPlan(raw: unknown, trickIds: readonly string[], days: number): TripPlanOut | null {
+  const r = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>
+  const list = (Array.isArray(r.dagen) ? r.dagen : []) as Record<string, unknown>[]
+  const dagen = list
+    .map((d, i): TripPlanDay | null => {
+      const titel = text(d?.titel, 60)
+      const oefeningen = (Array.isArray(d?.oefeningen) ? d.oefeningen : [])
+        .map((o) => text(o, 200))
+        .filter(Boolean)
+        .slice(0, 3)
+      if (!titel || !oefeningen.length) return null
+      return {
+        dag: i + 1,
+        titel,
+        focus: text(d.focus, 240),
+        oefeningen,
+        trickId: typeof d.trickId === 'string' && trickIds.includes(d.trickId) ? d.trickId : null,
+      }
+    })
+    .filter((d): d is TripPlanDay => !!d)
+    .slice(0, days)
+  if (dagen.length !== days) return null
+  return { intro: text(r.intro, 300), dagen }
+}
+
+/** Het plan van vandaag (en morgen) als tekst, voor de avondterugblik. */
+export function planText(today?: TripPlanDay | null, tomorrow?: TripPlanDay | null): string {
+  const one = (label: string, d?: TripPlanDay | null) =>
+    d ? `${label} (dag ${d.dag}): ${d.titel}. ${d.focus} Oefeningen: ${d.oefeningen.join(' / ')}` : ''
+  return [one('Plan vandaag', today), one('Plan morgen', tomorrow)].filter(Boolean).join('\n').slice(0, 1500)
+}

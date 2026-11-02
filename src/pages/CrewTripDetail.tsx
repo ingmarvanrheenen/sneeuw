@@ -9,6 +9,7 @@ import { HouseNote } from '../components/HouseNote'
 import { TripTournament } from '../components/TripTournament'
 import { TripFilm } from '../components/TripFilm'
 import { TripPot } from '../components/TripPot'
+import { TripCoach } from '../components/TripCoach'
 import { CrewGoals } from '../components/CrewGoals'
 import { TripRecap } from '../components/TripRecap'
 import { TripBingo } from '../components/TripBingo'
@@ -76,6 +77,7 @@ export default function CrewTripDetail() {
         <Stat label="Van" value={t.startDate ? fmtShort(t.startDate) : '–'} />
         <Stat label="Tot" value={t.endDate ? fmtShort(t.endDate) : '–'} />
       </StatGroup>
+      <TripCoach trip={t} editable={false} />
       {t.startDate && t.startDate <= todayISO() && <TripRecap tripId={ct.id} crewId={ct.crewId} trip={t} />}
       {t.startDate && t.startDate <= todayISO() && <TripTournament tripId={ct.id} crewId={ct.crewId} ownerId={ct.ownerId} trip={t} />}
       {t.startDate && t.startDate <= todayISO() && <TripFilm tripId={ct.id} crewId={ct.crewId} trip={t} />}

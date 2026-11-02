@@ -3,7 +3,14 @@
 // tekst, plus knoppen (doel, trick, oefenplan, geheugen) die de coach via tools voorstelt.
 import Anthropic from 'npm:@anthropic-ai/sdk@1.3.0'
 import { createClient } from 'npm:@supabase/supabase-js@2'
-import { COMPARE_INSTRUCTIONS, DRILL_INSTRUCTIONS, REVIEW_INSTRUCTIONS, SYSTEM_PROMPT } from './prompt.ts'
+import {
+  COMPARE_INSTRUCTIONS,
+  DRILL_INSTRUCTIONS,
+  EVENING_INSTRUCTIONS,
+  REVIEW_INSTRUCTIONS,
+  SYSTEM_PROMPT,
+  TRIPPLAN_INSTRUCTIONS,
+} from './prompt.ts'
 import {
   COMPARE_SCHEMA,
   LIMITS,
@@ -18,6 +25,9 @@ import {
   checkMessages,
   checkTrickIds,
   checkTricks,
+  checkTripInput,
+  checkTripPlan,
+  tripPlanSchema,
   drillSchema,
   effortFor,
   encodeEvent,
@@ -64,6 +74,9 @@ Deno.serve(async (req) => {
     after?: unknown
     trick?: unknown
     days?: unknown
+    trip?: unknown
+    wish?: unknown
+    plan?: unknown
   }
   try {
     body = await req.json()
@@ -87,6 +100,7 @@ Deno.serve(async (req) => {
   if (body.mode === 'review') return review(body, countUsage)
   if (body.mode === 'drill') return drill(body, countUsage)
   if (body.mode === 'compare') return compare(body, countUsage)
+  if (body.mode === 'tripplan') return tripPlan(body, countUsage)
 
   const tricks = checkTricks(body.tricks)
   const trickIds = tricks.map((t) => t.id)
@@ -179,7 +193,7 @@ Deno.serve(async (req) => {
 const TRICK_ID = /^[a-z0-9-]{1,40}$/
 
 async function review(
-  body: { context?: string; day?: string; trickIds?: string[] },
+  body: { context?: string; day?: string; trickIds?: string[]; plan?: unknown },
   countUsage: (u: Anthropic.Beta.BetaUsage) => unknown,
 ): Promise<Response> {
   const day = (body.day ?? '').slice(0, 4000)
@@ -187,8 +201,10 @@ async function review(
   const context = (body.context ?? '').slice(0, 12000)
   // alleen tricks uit de bijbel: de coach kan geen trick verzinnen die de app niet kent
   const trickIds = [...new Set((body.trickIds ?? []).filter((t) => typeof t === 'string' && TRICK_ID.test(t)))].slice(0, 150)
+  // dag van een trip met een plan: dan ook wat je morgen anders doet
+  const plan = typeof body.plan === 'string' ? body.plan.trim().slice(0, 1500) : ''
 
-  const schema = {
+  const schema: { type: string; properties: Record<string, unknown>; required: string[]; additionalProperties: boolean } = {
     type: 'object',
     properties: {
       goed: { type: 'string', description: 'Wat ging er goed deze dag. 1-2 zinnen, concreet, verwijs naar wat er gelogd is.' },
@@ -208,6 +224,10 @@ async function review(
     required: ['goed', 'focus', 'oefening', 'trickId', 'veiligheid'],
     additionalProperties: false,
   }
+  if (plan) {
+    schema.properties.morgen = { type: 'string', description: 'Hoe je het plan van morgen aanpast op vandaag. 1-2 zinnen.' }
+    schema.required.push('morgen')
+  }
 
   try {
     const res = await anthropic.beta.messages.create({
@@ -222,7 +242,10 @@ async function review(
           role: 'user',
           content: [
             { type: 'text', text: `<rider_context>\n${context}\n</rider_context>` },
-            { type: 'text', text: `${REVIEW_INSTRUCTIONS}\n\n<dag>\n${day}\n</dag>` },
+            {
+              type: 'text',
+              text: `${REVIEW_INSTRUCTIONS}${plan ? `\n${EVENING_INSTRUCTIONS}\n\n<plan>\n${plan}\n</plan>` : ''}\n\n<dag>\n${day}\n</dag>`,
+            },
           ],
         },
       ],
@@ -234,6 +257,7 @@ async function review(
     if (!text || text.type !== 'text') return json(502, { error: 'Coach gaf geen review terug.' })
     const parsed = JSON.parse(text.text)
     if (parsed.trickId && !trickIds.includes(parsed.trickId)) parsed.trickId = null
+    parsed.morgen = plan && typeof parsed.morgen === 'string' ? parsed.morgen.slice(0, 300) : null
     return json(200, parsed)
   } catch (e) {
     console.error(e)
@@ -325,4 +349,27 @@ async function compare(body: Record<string, unknown>, countUsage: (u: Anthropic.
   if (out instanceof Response) return out
   const c = checkComparison(out)
   return c ? json(200, c) : json(502, { error: 'Coach gaf geen bruikbare vergelijking terug.' })
+}
+
+/** Coach op de trip: een plan met per dag een thema, focus, oefeningen en een trick. */
+async function tripPlan(body: Record<string, unknown>, countUsage: (u: Anthropic.Beta.BetaUsage) => unknown): Promise<Response> {
+  const input = checkTripInput(body)
+  if ('error' in input) return json(400, { error: input.error })
+  const context = (typeof body.context === 'string' ? body.context : '').slice(0, LIMITS.context)
+  const trickIds = checkTrickIds(body.trickIds)
+  const out = await structured(
+    [
+      { type: 'text', text: `<rider_context>\n${context}\n</rider_context>` },
+      {
+        type: 'text',
+        text: `${TRIPPLAN_INSTRUCTIONS}\n\n<trip>\n${input.trip}\nAantal dagen op de plank: ${input.days}\n</trip>\n\n<wens>\n${input.wish || '-'}\n</wens>`,
+      },
+    ],
+    tripPlanSchema(trickIds, input.days),
+    'medium',
+    countUsage,
+  )
+  if (out instanceof Response) return out
+  const plan = checkTripPlan(out, trickIds, input.days)
+  return plan ? json(200, plan) : json(502, { error: 'Coach gaf geen bruikbaar plan terug. Probeer het nog eens.' })
 }
