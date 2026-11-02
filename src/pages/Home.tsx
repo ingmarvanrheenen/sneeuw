@@ -8,6 +8,8 @@ import { QuickLog } from '../components/QuickLog'
 import { MemoRecorder } from '../components/VoiceMemos'
 import { looseMemos } from '../lib/memo'
 import { fmtClock, loadRunDay, runStats, runStore, stateOf } from '../lib/runs'
+import { loadPrograms, nextDay, programStore } from '../lib/programs'
+import { PROGRAM_BY_ID } from '../content/programs'
 import { toast } from '../lib/toast'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useProgress } from '../lib/useProgress'
@@ -105,6 +107,10 @@ export default function Home() {
   const runState = stateOf(runDay, tick)
   const counting = runState === 'piste' || runState === 'lift'
   useEffect(() => void loadRunDay(), [])
+  const programs = programStore.use()
+  useEffect(() => void loadPrograms(), [])
+  const program = programs.active ? PROGRAM_BY_ID.get(programs.active) : undefined
+  const programDay = program ? nextDay(program, programs.runs[program.id]) : null
   // lopende teller: elke seconde bijwerken
   useEffect(() => {
     if (!counting) return
@@ -228,6 +234,17 @@ export default function Home() {
         )}
         {!loggedToday && !runDay.runs.length && (
           <Row icon="bolt" title="Warming-up" detail="5 minuten voor de eerste lift" to="/warming-up" />
+        )}
+        {program && programDay !== null ? (
+          <Row
+            icon="list"
+            title={`Dag ${programDay + 1}: ${program.days[programDay].title}`}
+            detail={program.name}
+            value={`${programDay + 1}/${program.days.length}`}
+            to={`/programmas/${program.id}`}
+          />
+        ) : (
+          <Row icon="list" title="Programma's" detail="Van groen naar rood in vijf dagen, en meer" to="/programmas" />
         )}
         <Row icon="replay" title="Trick-roulette" detail="Weet je niet wat je moet oefenen?" to="/tricks?roulette=1" />
         <Row icon="chat" title="Coach Daddy" detail="Vraag om tips of een oefenplan" to="/coach" />

@@ -16,6 +16,7 @@ const GROUPS: Item[][] = [
   ],
   [
     { to: '/doelen', label: 'Doelen', icon: 'target' },
+    { to: '/programmas', label: "Programma's", icon: 'list' },
     { to: '/reizen', label: 'Trips en paklijst', icon: 'suitcase' },
     { to: '/weer', label: 'Sneeuwradar', icon: 'snow' },
     { to: '/gear', label: 'Gear en stance', icon: 'board' },
