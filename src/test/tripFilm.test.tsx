@@ -12,6 +12,7 @@ const api = vi.hoisted(() => ({
   canMakeFilm: vi.fn(() => true),
   previewMusic: vi.fn(),
   shareFile: vi.fn(),
+  loadBracket: vi.fn(async () => ({ bracket: null, votes: [] }) as unknown),
 }))
 vi.mock('../lib/crew', async (orig) => ({ ...(await orig<typeof import('../lib/crew')>()), crewMembers: api.crewMembers }))
 vi.mock('../lib/crewTrips', async (orig) => ({
@@ -19,6 +20,7 @@ vi.mock('../lib/crewTrips', async (orig) => ({
   tripDays: api.tripDays,
   tripMedia: api.tripMedia,
 }))
+vi.mock('../lib/tournament', async (orig) => ({ ...(await orig<typeof import('../lib/tournament')>()), loadBracket: api.loadBracket }))
 vi.mock('../lib/sounds', () => ({ sfx: new Proxy({}, { get: () => () => {} }) }))
 vi.mock('../lib/shareCard', async (orig) => ({ ...(await orig<typeof import('../lib/shareCard')>()), shareFile: api.shareFile }))
 vi.mock('../lib/tripFilm', async (orig) => ({
@@ -43,6 +45,9 @@ import {
   planFilm,
   saveFilm,
   savedFilms,
+  drawFrame,
+  FILM_STYLES,
+  isFilmStyle,
   type Segment,
 } from '../lib/tripFilm'
 import Vault from '../pages/Vault'
@@ -424,5 +429,130 @@ describe('film bewaren in je kluis', () => {
     )
     expect(await screen.findByRole('heading', { name: 'Trip-films' })).toBeTruthy()
     expect(screen.getByRole('button', { name: 'Bekijk Tignes 2027' })).toBeTruthy()
+  })
+})
+
+describe('stijlen en opener', () => {
+  const textsOf = (style: (typeof FILM_STYLES)[number]['id'], seg: Segment, t = 0.6) => {
+    const texts: string[] = []
+    const canvas = { width: 720, height: 1280 }
+    const ctx = new Proxy(
+      {
+        canvas,
+        measureText: () => ({ width: 100 }),
+        fillText: (x: string) => texts.push(x),
+        createLinearGradient: () => ({ addColorStop() {} }),
+        createPattern: () => null,
+      } as Record<string, unknown>,
+      {
+        get: (o, k) => (k in o ? o[k as string] : () => {}),
+        set: () => true,
+      },
+    ) as unknown as CanvasRenderingContext2D
+    vi.stubGlobal('Path2D', class {})
+    vi.stubGlobal('document', {
+      ...document,
+      createElement: () => ({
+        width: 0,
+        height: 0,
+        getContext: () => ({ createImageData: (w: number, h: number) => ({ data: new Uint8ClampedArray(w * h * 4) }), putImageData() {} }),
+      }),
+    })
+    try {
+      drawFrame(ctx, seg, t, {}, style)
+    } finally {
+      vi.unstubAllGlobals()
+    }
+    return texts
+  }
+  const clip = (over: Partial<Extract<Segment, { kind: 'clip' }>> = {}): Segment => ({
+    kind: 'clip',
+    dur: 2,
+    media: m('x', 'image', 'u1', Date.parse('2027-01-17T11:00:00')),
+    rider: 'Noor',
+    index: 2,
+    total: 6,
+    ...over,
+  })
+
+  it('vier stijlen, uniek, met uitleg', () => {
+    expect(FILM_STYLES.map((s) => s.id)).toEqual(['park', 'zon', 'vhs', 'strak'])
+    expect(isFilmStyle('vhs')).toBe(true)
+    expect(isFilmStyle('disco')).toBe(false)
+    for (const s of FILM_STYLES) expect(s.blurb.length).toBeGreaterThan(10)
+  })
+
+  it('elke stijl tekent de rider; de opener krijgt "clip van de trip"; VHS heeft REC en de datum', () => {
+    expect(textsOf('park', clip())).toContain('2/6')
+    expect(textsOf('park', clip({ opener: true }))).toContain('Clip van de trip')
+    expect(textsOf('zon', clip({ opener: true }))).toContain('Clip van de trip')
+    const vhs = textsOf('vhs', clip())
+    expect(vhs).toEqual(expect.arrayContaining(['REC', 'NOOR', '17 JAN 2027']))
+    expect(textsOf('vhs', clip({ opener: true }))).toContain('BESTE CLIP')
+    expect(textsOf('strak', clip({ opener: true }))).toEqual(expect.arrayContaining(['NOOR', 'CLIP VAN DE TRIP']))
+    expect(textsOf('vhs', { kind: 'outro', dur: 2, riders: ['Sam'] }, 0.9)).toEqual(expect.arrayContaining(['STOP', 'SAM']))
+    expect(textsOf('strak', { kind: 'intro', dur: 2, title: 'Tignes', sub: 'Tignes · 16 jan' }, 0.9)).toEqual(
+      expect.arrayContaining(['TIGNES', 'Tignes · 16 jan']),
+    )
+  })
+
+  it('opener: de winnaar van het toernooi eerst, ook als hij er anders niet in kwam; eigen keuze zonder hem gaat voor', () => {
+    const many = Array.from({ length: 10 }, (_, i) => m(`c${i}`, i < 9 ? 'video' : 'image', 'u1', i))
+    const plan = planFilm(many, names, trip, 't', { opener: 'c9' })
+    const ids = plan.segments.filter((x): x is Extract<Segment, { kind: 'clip' }> => x.kind === 'clip')
+    expect(ids[0]).toMatchObject({ media: { id: 'c9' }, opener: true, index: 1 })
+    expect(ids).toHaveLength(MAX_CLIPS)
+    expect(ids.slice(1).every((x) => !x.opener)).toBe(true)
+    const own = planFilm(many, names, trip, 't', { opener: 'c9', pick: ['c1', 'c2'] })
+    expect(own.segments.filter((x) => x.kind === 'clip').map((x) => (x as Extract<Segment, { kind: 'clip' }>).media.id)).toEqual([
+      'c1',
+      'c2',
+    ])
+    expect(planFilm(many, names, trip, 't', { opener: 'bestaat-niet' }).segments.some((x) => x.kind === 'clip' && x.opener)).toBe(false)
+  })
+
+  it('op de trippagina: stijl kiezen (onthouden) en de winnaar opent de film', async () => {
+    const user = userEvent.setup()
+    await db.kv.clear()
+    Object.defineProperty(navigator, 'onLine', { configurable: true, get: () => true })
+    api.crewMembers.mockResolvedValue([{ user_id: 'u1', display_name: 'Sam', role: 'owner', stats: {} }])
+    api.tripDays.mockResolvedValue([])
+    api.tripMedia.mockResolvedValue([m('a', 'video', 'u1', 1), m('b', 'video', 'u1', 2)])
+    api.loadBracket.mockResolvedValue({
+      bracket: { trip_id: 't1', crew_id: 'c1', entries: ['a', 'b'], created_by: 'u1', created_at: '' },
+      votes: [{ round: 0, match: 0, voter: 'u1', pick: 'b' }],
+    })
+    api.canMakeFilm.mockReturnValue(true)
+    api.previewMusic.mockReset().mockReturnValue(() => {})
+    api.renderFilm.mockReset().mockResolvedValue(new Blob([new Uint8Array(20_000)], { type: 'video/mp4' }))
+    vi.stubGlobal('URL', Object.assign(URL, { createObjectURL: () => 'blob:film', revokeObjectURL: () => {} }))
+    vi.stubGlobal(
+      'AudioContext',
+      class {
+        state = 'running'
+        resume = async () => {}
+        close = async () => {}
+      },
+    )
+    const r = render(<TripFilm tripId="t1" crewId="c1" trip={trip} />)
+    expect(await screen.findByText(/opent met de clip van de trip/)).toBeTruthy()
+    await user.click(within(screen.getByRole('group', { name: 'Stijl' })).getByRole('button', { name: 'VHS' }))
+    expect(screen.getByText(/Camcorder/)).toBeTruthy()
+    await user.click(screen.getByRole('button', { name: 'Maak de film' }))
+    await waitFor(() => expect(api.renderFilm).toHaveBeenCalled())
+    const [plan, opts] = api.renderFilm.mock.calls[0]
+    expect(opts.style).toBe('vhs')
+    expect(plan.segments[1]).toMatchObject({ kind: 'clip', opener: true, media: { id: 'b' } })
+    r.unmount()
+    render(<TripFilm tripId="t1" crewId="c1" trip={trip} />)
+    await waitFor(() =>
+      expect(
+        within(screen.getByRole('group', { name: 'Stijl' }))
+          .getByRole('button', { name: 'VHS' })
+          .getAttribute('aria-pressed'),
+      ).toBe('true'),
+    )
+    cleanup()
+    vi.unstubAllGlobals()
   })
 })
