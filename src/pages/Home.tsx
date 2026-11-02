@@ -7,6 +7,7 @@ import { SyncBadge } from '../components/SyncBadge'
 import { QuickLog } from '../components/QuickLog'
 import { MemoRecorder } from '../components/VoiceMemos'
 import { looseMemos } from '../lib/memo'
+import { fmtClock, loadRunDay, runStats, runStore, stateOf } from '../lib/runs'
 import { toast } from '../lib/toast'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useProgress } from '../lib/useProgress'
@@ -99,6 +100,17 @@ export default function Home() {
   const recent = sessionsSorted(sessions ?? []).slice(0, 3)
   const loggedToday = (sessions ?? []).find((s) => s.date === today)
   const waiting = useLiveQuery(() => looseMemos(today), [today, sessions?.length])
+  const runDay = runStore.use()
+  const [tick, setTick] = useState(Date.now())
+  const runState = stateOf(runDay, tick)
+  const counting = runState === 'piste' || runState === 'lift'
+  useEffect(() => void loadRunDay(), [])
+  // lopende teller: elke seconde bijwerken
+  useEffect(() => {
+    if (!counting) return
+    const t = setInterval(() => setTick(Date.now()), 1000)
+    return () => clearInterval(t)
+  }, [counting])
 
   const landedIds = new Set((trickRows ?? []).filter((t) => t.status === 'geland' || t.status === 'beheerst').map((t) => t.trickId))
   // Eerst wat net ontgrendeld is door iets wat je al kunt, dan de rest op niveau
@@ -136,18 +148,43 @@ export default function Home() {
         <SeasonCell value={seasonStats.falls} label="slams" hot />
       </button>
 
+      {counting && (
+        <button
+          type="button"
+          onClick={() => nav('/runs')}
+          className={cx(
+            'mt-6 flex w-full items-center gap-3 rounded-[6px] px-4 py-3 text-left',
+            runState === 'piste' ? 'bg-hot text-hot-ink' : 'bg-block text-block-ink',
+          )}
+          aria-label="Run-teller"
+        >
+          <Icon name={runState === 'piste' ? 'mountain' : 'lift'} size={22} />
+          <span className="min-w-0 flex-1">
+            <span className="block text-[12px] font-extrabold uppercase tracking-[0.1em]">
+              {runState === 'piste' ? `Run ${runStats(runDay, tick).runs + 1}` : 'In de lift'}
+            </span>
+            <span className="display num block text-[28px] leading-none">{fmtClock(runStats(runDay, tick).currentMs)}</span>
+          </span>
+          <Icon name="chevron" size={18} />
+        </button>
+      )}
       {loggedToday ? (
         <Button
           size="lg"
           variant="outline"
-          className="mt-6 w-full"
+          className={counting ? 'mt-2 w-full' : 'mt-6 w-full'}
           icon={<Icon name="edit" size={20} />}
           onClick={() => nav(`/log/${loggedToday.id}/bewerk`)}
         >
           Vandaag aanvullen
         </Button>
       ) : (
-        <Button size="lg" className="mt-6 w-full" icon={<Icon name="plus" size={20} stroke={2.2} />} onClick={() => setQuick(true)}>
+        <Button
+          size="lg"
+          className={counting ? 'mt-2 w-full' : 'mt-6 w-full'}
+          icon={<Icon name="plus" size={20} stroke={2.2} />}
+          onClick={() => setQuick(true)}
+        >
           Log je dag
         </Button>
       )}
@@ -179,6 +216,14 @@ export default function Home() {
             title={`Season Wrapped ${wrappedSeason}`}
             detail="Je seizoen tot nu toe, als story"
             to={`/wrapped?seizoen=${encodeURIComponent(wrappedSeason)}`}
+          />
+        )}
+        {!counting && (
+          <Row
+            icon="lift"
+            title="Run-teller"
+            detail={runDay.runs.length ? `${runStats(runDay, tick).runs} runs vandaag` : 'Tel je runs en je tijd in de lift'}
+            to="/runs"
           />
         )}
         <Row icon="replay" title="Trick-roulette" detail="Weet je niet wat je moet oefenen?" to="/tricks?roulette=1" />

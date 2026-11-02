@@ -12,6 +12,7 @@ import Home from './pages/Home'
 const LogList = lazy(() => import('./pages/LogList'))
 const LogEditor = lazy(() => import('./pages/LogEditor'))
 const LogDetail = lazy(() => import('./pages/LogDetail'))
+const Runs = lazy(() => import('./pages/Runs'))
 const Tricks = lazy(() => import('./pages/Tricks'))
 const TrickDetail = lazy(() => import('./pages/TrickDetail'))
 const Quiz = lazy(() => import('./pages/Quiz'))
@@ -169,6 +170,7 @@ export default function App() {
               <Route path="/log/nieuw" element={<LogEditor />} />
               <Route path="/log/:id" element={<LogDetail />} />
               <Route path="/log/:id/bewerk" element={<LogEditor />} />
+              <Route path="/runs" element={<Runs />} />
               <Route path="/tricks" element={<Tricks />} />
               <Route path="/tricks/:id" element={<TrickDetail />} />
               <Route path="/quiz" element={<Quiz />} />

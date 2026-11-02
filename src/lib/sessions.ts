@@ -9,6 +9,7 @@ import { TRICK_BY_ID } from '../content/tricks'
 import { RESORTS } from '../content/resorts'
 import type { MediaMeta, Session } from './types'
 import { adoptMemos } from './memo'
+import { runsForDay } from './runs'
 
 export type SessionDraft = Omit<Session, 'id' | 'userId' | 'createdAt' | 'updatedAt' | 'kind'>
 
@@ -54,6 +55,12 @@ export async function smartDraft(date = todayISO()): Promise<SessionDraft> {
   if (d.resortId && RESORTS.find((r) => r.id === d.resortId)?.indoor) d.snow = 'indoor'
   if (last) d.hours = last.hours
   if (lastCrew && crews.some((c) => c.id === lastCrew)) d.crewId = lastCrew
+  // run-teller van die dag: aantal runs en de tijd op de berg
+  const counted = await runsForDay(date)
+  if (counted) {
+    d.runs = counted.runs
+    d.hours = counted.hours
+  }
   return d
 }
 

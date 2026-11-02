@@ -78,7 +78,7 @@ export default function LogDetail() {
         <Stat label="Geland" value={s.landed.length} />
       </StatGroup>
 
-      {(s.snow || weather || s.pistes.length > 0) && (
+      {(s.snow || weather || s.pistes.length > 0 || !!s.runs) && (
         <Card className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
           {weather && (
             <span className="flex items-center gap-1.5">
@@ -88,6 +88,11 @@ export default function LogDetail() {
           {s.snow && (
             <span className="flex items-center gap-1.5">
               <Icon name="snowflake" size={18} /> {SNOW.find((x) => x.id === s.snow)?.label}
+            </span>
+          )}
+          {!!s.runs && (
+            <span className="flex items-center gap-1.5">
+              <Icon name="lift" size={18} /> {s.runs} {s.runs === 1 ? 'run' : 'runs'}
             </span>
           )}
           {s.pistes.map((p) => {

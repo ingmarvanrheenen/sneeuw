@@ -201,6 +201,14 @@ export default function LogEditor() {
             <Stepper value={d.falls} onChange={(v) => set('falls', v)} max={200} />
           </div>
         </div>
+        {d.runs !== undefined && (
+          <div className="card mt-2 flex items-center justify-between gap-2 p-3">
+            <span className="label flex items-center gap-1">
+              <Icon name="lift" size={12} /> Runs
+            </span>
+            <Stepper value={d.runs} onChange={(v) => set('runs', v)} max={200} />
+          </div>
+        )}
         <div className="label mb-1.5 mt-4">Pistes</div>
         <div className="flex flex-wrap gap-2">
           {PISTES.map((p) => (

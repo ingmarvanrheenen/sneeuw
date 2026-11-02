@@ -28,6 +28,8 @@ export interface Session extends BaseRecord {
   pistes: PisteColor[]
   hours: number
   falls: number
+  /** afdalingen, uit de run-teller of zelf ingevuld */
+  runs?: number
   mood: number // 1-5
   energy?: number // 1-5
   practiced: string[] // trick ids
