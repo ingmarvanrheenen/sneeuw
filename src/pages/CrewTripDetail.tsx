@@ -5,6 +5,7 @@ import { Empty, Page, PageHeader, Stat, StatGroup } from '../components/ui'
 import { Icon, Spinner } from '../design/icons'
 import { GroupList } from '../components/GroupList'
 import { CarPool } from '../components/CarPool'
+import { HouseNote } from '../components/HouseNote'
 import { CrewGoals } from '../components/CrewGoals'
 import { TripRecap } from '../components/TripRecap'
 import { TripBingo } from '../components/TripBingo'
@@ -77,6 +78,7 @@ export default function CrewTripDetail() {
       <CrewGoals tripId={ct.id} crewId={ct.crewId} ownerId={ct.ownerId} />
       <GroupList tripId={ct.id} crewId={ct.crewId} ownerId={ct.ownerId} />
       <CarPool tripId={ct.id} crewId={ct.crewId} />
+      <HouseNote tripId={ct.id} crewId={ct.crewId} ownerId={ct.ownerId} trip={t} />
     </Page>
   )
 }
