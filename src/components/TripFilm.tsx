@@ -1,11 +1,24 @@
 // Trip-film op de trippagina: van de gedeelde clips van de crew een korte montage maken en delen,
 // met muziek (tik een stijl om hem te horen) en het geluid van de clips.
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Button, Chip, Heading, List, Progress, Sheet, Toggle } from './ui'
+import { Button, Chip, Heading, List, Progress, Row, Sheet, Toggle, cx } from './ui'
+import { MediaThumb } from './Media'
+import { kvGet, kvSet } from '../lib/db'
 import { Icon, Spinner } from '../design/icons'
 import { crewMembers } from '../lib/crew'
 import { tripDays, tripMedia } from '../lib/crewTrips'
-import { canMakeFilm, filmName, looksEmpty, MAX_CLIPS, planFilm, previewMusic, renderFilm, type FilmTrip } from '../lib/tripFilm'
+import {
+  canMakeFilm,
+  filmable,
+  filmName,
+  looksEmpty,
+  MAX_CLIPS,
+  pickClips,
+  planFilm,
+  previewMusic,
+  renderFilm,
+  type FilmTrip,
+} from '../lib/tripFilm'
 import { TRACK_BY_ID, TRACKS, type TrackId } from '../lib/filmMusic'
 import { shareFile } from '../lib/shareCard'
 import { errMsg } from '../lib/errors'
@@ -25,6 +38,9 @@ export function TripFilm({ tripId, crewId, trip, ready = true }: { tripId: strin
   const [stage, setStage] = useState<Stage>({ kind: 'idle' })
   const [music, setMusic] = useState<TrackId>('park')
   const [clipAudio, setClipAudio] = useState(true)
+  /** eigen keuze van clips (ids), per trip onthouden op dit toestel; null = automatisch */
+  const [pick, setPick] = useState<string[] | null>(null)
+  const [choosing, setChoosing] = useState(false)
   const canvas = useRef<HTMLCanvasElement>(null)
   const abort = useRef<AbortController | null>(null)
   const audio = useRef<AudioContext | null>(null)
@@ -45,6 +61,15 @@ export function TripFilm({ tripId, crewId, trip, ready = true }: { tripId: strin
   useEffect(() => {
     void load()
   }, [load])
+
+  const pickKey = `filmPick:${tripId}`
+  useEffect(() => {
+    void kvGet<string[] | null>(pickKey, null).then(setPick)
+  }, [pickKey])
+  function savePick(ids: string[] | null) {
+    setPick(ids)
+    void kvSet(pickKey, ids)
+  }
 
   // weg van de pagina: geluid uit
   useEffect(
@@ -77,7 +102,11 @@ export function TripFilm({ tripId, crewId, trip, ready = true }: { tripId: strin
   useEffect(() => () => void (url && URL.revokeObjectURL(url)), [url])
 
   if (!canMakeFilm() || media === null || media.length === 0) return null
-  const plan = planFilm(media, names, trip, tripId, { bpm: TRACK_BY_ID.get(music)?.bpm })
+  const plan = planFilm(media, names, trip, tripId, { bpm: TRACK_BY_ID.get(music)?.bpm, pick })
+  const all = filmable(media)
+  const chosen = pickClips(media, tripId, pick).map((m) => m.id)
+  // wat jij koos (en nog bestaat); null = automatisch. Leeg gekozen = in de film toch automatisch.
+  const ownIds = pick ? all.filter((m) => pick.includes(m.id)).map((m) => m.id) : null
   const clips = plan.segments.length - 2
 
   async function make() {
@@ -136,6 +165,12 @@ export function TripFilm({ tripId, crewId, trip, ready = true }: { tripId: strin
         </div>
         <p className="mt-2 text-[13px] text-muted">Tik een stijl om hem even te horen. De cuts vallen op de beat.</p>
         <List className="mt-3">
+          <Row
+            icon="video"
+            title="Clips"
+            detail={ownIds?.length ? `Jouw keuze: ${chosen.length}` : `Automatisch: ${chosen.length} van ${all.length}`}
+            onClick={() => setChoosing(true)}
+          />
           <Toggle
             on={clipAudio}
             onChange={setClipAudio}
@@ -155,6 +190,16 @@ export function TripFilm({ tripId, crewId, trip, ready = true }: { tripId: strin
           Maak de film
         </Button>
       </div>
+
+      <ClipPicker
+        open={choosing}
+        onClose={() => setChoosing(false)}
+        media={all}
+        names={names}
+        selected={ownIds ?? chosen}
+        own={ownIds !== null}
+        onChange={savePick}
+      />
 
       <Sheet open={open} onClose={close} title="Trip-film" closeLabel={stage.kind === 'busy' ? 'Stop' : 'Klaar'}>
         {stage.kind === 'klaar' ? (
@@ -212,5 +257,77 @@ export function TripFilm({ tripId, crewId, trip, ready = true }: { tripId: strin
         </div>
       </Sheet>
     </section>
+  )
+}
+
+/** Zelf kiezen welke clips in de film komen: aantikken (max 8), op volgorde van de trip. */
+function ClipPicker({
+  open,
+  onClose,
+  media,
+  names,
+  selected,
+  own,
+  onChange,
+}: {
+  open: boolean
+  onClose: () => void
+  media: MediaMeta[]
+  names: Record<string, string>
+  selected: string[]
+  own: boolean
+  onChange: (ids: string[] | null) => void
+}) {
+  const full = selected.length >= MAX_CLIPS
+  function toggle(id: string) {
+    const next = selected.includes(id) ? selected.filter((x) => x !== id) : full ? selected : [...selected, id]
+    onChange(next)
+  }
+  // nummers op volgorde van de trip (zo staan ze in de film)
+  const order = media.filter((m) => selected.includes(m.id)).map((m) => m.id)
+  return (
+    <Sheet open={open} onClose={onClose} title="Clips voor de film">
+      <p className="mb-3 text-[15px] text-muted">
+        {own ? `${selected.length} van max ${MAX_CLIPS} gekozen.` : `De app koos er ${selected.length}; tik om zelf te kiezen.`} Ze komen op
+        volgorde van de trip in de film.
+      </p>
+      <div className="grid grid-cols-3 gap-2" role="group" aria-label="Clips">
+        {media.map((m) => {
+          const at = order.indexOf(m.id)
+          const on = at >= 0
+          const who = names[m.userId ?? ''] ?? 'Iemand'
+          return (
+            <div key={m.id} className="relative">
+              <MediaThumb
+                m={m}
+                onClick={() => toggle(m.id)}
+                pressed={on}
+                disabled={!on && full}
+                label={`${m.type === 'video' ? 'Clip' : 'Foto'} van ${who}`}
+                className={cx('aspect-[4/5] w-full disabled:opacity-40', on && 'ring-2 ring-accent ring-offset-2 ring-offset-[var(--bg)]')}
+              />
+              {on && (
+                <span
+                  aria-hidden
+                  className="display num pointer-events-none absolute left-1.5 top-1.5 grid size-7 place-items-center rounded-full bg-accent text-[17px] text-accent-ink"
+                >
+                  {at + 1}
+                </span>
+              )}
+              <span className="mt-1 block truncate text-[12px] text-muted">{who}</span>
+            </div>
+          )
+        })}
+      </div>
+      {own && !selected.length && <p className="mt-3 text-[13px] text-muted">Niks gekozen: dan kiest de app weer.</p>}
+      <div className="mb-6 mt-5 flex gap-2">
+        <Button variant="ghost" className="flex-1" icon={<Icon name="sparkle" size={18} />} disabled={!own} onClick={() => onChange(null)}>
+          Automatisch
+        </Button>
+        <Button variant="ghost" className="flex-1" disabled={!selected.length} onClick={() => onChange([])}>
+          Niks
+        </Button>
+      </div>
+    </Sheet>
   )
 }

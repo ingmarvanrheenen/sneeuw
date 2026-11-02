@@ -44,21 +44,17 @@ export interface FilmPlan {
   total: number
 }
 
+/** Wat in de film mag: foto's en video's, niet weggegooid, oudste eerst. */
+export const filmable = (media: MediaMeta[]) => media.filter((m) => isVisual(m) && !m.deleted).sort((a, b) => a.createdAt - b.createdAt)
+
 /**
- * Welke clips erin komen en in welke volgorde: op tijd (zoals de trip ging), max 8. Zijn er meer, dan gaan
- * video's voor foto's, en per soort een vaste maar gehusselde keuze per trip (zelfde trip = zelfde film).
+ * Welke clips erin komen. Eigen keuze (`pick`, ids) gaat voor, zolang er nog iets van bestaat; anders automatisch:
+ * alles, of bij meer dan 8 video's voor foto's, met een vaste maar gehusselde keuze per trip. Altijd op tijd.
  */
-export function planFilm(
-  media: MediaMeta[],
-  names: Record<string, string>,
-  trip: FilmTrip,
-  seed: string,
-  opts: { bpm?: number } = {},
-): FilmPlan {
-  // met muziek: elke cut op de beat (intro en clips 4 tellen, foto's 3, outro 4 plus een uitloop)
-  const beat = opts.bpm ? 60 / opts.bpm : 0
-  const snap = (s: number, beats: number) => (beat ? Math.round(beats * beat * 1000) / 1000 : s)
-  const visual = media.filter((m) => isVisual(m) && !m.deleted)
+export function pickClips(media: MediaMeta[], seed: string, pick?: string[] | null): MediaMeta[] {
+  const visual = filmable(media)
+  const own = pick?.length ? visual.filter((m) => pick.includes(m.id)).slice(0, MAX_CLIPS) : []
+  if (own.length) return own
   let picked = visual
   if (visual.length > MAX_CLIPS) {
     const rng = seeded(`film:${seed}`)
@@ -71,7 +67,20 @@ export function planFilm(
     const photos = shuffled(visual.filter((m) => m.type === 'image'))
     picked = [...videos, ...photos].slice(0, MAX_CLIPS)
   }
-  picked = [...picked].sort((a, b) => a.createdAt - b.createdAt)
+  return [...picked].sort((a, b) => a.createdAt - b.createdAt)
+}
+
+export function planFilm(
+  media: MediaMeta[],
+  names: Record<string, string>,
+  trip: FilmTrip,
+  seed: string,
+  opts: { bpm?: number; pick?: string[] | null } = {},
+): FilmPlan {
+  // met muziek: elke cut op de beat (intro en clips 4 tellen, foto's 3, outro 4 plus een uitloop)
+  const beat = opts.bpm ? 60 / opts.bpm : 0
+  const snap = (s: number, beats: number) => (beat ? Math.round(beats * beat * 1000) / 1000 : s)
+  const picked = pickClips(media, seed, opts.pick)
   // echte namen, ook die van jezelf: de film is om te delen
   const who = (uid: string | null | undefined) => (uid && names[uid]) || 'Iemand'
   const dates = [trip.startDate, trip.endDate && trip.endDate !== trip.startDate ? trip.endDate : null]
