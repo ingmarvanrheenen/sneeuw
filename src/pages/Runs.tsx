@@ -1,7 +1,7 @@
 // Run-teller: één grote knop. Start boven, Beneden onder; de tijd ertussen is lift. Werkt offline, alleen lokaal.
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Button, Heading, List, Page, PageHeader, Stat, StatGroup, cx } from '../components/ui'
+import { Button, Heading, List, Page, PageHeader, Row, Stat, StatGroup, cx } from '../components/ui'
 import { Peaks } from '../components/Poster'
 import { Icon } from '../design/icons'
 import {
@@ -170,6 +170,11 @@ export default function Runs() {
             Opnieuw beginnen
           </button>
         </>
+      )}
+      {!day.runs.length && (
+        <List className="mt-4">
+          <Row icon="bolt" title="Eerst warm worden?" detail="5 minuten, met je board aan" to="/warming-up" />
+        </List>
       )}
       {!day.runs.length && (
         <p className="mt-4 text-[15px] text-muted">

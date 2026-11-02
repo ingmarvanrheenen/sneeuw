@@ -14,6 +14,7 @@ const LogEditor = lazy(() => import('./pages/LogEditor'))
 const LogDetail = lazy(() => import('./pages/LogDetail'))
 const Runs = lazy(() => import('./pages/Runs'))
 const Emergency = lazy(() => import('./pages/Emergency'))
+const Warmup = lazy(() => import('./pages/Warmup'))
 const Tricks = lazy(() => import('./pages/Tricks'))
 const TrickDetail = lazy(() => import('./pages/TrickDetail'))
 const Quiz = lazy(() => import('./pages/Quiz'))
@@ -173,6 +174,7 @@ export default function App() {
               <Route path="/log/:id/bewerk" element={<LogEditor />} />
               <Route path="/runs" element={<Runs />} />
               <Route path="/nood" element={<Emergency />} />
+              <Route path="/warming-up" element={<Warmup />} />
               <Route path="/tricks" element={<Tricks />} />
               <Route path="/tricks/:id" element={<TrickDetail />} />
               <Route path="/quiz" element={<Quiz />} />
