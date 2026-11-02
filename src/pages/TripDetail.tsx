@@ -229,6 +229,10 @@ export default function TripDetail() {
         </Section>
       )}
 
+      <List className="mt-8">
+        <Row icon="phone" title="Noodkaart" detail="Alarmnummers, je plek en je gegevens, ook offline" to="/nood" />
+      </List>
+
       <Button
         variant="danger"
         className="mt-8 w-full"

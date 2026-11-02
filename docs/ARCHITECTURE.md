@@ -149,6 +149,13 @@ S.K.A.T.E., maar op de piste, binnen een crew. Wie aan de beurt is zet een trick
 - Alleen lokaal, op tijdstempels (`kv: runs:<datum>`), dus het klopt ook als de app dicht was of je scherm uit stond. `runStore` houdt Home en de pagina live gelijk.
 - Op Home: een live blok (run of lift, met de klok) terwijl je telt, anders een rij. Je dag: `smartDraft` neemt het aantal runs en de uren op de berg (op een half uur) over; "Zet in je dag" zet de runs in een al gelogde dag. `Session.runs` staat op de dagpagina en in de editor. XP verandert niet.
 
+## Noodkaart (`src/pages/Emergency.tsx`, `src/lib/emergency.ts`, `src/content/emergency.ts`)
+
+- Route `/nood` (Meer, en onderaan elke trip). Groot het alarmnummer van het land (bellen met één tik), en de andere landelijke nummers. Het land: wat je koos, anders dat van je trip, anders Frankrijk.
+- Alleen nummers die landelijk gelden (112 in Europa, plus bijv. Bergrettung 140, Rega 1414). Pistediensten verschillen per gebied; dat nummer vul je zelf in.
+- "Waar ben ik": je coördinaten (GPS, ook zonder bereik) om voor te lezen. "Bij een ongeluk": wat te doen, in volgorde.
+- Je gegevens (allergieën, medicijnen, wie ze moeten bellen, verzekering) staan alleen op dit toestel (`kv: emergency:card`), niet in je profiel en nooit op de server. "Laat zien aan hulp" toont ze groot, in het Nederlands en Engels.
+
 ## Push-meldingen
 
 ```

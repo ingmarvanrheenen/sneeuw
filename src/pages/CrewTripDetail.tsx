@@ -1,7 +1,7 @@
 // Trip van een crewgenoot: de gegevens lezen en samen de groepslijst vullen.
 import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
-import { Empty, Page, PageHeader, Stat, StatGroup } from '../components/ui'
+import { Empty, List, Page, PageHeader, Row, Stat, StatGroup } from '../components/ui'
 import { Icon, Spinner } from '../design/icons'
 import { GroupList } from '../components/GroupList'
 import { CarPool } from '../components/CarPool'
@@ -85,6 +85,9 @@ export default function CrewTripDetail() {
       <CarPool tripId={ct.id} crewId={ct.crewId} />
       <HouseNote tripId={ct.id} crewId={ct.crewId} ownerId={ct.ownerId} trip={t} />
       <TripPot tripId={ct.id} crewId={ct.crewId} ownerId={ct.ownerId} />
+      <List className="mt-8">
+        <Row icon="phone" title="Noodkaart" detail="Alarmnummers, je plek en je gegevens, ook offline" to="/nood" />
+      </List>
     </Page>
   )
 }
