@@ -2,12 +2,13 @@
 // van de `coach` Edge Function (de API-key staat alleen op de server).
 import { kvGet, kvSet } from './db'
 import { getAccessToken, getProfile } from './auth'
-import { create } from './repo'
+import { create, listKind, update } from './repo'
 import { loadProgressInput, computeProgress } from './useProgress'
 import { TRICKS, TRICK_BY_ID } from '../content/tricks'
 import { PISTES, SNOW, WEATHER } from '../content/logOptions'
 import { MOOD_LABELS } from '../design/icons'
-import type { DayReview, Session } from './types'
+import type { DayReview, Session, Trip, TripPlan } from './types'
+import { RESORTS } from '../content/resorts'
 import { sessionsSorted } from './repo'
 import { todayISO, uid } from './ids'
 import {
@@ -24,6 +25,7 @@ import {
 } from '../../supabase/functions/coach/protocol'
 
 export type { CoachAction, CoachImage, Comparison, Drill, PlanDay } from '../../supabase/functions/coach/protocol'
+import { checkTripPlan, planText, TRIP_MAX_DAYS } from '../../supabase/functions/coach/protocol'
 
 export interface CoachMessage extends WireMessage {
   /** indexen van `actions` waar de rider al op getikt heeft */
@@ -193,10 +195,17 @@ export async function reviewDay(s: Session): Promise<DayReview> {
   const [context, input] = await Promise.all([buildContext(), loadProgressInput()])
   const done = new Set(input.tricks.filter((t) => t.status === 'geland' || t.status === 'beheerst').map((t) => t.trickId))
   const trickIds = TRICKS.map((t) => t.id).filter((id) => !done.has(id))
-  const res = await coachRequest({ mode: 'review', context, day: dayText(s), trickIds })
+  // dag van een trip met een coach-plan: het plan van vandaag en morgen gaat mee
+  const plan = await planFor(s)
+  const res = await coachRequest({ mode: 'review', context, day: dayText(s), trickIds, ...(plan ? { plan } : {}) })
   const r = (await res.json()) as Omit<DayReview, 'createdAt'>
   if (!r?.focus) throw new CoachError('Coach gaf geen bruikbare review terug.')
-  return { ...r, trickId: r.trickId && TRICK_BY_ID.has(r.trickId) ? r.trickId : null, createdAt: Date.now() }
+  return {
+    ...r,
+    trickId: r.trickId && TRICK_BY_ID.has(r.trickId) ? r.trickId : null,
+    morgen: plan && typeof r.morgen === 'string' ? r.morgen : null,
+    createdAt: Date.now(),
+  }
 }
 
 // ── Drill van de dag ──────────────────────────────────────────────────────────
@@ -362,3 +371,77 @@ export function toCoachImage(src: CanvasImageSource, w: number, h: number): Coac
 }
 
 export const imageSrc = (img: CoachImage) => `data:${img.mediaType};base64,${img.data}`
+
+// ── Coach op de trip ──────────────────────────────────────────────────────────
+// Aan het begin van een trip een plan per dag (één coach-bericht), bewaard bij de trip zodat hij meesynct.
+// Elke avond neemt de dagreview het plan van die dag en morgen mee.
+
+const DAY_MS = 864e5
+const addDays = (iso: string, n: number) => new Date(Date.parse(`${iso}T12:00:00Z`) + n * DAY_MS).toISOString().slice(0, 10)
+
+/** De dagen van een trip (van begin tot eind, max 14); zonder einddatum één dag. */
+export function tripDates(t: Pick<Trip, 'startDate' | 'endDate'>): string[] {
+  if (!t.startDate) return []
+  const out = [t.startDate]
+  while (t.endDate && out.length < TRIP_MAX_DAYS && out.at(-1)! < t.endDate) out.push(addDays(out.at(-1)!, 1))
+  return out
+}
+
+/** De trip in een paar regels voor de coach. */
+export function tripText(t: Trip): string {
+  const resort = RESORTS.find((r) => r.id === t.resortId)
+  return [
+    `Trip: ${t.name}`,
+    `Waar: ${t.resortName || resort?.name || 'onbekend'}${resort ? ` (${resort.region}, ${resort.base}-${resort.top} m, beginners ${resort.beginner}/5, ${resort.park ? 'met park' : 'geen park'}${resort.indoor ? ', indoor' : ''})` : ''}`,
+    `Van ${t.startDate} tot ${t.endDate ?? t.startDate}`,
+  ].join('\n')
+}
+
+/** Het plan van vandaag op een trip, als die er is. */
+export function planDay(t: Pick<Trip, 'coachPlan'> | undefined, date: string) {
+  return t?.coachPlan?.days.find((d) => d.date === date) ?? null
+}
+
+async function planFor(s: Session): Promise<string | null> {
+  const trips = await listKind('trip')
+  const t = trips.find((x) => (s.tripId ? x.id === s.tripId : x.startDate && x.startDate <= s.date && (x.endDate ?? x.startDate) >= s.date))
+  const days = t?.coachPlan?.days ?? []
+  const i = days.findIndex((d) => d.date === s.date)
+  if (i < 0) return null
+  const wire = (d: (typeof days)[number] | undefined, n: number) =>
+    d ? { dag: n + 1, titel: d.titel, focus: d.focus, oefeningen: d.oefeningen, trickId: d.trickId } : null
+  return planText(wire(days[i], i), wire(days[i + 1], i + 1)) || null
+}
+
+/** Vraag de coach om een plan voor deze trip. Telt als één coach-bericht; bewaart het bij de trip. */
+export async function askTripPlan(t: Trip, wish = ''): Promise<TripPlan> {
+  const dates = tripDates(t)
+  if (!dates.length) throw new CoachError('Zet eerst de data van je trip.')
+  const [context, input] = await Promise.all([buildContext(), loadProgressInput()])
+  const done = new Set(input.tricks.filter((x) => x.status === 'beheerst').map((x) => x.trickId))
+  const trickIds = TRICKS.map((x) => x.id).filter((id) => !done.has(id))
+  const res = await coachRequest({
+    mode: 'tripplan',
+    context,
+    trip: tripText(t),
+    days: dates.length,
+    wish: wish.trim().slice(0, 300),
+    trickIds,
+  })
+  const out = checkTripPlan(await res.json(), trickIds, dates.length)
+  if (!out) throw new CoachError('Coach gaf geen bruikbaar plan terug. Probeer het nog eens.')
+  const plan: TripPlan = {
+    intro: out.intro,
+    days: out.dagen.map((d, i) => ({
+      date: dates[i],
+      titel: d.titel,
+      focus: d.focus,
+      oefeningen: d.oefeningen,
+      trickId: d.trickId && TRICK_BY_ID.has(d.trickId) ? d.trickId : null,
+    })),
+    ...(wish.trim() ? { wish: wish.trim().slice(0, 300) } : {}),
+    createdAt: Date.now(),
+  }
+  await update(t, { coachPlan: plan })
+  return plan
+}

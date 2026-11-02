@@ -79,6 +79,7 @@ export function DayReview({ session }: { session: Session }) {
         <Item label="Ging goed">{r.goed}</Item>
         <Item label="Focus voor de volgende keer">{r.focus}</Item>
         <Item label="Oefening">{r.oefening}</Item>
+        {r.morgen && <Item label="Morgen, volgens je tripplan">{r.morgen}</Item>}
         {r.veiligheid && (
           <Item label="Let op" tone="warn">
             {r.veiligheid}

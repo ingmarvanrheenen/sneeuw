@@ -51,6 +51,16 @@ export interface DayReview {
   /** voorgestelde volgende trick uit de bijbel */
   trickId: string | null
   veiligheid: string | null
+  /** op een trip met een coach-plan: hoe je morgen bijstuurt */
+  morgen?: string | null
+  createdAt: number
+}
+
+/** Coach op de trip: per tripdag een thema, gemaakt door Coach Daddy en bewaard bij de trip. */
+export interface TripPlan {
+  intro: string
+  days: { date: string; titel: string; focus: string; oefeningen: string[]; trickId: string | null }[]
+  wish?: string
   createdAt: number
 }
 
@@ -90,6 +100,7 @@ export interface Trip extends BaseRecord {
   startDate?: string
   endDate?: string
   packing: PackItem[]
+  coachPlan?: TripPlan
 }
 
 export type GearKind = 'board' | 'binding' | 'boots' | 'helm' | 'goggle' | 'kleding' | 'protectie' | 'overig'

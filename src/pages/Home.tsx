@@ -10,6 +10,7 @@ import { looseMemos } from '../lib/memo'
 import { fmtClock, loadRunDay, runStats, runStore, stateOf } from '../lib/runs'
 import { loadPrograms, nextDay, programStore } from '../lib/programs'
 import { PROGRAM_BY_ID } from '../content/programs'
+import { planDay } from '../lib/coach'
 import { toast } from '../lib/toast'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useProgress } from '../lib/useProgress'
@@ -111,6 +112,8 @@ export default function Home() {
   useEffect(() => void loadPrograms(), [])
   const program = programs.active ? PROGRAM_BY_ID.get(programs.active) : undefined
   const programDay = program ? nextDay(program, programs.runs[program.id]) : null
+  const coachTrip = (trips ?? []).find((t) => planDay(t, today))
+  const coachToday = coachTrip ? planDay(coachTrip, today) : null
   // lopende teller: elke seconde bijwerken
   useEffect(() => {
     if (!counting) return
@@ -234,6 +237,9 @@ export default function Home() {
         )}
         {!loggedToday && !runDay.runs.length && (
           <Row icon="bolt" title="Warming-up" detail="5 minuten voor de eerste lift" to="/warming-up" />
+        )}
+        {coachTrip && coachToday && (
+          <Row icon="chat" title={`Coach: ${coachToday.titel}`} detail={coachToday.focus} to={`/reizen/${coachTrip.id}`} />
         )}
         {program && programDay !== null ? (
           <Row
