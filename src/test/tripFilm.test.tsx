@@ -31,6 +31,7 @@ vi.mock('../lib/tripFilm', async (orig) => ({
 import { TripFilm } from '../components/TripFilm'
 import {
   clipStart,
+  pickClips,
   timeline,
   CLIP_S,
   filmName,
@@ -43,6 +44,7 @@ import {
   type Segment,
 } from '../lib/tripFilm'
 import type { MediaMeta } from '../lib/types'
+import { db } from '../lib/db'
 
 const m = (id: string, type: MediaMeta['type'], userId: string, createdAt: number, over: Partial<MediaMeta> = {}) =>
   ({ id, kind: 'media', type, mime: 'x', userId, createdAt, updatedAt: 0, ...over }) as MediaMeta
@@ -251,5 +253,101 @@ describe('muziek kiezen', () => {
     await user.click(screen.getByRole('button', { name: 'Maak de film' }))
     await waitFor(() => expect(api.renderFilm).toHaveBeenCalled())
     expect(api.renderFilm.mock.calls[0][1]).toMatchObject({ music: 'geen', clipAudio: false, audio: null })
+  })
+})
+
+describe('zelf clips kiezen', () => {
+  const many = Array.from({ length: 10 }, (_, i) => m(`c${i}`, i % 3 ? 'video' : 'image', i % 2 ? 'u1' : 'u2', i))
+
+  it('eigen keuze gaat voor, op tijd en max 8; verdwenen clips tellen niet; niks of alles weg = automatisch', () => {
+    expect(pickClips(many, 't', ['c5', 'c1', 'c3']).map((x) => x.id)).toEqual(['c1', 'c3', 'c5'])
+    expect(
+      pickClips(
+        many,
+        't',
+        many.map((x) => x.id),
+      ),
+    ).toHaveLength(8)
+    expect(pickClips(many, 't', ['weg', 'c2']).map((x) => x.id)).toEqual(['c2'])
+    const auto = pickClips(many, 't').map((x) => x.id)
+    expect(pickClips(many, 't', []).map((x) => x.id)).toEqual(auto)
+    expect(pickClips(many, 't', ['weg']).map((x) => x.id)).toEqual(auto)
+    expect(pickClips([...many, m('memo', 'audio', 'u1', 99)], 't', ['memo', 'c0']).map((x) => x.id)).toEqual(['c0'])
+  })
+
+  beforeEach(async () => {
+    await db.kv.clear()
+    Object.defineProperty(navigator, 'onLine', { configurable: true, get: () => true })
+    api.crewMembers.mockResolvedValue([
+      { user_id: 'u1', display_name: 'Sam', role: 'owner', stats: {} },
+      { user_id: 'u2', display_name: 'Noor', role: 'member', stats: {} },
+    ])
+    api.tripDays.mockResolvedValue([])
+    api.tripMedia.mockResolvedValue(many)
+    api.canMakeFilm.mockReturnValue(true)
+    api.renderFilm.mockReset().mockResolvedValue(new Blob([new Uint8Array(20_000)], { type: 'video/mp4' }))
+    api.previewMusic.mockReset().mockReturnValue(() => {})
+    vi.stubGlobal('URL', Object.assign(URL, { createObjectURL: () => 'blob:film', revokeObjectURL: () => {} }))
+    vi.stubGlobal(
+      'AudioContext',
+      class {
+        state = 'running'
+        resume = async () => {}
+        close = async () => {}
+      },
+    )
+  })
+  afterEach(() => {
+    cleanup()
+    vi.unstubAllGlobals()
+  })
+
+  const clipsSheet = () => screen.getByRole('dialog', { name: 'Clips voor de film' })
+  const tiles = () => within(within(clipsSheet()).getByRole('group', { name: 'Clips' })).getAllByRole('button')
+
+  it('kiezen, nummers op volgorde, onthouden per trip, en de film gebruikt jouw keuze', async () => {
+    const user = userEvent.setup()
+    const r = render(<TripFilm tripId="t1" crewId="c1" trip={trip} />)
+    await user.click(await screen.findByRole('button', { name: /Clips.*Automatisch: 8 van 10/ }))
+    expect(tiles().filter((b) => b.getAttribute('aria-pressed') === 'true')).toHaveLength(8)
+    // alles uit, dan drie kiezen in een andere volgorde dan de trip
+    await user.click(within(clipsSheet()).getByRole('button', { name: 'Niks' }))
+    expect(within(clipsSheet()).getByText(/Niks gekozen: dan kiest de app weer/)).toBeTruthy()
+    for (const i of [5, 1, 3]) await user.click(tiles()[i])
+    expect(tiles()[1].getAttribute('aria-label')).toBe('Clip van Sam')
+    expect(tiles()[1].parentElement?.textContent).toContain('1')
+    expect(tiles()[5].parentElement?.textContent).toContain('3')
+    await user.click(within(clipsSheet()).getByRole('button', { name: 'Klaar' }))
+    expect(screen.getByRole('button', { name: /Jouw keuze: 3/ })).toBeTruthy()
+
+    await user.click(screen.getByRole('button', { name: 'Maak de film' }))
+    await waitFor(() => expect(api.renderFilm).toHaveBeenCalled())
+    const ids = api.renderFilm.mock.calls[0][0].segments
+      .filter((x: Segment) => x.kind === 'clip')
+      .map((x: Extract<Segment, { kind: 'clip' }>) => x.media.id)
+    expect(ids).toEqual(['c1', 'c3', 'c5'])
+
+    // onthouden: opnieuw openen geeft dezelfde keuze
+    r.unmount()
+    render(<TripFilm tripId="t1" crewId="c1" trip={trip} />)
+    expect(await screen.findByRole('button', { name: /Jouw keuze: 3/ })).toBeTruthy()
+  })
+
+  it('max 8: de rest kan niet meer; automatisch zet het terug', async () => {
+    const user = userEvent.setup()
+    render(<TripFilm tripId="t1" crewId="c1" trip={trip} />)
+    await user.click(await screen.findByRole('button', { name: /Clips/ }))
+    // de app koos 8: de andere twee zijn vol
+    const off = tiles().filter((b) => b.getAttribute('aria-pressed') === 'false')
+    expect(off).toHaveLength(2)
+    expect(off.every((b) => (b as HTMLButtonElement).disabled)).toBe(true)
+    expect((within(clipsSheet()).getByRole('button', { name: 'Automatisch' }) as HTMLButtonElement).disabled).toBe(true)
+    // één eruit, dan kan er een andere in
+    await user.click(tiles().find((b) => b.getAttribute('aria-pressed') === 'true')!)
+    await user.click(off[0])
+    expect(off[0].getAttribute('aria-pressed')).toBe('true')
+    await user.click(within(clipsSheet()).getByRole('button', { name: 'Automatisch' }))
+    await user.click(within(clipsSheet()).getByRole('button', { name: 'Klaar' }))
+    expect(screen.getByRole('button', { name: /Automatisch: 8 van 10/ })).toBeTruthy()
   })
 })

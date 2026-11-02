@@ -21,11 +21,33 @@ export function useMediaUrl(m: MediaMeta | undefined) {
   return url
 }
 
-export function MediaThumb({ m, onClick, className }: { m: MediaMeta; onClick?: () => void; className?: string }) {
+export function MediaThumb({
+  m,
+  onClick,
+  className,
+  label,
+  pressed,
+  disabled,
+}: {
+  m: MediaMeta
+  onClick?: () => void
+  className?: string
+  label?: string
+  /** voor kiezers: aan of uit */
+  pressed?: boolean
+  disabled?: boolean
+}) {
   const url = useMediaUrl(m.thumb ? undefined : m)
   const src = m.thumb ?? (m.type === 'image' ? url : null)
   return (
-    <button onClick={onClick} className={cx('relative overflow-hidden rounded-[6px] bg-surface-2', className)}>
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={label}
+      aria-pressed={pressed}
+      disabled={disabled}
+      className={cx('relative overflow-hidden rounded-[6px] bg-surface-2', className)}
+    >
       {src ? (
         <img src={src} alt="" className="h-full w-full object-cover" loading="lazy" />
       ) : (

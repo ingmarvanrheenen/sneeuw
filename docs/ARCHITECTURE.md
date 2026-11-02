@@ -134,7 +134,8 @@ S.K.A.T.E., maar op de piste, binnen een crew. Wie aan de beurt is zet een trick
 - **Geluid**: muziek uit `src/lib/filmMusic.ts`, in de app gemaakt met WebAudio (geen bestanden, geen licenties): Boom bap (92 bpm), Park (108), Pow day (124) of geen. Tik een stijl om 4 maten te horen (`previewMusic`). Met muziek vallen de cuts op de beat (`planFilm(..., { bpm })`: intro en clips 4 tellen, foto's 3, outro 6).
 - Het geluid van de clips komt uit het bestand zelf (`decodeAudioData`, één download voor beeld en geluid) en wordt op de klok van de AudioContext ingepland; de muziek gaat dan zachter. Beeld volgt dezelfde klok, dus beeld en geluid blijven gelijk. Alles via een limiter naar een `MediaStreamAudioDestinationNode`, samen met het canvas opgenomen.
 - iOS start geluid alleen na een tik: de AudioContext wordt in de tik op "Maak de film" (of op een muziekstijl) gemaakt. Lukt dat niet, dan wordt het een stille film.
-- Nog niet: kiezen welke clips. Getest in Chromium met testclips met testtonen (ffmpeg): elke toon zit precies in zijn eigen clip (FFT-check); op een iPhone nog proberen.
+- **Zelf kiezen** (rij "Clips" → `ClipPicker`): tik clips aan of uit, max 8, met een nummer op volgorde van de trip. Je keuze wordt per trip op je toestel onthouden (`kv: filmPick:<tripId>`); "Automatisch" zet hem terug. `pickClips()`: eigen keuze gaat voor, verdwenen clips tellen niet, niks gekozen = automatisch.
+- Getest in Chromium met testclips met testtonen (ffmpeg): elke toon zit precies in zijn eigen clip (FFT-check); op een iPhone nog proberen.
 
 ## Push-meldingen
 
