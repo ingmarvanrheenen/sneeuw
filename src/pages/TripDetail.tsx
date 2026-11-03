@@ -8,6 +8,8 @@ import { TripTournament } from '../components/TripTournament'
 import { TripFilm } from '../components/TripFilm'
 import { TripPot } from '../components/TripPot'
 import { TripCoach } from '../components/TripCoach'
+import { SnowReport } from '../components/SnowReport'
+import { RESORTS } from '../content/resorts'
 import { CrewGoals } from '../components/CrewGoals'
 import { TripRecap } from '../components/TripRecap'
 import { TripBingo } from '../components/TripBingo'
@@ -132,6 +134,7 @@ export default function TripDetail() {
       <CrewShare trip={trip} />
 
       <TripCoach trip={trip} editable />
+      {RESORTS.find((r) => r.id === trip.resortId) && <SnowReport resort={RESORTS.find((r) => r.id === trip.resortId)!} />}
 
       {tripGoals.length > 0 && (
         <Section title="Doelen deze trip">
