@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useInRouterContext, useNavigate } from 'react-router-dom'
 import { Icon } from '../design/icons'
 import { getCurrentUserId } from '../lib/auth-state'
 import { mediaUrl } from '../lib/sync'
@@ -65,15 +65,37 @@ export function MediaThumb({
   )
 }
 
+/** Tekenen met de knop "Vraag de coach": die opent de techniek-check met dezelfde clip en hetzelfde moment. */
+function DrawWithCoach({ m, onClose, onLeave }: { m: MediaMeta; onClose: () => void; onLeave: () => void }) {
+  const nav = useNavigate()
+  return (
+    <ClipDraw
+      m={m}
+      onClose={onClose}
+      onAskCoach={(at) => {
+        onClose()
+        onLeave()
+        nav(`/coach?media=${m.id}${at !== null ? `&at=${at.toFixed(2)}` : ''}`)
+      }}
+    />
+  )
+}
+
 export function MediaViewer({ m, onClose, onDelete }: { m: MediaMeta | null; onClose: () => void; onDelete?: (m: MediaMeta) => void }) {
   const url = useMediaUrl(m ?? undefined)
   const [drawing, setDrawing] = useState(false)
+  const inRouter = useInRouterContext()
   useEffect(() => setDrawing(false), [m])
   if (!m) return null
   const mine = !m.userId || m.userId === getCurrentUserId()
   return (
     <div className="fixed inset-0 z-[70] flex flex-col bg-black" onClick={onClose}>
-      {drawing && <ClipDraw m={m} onClose={() => setDrawing(false)} />}
+      {drawing &&
+        (inRouter ? (
+          <DrawWithCoach m={m} onClose={() => setDrawing(false)} onLeave={onClose} />
+        ) : (
+          <ClipDraw m={m} onClose={() => setDrawing(false)} />
+        ))}
       <div className="pt-safe flex justify-between px-4 pb-2" onClick={(e) => e.stopPropagation()}>
         {onDelete ? (
           <button

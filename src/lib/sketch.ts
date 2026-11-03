@@ -131,3 +131,65 @@ export async function exportSketch(src: CanvasImageSource, size: { width: number
     canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('Opslaan lukte niet'))), 'image/jpeg', 0.9),
   )
 }
+
+/** Een punt uit het beeld van een paneel naar de maten van het basisbeeld (waar de tekening in staat). */
+export const toBase = (p: Pt, pane: { width: number; height: number }, base: { width: number; height: number }): Pt => ({
+  x: (p.x * base.width) / pane.width,
+  y: (p.y * base.height) / pane.height,
+})
+
+export interface ComparePane {
+  src: CanvasImageSource
+  size: { width: number; height: number }
+  label: string
+}
+
+/** Twee beelden onder elkaar, even breed als het bovenste, met dezelfde tekening op allebei en een label. */
+export function compareLayout(top: { width: number; height: number }, bottom: { width: number; height: number }) {
+  const width = top.width
+  const bottomHeight = Math.round((bottom.height * width) / bottom.width)
+  return { width, height: top.height + bottomHeight, bottomHeight }
+}
+
+export function drawCompare(c: CanvasRenderingContext2D, top: ComparePane, bottom: ComparePane, shapes: Shape[]) {
+  const { width, bottomHeight } = compareLayout(top.size, bottom.size)
+  const tag = (text: string, y: number) => {
+    const fs = Math.max(18, Math.round(width / 22))
+    c.font = `800 ${fs}px -apple-system, system-ui, sans-serif`
+    const tw = c.measureText(text).width
+    c.fillStyle = 'rgba(0,0,0,0.6)'
+    c.fillRect(fs * 0.5, y + fs * 0.5, tw + fs, fs * 1.5)
+    c.fillStyle = '#ffffff'
+    c.textAlign = 'left'
+    c.textBaseline = 'middle'
+    c.fillText(text, fs, y + fs * 1.25)
+  }
+  c.drawImage(top.src, 0, 0, width, top.size.height)
+  drawShapes(c, shapes, top.size)
+  tag(top.label, 0)
+  c.save()
+  c.translate(0, top.size.height)
+  c.drawImage(bottom.src, 0, 0, width, bottomHeight)
+  // dezelfde lijnen, op dezelfde plek in het beeld
+  c.scale(width / top.size.width, bottomHeight / top.size.height)
+  drawShapes(c, shapes, top.size)
+  c.restore()
+  tag(bottom.label, top.size.height)
+}
+
+/** Twee frames onder elkaar als jpg, voor toen en nu. */
+export async function exportCompare(top: ComparePane, bottom: ComparePane, shapes: Shape[]): Promise<Blob> {
+  const { width, height } = compareLayout(top.size, bottom.size)
+  const canvas = document.createElement('canvas')
+  canvas.width = width
+  canvas.height = height
+  drawCompare(canvas.getContext('2d')!, top, bottom, shapes)
+  return new Promise((resolve, reject) =>
+    canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('Opslaan lukte niet'))), 'image/jpeg', 0.9),
+  )
+}
+
+/** Afspeelsnelheden: slow-motion eerst. */
+export const RATES = [0.5, 0.25, 1] as const
+export const nextRate = (r: number) => RATES[(RATES.indexOf(r as (typeof RATES)[number]) + 1) % RATES.length]
+export const rateLabel = (r: number) => (r === 1 ? '1x' : r === 0.5 ? '½x' : '¼x')
