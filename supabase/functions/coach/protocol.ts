@@ -508,25 +508,50 @@ export function tripPlanSchema(trickIds: readonly string[], days: number) {
 }
 
 /** Checkt en begrenst het plan; precies `days` dagen (te veel eraf, te weinig = onbruikbaar). */
+/** Eén plandag checken en begrenzen; null als hij niet bruikbaar is (geen titel of geen oefeningen). */
+export function checkPlanDay(raw: unknown, trickIds: readonly string[], dag: number): TripPlanDay | null {
+  const d = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>
+  const titel = text(d.titel, 60)
+  const oefeningen = (Array.isArray(d.oefeningen) ? d.oefeningen : [])
+    .map((o) => text(o, 200))
+    .filter(Boolean)
+    .slice(0, 3)
+  if (!titel || !oefeningen.length) return null
+  return {
+    dag,
+    titel,
+    focus: text(d.focus, 240),
+    oefeningen,
+    trickId: typeof d.trickId === 'string' && trickIds.includes(d.trickId) ? d.trickId : null,
+  }
+}
+
+/** Schema voor de aangepaste dag van morgen in de avondterugblik. */
+export function planDaySchema(trickIds: readonly string[]) {
+  return {
+    type: 'object',
+    description: 'Het plan van morgen, aangepast op vandaag. Klopte het plan al? Geef het dan (bijna) hetzelfde terug.',
+    properties: {
+      titel: { type: 'string', description: 'Thema van de dag, max 5 woorden.' },
+      focus: { type: 'string', description: 'Waar het die dag om draait, één zin.' },
+      oefeningen: { type: 'array', items: { type: 'string' }, description: '2-3 concrete oefeningen, elk één zin.' },
+      trickId: trickIds.length
+        ? {
+            anyOf: [{ type: 'string', enum: [...trickIds] }, { type: 'null' }],
+            description: 'De trick uit de bijbel van die dag, of null.',
+          }
+        : { type: 'null' },
+    },
+    required: ['titel', 'focus', 'oefeningen', 'trickId'],
+    additionalProperties: false,
+  }
+}
+
 export function checkTripPlan(raw: unknown, trickIds: readonly string[], days: number): TripPlanOut | null {
   const r = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>
   const list = (Array.isArray(r.dagen) ? r.dagen : []) as Record<string, unknown>[]
   const dagen = list
-    .map((d, i): TripPlanDay | null => {
-      const titel = text(d?.titel, 60)
-      const oefeningen = (Array.isArray(d?.oefeningen) ? d.oefeningen : [])
-        .map((o) => text(o, 200))
-        .filter(Boolean)
-        .slice(0, 3)
-      if (!titel || !oefeningen.length) return null
-      return {
-        dag: i + 1,
-        titel,
-        focus: text(d.focus, 240),
-        oefeningen,
-        trickId: typeof d.trickId === 'string' && trickIds.includes(d.trickId) ? d.trickId : null,
-      }
-    })
+    .map((d, i) => checkPlanDay(d, trickIds, i + 1))
     .filter((d): d is TripPlanDay => !!d)
     .slice(0, days)
   if (dagen.length !== days) return null

@@ -1,6 +1,6 @@
 // Programma's: de content klopt (bestaande tricks, echte oefeningen), de voortgang, en de pagina's.
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { cleanup, render, screen, within } from '@testing-library/react'
+import { cleanup, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 
@@ -110,7 +110,8 @@ describe('programma-pagina’s', () => {
     const done = await screen.findByRole('group', { name: 'Programma af' })
     expect(within(done).getByText('Af')).toBeTruthy()
     await user.click(screen.getByRole('button', { name: 'Opnieuw beginnen' }))
-    expect(screen.queryByRole('group', { name: 'Programma af' })).toBeNull()
+    // opnieuw beginnen slaat async op: wachten tot de poster weg is
+    await waitFor(() => expect(screen.queryByRole('group', { name: 'Programma af' })).toBeNull())
   })
 
   it('onbekend programma: niet gevonden', async () => {

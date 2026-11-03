@@ -27,6 +27,8 @@ import {
   checkTricks,
   checkTripInput,
   checkTripPlan,
+  checkPlanDay,
+  planDaySchema,
   tripPlanSchema,
   drillSchema,
   effortFor,
@@ -228,6 +230,12 @@ async function review(
     schema.properties.morgen = { type: 'string', description: 'Hoe je het plan van morgen aanpast op vandaag. 1-2 zinnen.' }
     schema.required.push('morgen')
   }
+  // is er een dag morgen in het plan, dan geeft de coach die aangepast terug
+  const tomorrow = plan.includes('Plan morgen')
+  if (tomorrow) {
+    schema.properties.morgenDag = planDaySchema(trickIds)
+    schema.required.push('morgenDag')
+  }
 
   try {
     const res = await anthropic.beta.messages.create({
@@ -258,6 +266,7 @@ async function review(
     const parsed = JSON.parse(text.text)
     if (parsed.trickId && !trickIds.includes(parsed.trickId)) parsed.trickId = null
     parsed.morgen = plan && typeof parsed.morgen === 'string' ? parsed.morgen.slice(0, 300) : null
+    parsed.morgenDag = tomorrow ? checkPlanDay(parsed.morgenDag, trickIds, 0) : null
     return json(200, parsed)
   } catch (e) {
     console.error(e)
