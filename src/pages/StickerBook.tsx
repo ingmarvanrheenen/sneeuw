@@ -1,13 +1,18 @@
-// Stickerboek: per seizoen een albumpagina met de badges en trick-stickers die je dat seizoen haalde.
+// Stickerboek: per seizoen een albumpagina met de badges en trick-stickers die je dat seizoen haalde,
+// ook te delen als story.
 import { useEffect, useMemo, useState, type CSSProperties } from 'react'
 import { Link } from 'react-router-dom'
-import { Chip, Heading, List, Page, PageHeader, Row } from '../components/ui'
+import { Button, Chip, Heading, List, Page, PageHeader, Row } from '../components/ui'
 import { Peaks } from '../components/Poster'
 import { TrickSticker } from '../components/RiderParts'
 import { Medal } from '../design/Medal'
 import { useProgress } from '../lib/useProgress'
 import { album, albumTotals } from '../lib/album'
 import { plural } from '../lib/format'
+import { Icon } from '../design/icons'
+import { renderAlbumCard, shareImage } from '../lib/shareCard'
+import { toast } from '../lib/toast'
+import { errMsg } from '../lib/errors'
 
 /** Schuin erop geplakt, kort na elkaar. */
 const slap = (i: number) => ({ '--tilt': `${[-6, 4, -2, 6, -4, 2][i % 6]}deg`, '--delay': `${Math.min(i, 14) * 45}ms` }) as CSSProperties
@@ -16,6 +21,7 @@ export default function StickerBook() {
   const p = useProgress()
   const pages = useMemo(() => (p ? album(p.input) : []), [p])
   const [season, setSeason] = useState<string | null>(null)
+  const [busy, setBusy] = useState(false)
   useEffect(() => {
     if (pages.length && !season) setSeason(pages.at(-1)!.season)
   }, [pages, season])
@@ -24,6 +30,21 @@ export default function StickerBook() {
   const page = pages.find((x) => x.season === season) ?? pages.at(-1)!
   const { have, total } = albumTotals(pages)
   const count = page.badges.length + page.tricks.length
+
+  async function share() {
+    setBusy(true)
+    try {
+      await shareImage(
+        await renderAlbumCard(page, { have, total }),
+        `stickerboek-${page.season.replace('/', '-')}.png`,
+        `Stickerboek ${page.season}`,
+      )
+    } catch (e) {
+      toast({ title: 'Delen lukte niet', body: errMsg(e), tone: 'error', icon: 'alert' })
+    } finally {
+      setBusy(false)
+    }
+  }
 
   return (
     <Page>
@@ -52,6 +73,12 @@ export default function StickerBook() {
           {plural(page.days, 'dag', 'dagen')} · {Math.round(page.hours)} uur · {plural(count, 'sticker', 'stickers')}
         </div>
       </div>
+
+      {count > 0 && (
+        <Button variant="ghost" className="mt-3 w-full" icon={<Icon name="share" size={18} />} disabled={busy} onClick={() => void share()}>
+          {busy ? 'Even maken…' : 'Deel als story'}
+        </Button>
+      )}
 
       {count === 0 && (
         <p className="mt-6 text-[15px] text-muted">

@@ -1,6 +1,9 @@
 // Stickerboek: badges en trick-stickers per seizoen, afgeleid uit je data; en de albumpagina.
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { cleanup, render, screen, within } from '@testing-library/react'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+
+const share = vi.hoisted(() => ({ renderAlbumCard: vi.fn(), shareImage: vi.fn() }))
+vi.mock('../lib/shareCard', async (orig) => ({ ...(await orig<typeof import('../lib/shareCard')>()), ...share }))
+import { cleanup, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 
@@ -11,6 +14,8 @@ import { EMPTY_DRAFT } from '../lib/sessions'
 import { create } from '../lib/repo'
 import { db } from '../lib/db'
 import type { Session, TrickProgress } from '../lib/types'
+import { albumCardLayout, placePills } from '../lib/shareCard'
+import { toastStore } from '../lib/toast'
 
 const day = (date: string, hours = 4) => ({ ...EMPTY_DRAFT, id: date, kind: 'session', date, hours, createdAt: 0, updatedAt: 0 }) as Session
 const trick = (trickId: string, firstLandedAt?: string) =>
@@ -138,5 +143,65 @@ describe('stickerboek-pagina', () => {
     expect(screen.getByRole('link', { name: /^Lift-off/ })).toBeTruthy()
     expect(screen.getByRole('link', { name: 'Ollie' }).getAttribute('href')).toBe('/tricks/ollie')
     expect(screen.getByText(/van \d+ stickers verzameld/)).toBeTruthy()
+  })
+
+  it('een pagina delen als story; een lege pagina heeft geen knop', async () => {
+    const user = userEvent.setup()
+    share.renderAlbumCard.mockReset().mockResolvedValue(new Blob(['png']))
+    share.shareImage.mockReset().mockResolvedValue(undefined)
+    await create('session', { ...EMPTY_DRAFT, date: '2025-01-12', hours: 5 })
+    await create('trick', { trickId: 'ollie', status: 'geland', firstLandedAt: '2025-01-12', mediaIds: [] })
+    render(
+      <MemoryRouter>
+        <StickerBook />
+      </MemoryRouter>,
+    )
+    const seasons = await screen.findByRole('group', { name: 'Seizoen' })
+    expect(screen.queryByRole('button', { name: 'Deel als story' })).toBeNull()
+    await user.click(within(seasons).getByRole('button', { name: '24/25' }))
+    await user.click(screen.getByRole('button', { name: 'Deel als story' }))
+    await waitFor(() => expect(share.shareImage).toHaveBeenCalled())
+    const [page, totals] = share.renderAlbumCard.mock.calls[0]
+    expect(page.season).toBe('24/25')
+    expect(page.tricks.map((t: { id: string }) => t.id)).toEqual(['ollie'])
+    expect(totals.total).toBeGreaterThan(totals.have)
+    expect(share.shareImage.mock.calls[0][1]).toBe('stickerboek-24-25.png')
+  })
+
+  it('delen mislukt: een melding', async () => {
+    const user = userEvent.setup()
+    toastStore.set([])
+    share.renderAlbumCard.mockReset().mockRejectedValue(new Error('Geen canvas'))
+    await create('trick', { trickId: 'ollie', status: 'geland', mediaIds: [] })
+    render(
+      <MemoryRouter>
+        <StickerBook />
+      </MemoryRouter>,
+    )
+    await user.click(await screen.findByRole('button', { name: 'Deel als story' }))
+    await waitFor(() => expect(toastStore.get().at(-1)?.title).toBe('Delen lukte niet'))
+  })
+})
+
+describe('albumkaart: wat erop past', () => {
+  it('max 6 badges en 8 tricks, de rest als "meer"', () => {
+    const n = (k: number) => Array.from({ length: k }, (_, i) => ({ id: String(i) }))
+    expect(albumCardLayout({ badges: n(9), tricks: n(10) })).toMatchObject({ more: 5 })
+    const l = albumCardLayout({ badges: n(2), tricks: n(3) })
+    expect([l.badges.length, l.tricks.length, l.more]).toEqual([2, 3, 0])
+  })
+
+  it('labels: nieuwe regel als het niet past, stoppen onderaan (de rest telt bij meer)', () => {
+    const box = { x: 70, y: 100, right: 1010, bottom: 300, row: 96, gap: 18 }
+    const p = placePills([400, 400, 400, 300, 900, 300], box)
+    expect(p.map((x) => [x.x, x.y])).toEqual([
+      [70, 100],
+      [488, 100],
+      [70, 196],
+      [488, 196],
+      [70, 292],
+    ])
+    // een te breed label krijgt toch een eigen regel in plaats van eindeloos door te schuiven
+    expect(placePills([1200], box)).toHaveLength(1)
   })
 })

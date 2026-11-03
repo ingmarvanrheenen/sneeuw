@@ -10,6 +10,7 @@ import { TRICK_BY_ID } from '../content/tricks'
 import { fmtDate } from './format'
 import { db } from './db'
 import type { MediaMeta, Session } from './types'
+import type { SeasonPage } from './album'
 import { mediaUrl } from './sync'
 
 const W = 1080
@@ -495,4 +496,129 @@ export async function renderWrappedCard(
 
   grain(c, col.bg === INK ? 0.07 : 0.06)
   return toPng(canvas)
+}
+
+// ── Stickerboek als story ────────────────────────────────────────────────────
+
+/** Wat er op de albumkaart past: max 6 badges, max 8 tricks, en hoeveel er nog meer zijn. */
+export function albumCardLayout<B, T>(page: { badges: B[]; tricks: T[] }) {
+  const badges = page.badges.slice(0, 6)
+  const tricks = page.tricks.slice(0, 8)
+  return { badges, tricks, more: page.badges.length - badges.length + page.tricks.length - tricks.length }
+}
+
+export async function renderAlbumCard(page: SeasonPage, totals: { have: number; total: number }): Promise<Blob> {
+  await fontsReady()
+  const canvas = document.createElement('canvas')
+  canvas.width = W
+  canvas.height = H
+  const c = canvas.getContext('2d')!
+  const mascot = await mascotImg(170)
+  const { badges, tricks, more } = albumCardLayout(page)
+  const count = page.badges.length + page.tricks.length
+
+  c.fillStyle = INK
+  c.fillRect(0, 0, W, H)
+  peaks(c, W - 760, H - 640, 860, 'rgba(245,245,239,0.07)')
+
+  caps(c, 30)
+  c.fillStyle = LIME
+  c.fillText(page.current ? 'STICKERBOEK · DIT SEIZOEN' : 'STICKERBOEK', 70, 170)
+  resetSpacing(c)
+
+  c.fillStyle = PAPER
+  const size = fitDisplay(c, page.season, 300, W - 140)
+  c.fillText(page.season, 64, 170 + size * 0.95)
+  resetSpacing(c)
+  c.fillStyle = MUTED
+  c.font = `600 46px ${SANS}`
+  const stats = `${page.days} ${page.days === 1 ? 'dag' : 'dagen'} · ${Math.round(page.hours)} uur · ${count} ${count === 1 ? 'sticker' : 'stickers'}`
+  c.fillText(stats, 70, 170 + size * 0.95 + 90)
+
+  // badges: stickers in twee rijen van drie, schuin erop geplakt
+  let y = 170 + size * 0.95 + 250
+  badges.forEach((b, i) => {
+    const cx = 200 + (i % 3) * 340
+    const cy = y + Math.floor(i / 3) * 330
+    const tilt = [-8, 5, -3, 7, -5, 3][i]
+    rotated(c, cx, cy, tilt, () => {
+      burst(c, cx, cy, 115, b.rare ? HOT : LIME, 0.2 + i * 0.3)
+      drawIcon(c, b.icon, cx - 48, cy - 54, 96, INK, 2.2)
+      if (b.mark) {
+        display(c, 44)
+        c.fillStyle = INK
+        c.textAlign = 'center'
+        c.fillText(b.mark, cx, cy + 82)
+        c.textAlign = 'left'
+        resetSpacing(c)
+      }
+    })
+    c.fillStyle = PAPER
+    c.font = `700 34px ${SANS}`
+    c.textAlign = 'center'
+    c.fillText(b.name, cx, cy + 165, 320)
+    c.textAlign = 'left'
+  })
+  if (badges.length) y += Math.ceil(badges.length / 3) * 330 - 60
+
+  // tricks: labels achter elkaar, regel voor regel; wat niet past telt bij "meer"
+  c.font = `800 40px ${SANS}`
+  const placed = placePills(
+    tricks.map((t) => c.measureText(t.name).width + 56),
+    { x: 70, y, right: W - 70, bottom: H - 330, row: 96, gap: 18 },
+  )
+  placed.forEach((p, i) => drawPill(c, tricks[i].name, p, PAPER, INK, i))
+  const rest = more + tricks.length - placed.length
+  if (rest > 0) {
+    const label = `+${rest} meer`
+    const w = c.measureText(label).width + 56
+    const last = placed.at(-1)
+    const spot =
+      last && last.x + last.w + 18 + w <= W - 70 ? { x: last.x + last.w + 18, y: last.y, w } : { x: 70, y: last ? last.y + 96 : y, w }
+    drawPill(c, label, spot, 'rgba(245,245,239,0.16)', PAPER, placed.length)
+  }
+  if (!count) {
+    c.fillStyle = MUTED
+    c.font = `500 46px ${SANS}`
+    wrapText(c, 'Nog leeg. De eerste sticker komt met je eerste dag op de berg.', 70, y + 40, W - 140, 62, 3)
+  }
+
+  caps(c, 30)
+  c.fillStyle = MUTED
+  c.fillText(`SNEEUW DADDY · ${totals.have} VAN ${totals.total} VERZAMELD`, 70, H - 100)
+  resetSpacing(c)
+  if (mascot) rotated(c, W - 160, H - 160, 12, () => c.drawImage(mascot, W - 245, H - 245, 170, 170))
+
+  grain(c, 0.07)
+  return toPng(canvas)
+}
+
+/** Labels achter elkaar zetten: nieuwe regel als het niet meer past, stoppen onderaan. Puur, voor de test. */
+export function placePills(widths: number[], box: { x: number; y: number; right: number; bottom: number; row: number; gap: number }) {
+  const out: { x: number; y: number; w: number }[] = []
+  let x = box.x
+  let y = box.y
+  for (const w of widths) {
+    if (x + w > box.right && x > box.x) {
+      x = box.x
+      y += box.row
+    }
+    if (y > box.bottom) break
+    out.push({ x, y, w })
+    x += w + box.gap
+  }
+  return out
+}
+
+function drawPill(c: CanvasRenderingContext2D, text: string, p: { x: number; y: number; w: number }, fill: string, ink: string, i: number) {
+  rotated(c, p.x + p.w / 2, p.y + 36, [-3, 2, -1, 3][i % 4], () => {
+    c.fillStyle = fill
+    c.beginPath()
+    c.roundRect(p.x, p.y, p.w, 72, 36)
+    c.fill()
+    c.fillStyle = ink
+    c.textBaseline = 'middle'
+    c.fillText(text, p.x + 28, p.y + 38)
+    c.textBaseline = 'alphabetic'
+  })
 }
