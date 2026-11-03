@@ -468,7 +468,7 @@ export interface TripPlanOut {
 
 /** Input voor het tripplan: een korte beschrijving van de trip en het aantal dagen (1..14). */
 export function checkTripInput(body: Record<string, unknown>): { trip: string; days: number; wish: string } | { error: string } {
-  const trip = text(body.trip, 1500)
+  const trip = text(body.trip, 3000)
   const days = Math.round(Number(body.days))
   if (!trip) return { error: 'Geen trip meegestuurd' }
   if (!Number.isFinite(days) || days < 1 || days > TRIP_MAX_DAYS) return { error: `Een trip van 1 tot ${TRIP_MAX_DAYS} dagen` }

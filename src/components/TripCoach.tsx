@@ -10,6 +10,8 @@ import { hasBackend } from '../lib/supabase'
 import { useKind } from '../lib/repo'
 import { todayISO } from '../lib/ids'
 import { fmtDate } from '../lib/format'
+import { FORECAST_DAYS, wmoIcon } from '../lib/weather'
+import { RESORTS } from '../content/resorts'
 import { TRICK_BY_ID } from '../content/tricks'
 import { sfx } from '../lib/sounds'
 import { errMsg } from '../lib/errors'
@@ -42,6 +44,20 @@ export function TripCoach({ trip, editable }: { trip: Trip; editable: boolean })
       setBusy(false)
     }
   }
+
+  // weer: zat het in het plan, en kan het nu wel (trip binnen twee weken)?
+  const outdoor = !!RESORTS.find((r) => r.id === trip.resortId && !r.indoor)
+  const withWeather = plan?.weatherDays ?? 0
+  const inRange = !!trip.startDate && (Date.parse(trip.startDate) - Date.parse(today)) / 864e5 <= FORECAST_DAYS - 2
+  const weatherNow = outdoor && !!plan && withWeather < plan.days.length && inRange && (trip.endDate ?? trip.startDate ?? '') >= today
+  const weatherNote =
+    !plan || !outdoor || withWeather >= plan.days.length
+      ? ''
+      : withWeather
+        ? `Met het weer voor ${withWeather} van de ${plan.days.length} dagen; de rest lag nog te ver weg.`
+        : weatherNow
+          ? 'Gemaakt zonder weerbericht. Er is nu een verwachting: maak een nieuw plan met het weer.'
+          : `Gemaakt zonder weerbericht; dat komt ongeveer ${FORECAST_DAYS - 2} dagen voor je trip. Maak dan een nieuw plan.`
 
   const loggedOn = (d: string) => (sessions ?? []).find((s) => s.date === d && !s.deleted)
 
@@ -79,6 +95,7 @@ export function TripCoach({ trip, editable }: { trip: Trip; editable: boolean })
       ) : (
         <>
           {plan.intro && <p className="mb-3 text-[15px]">{plan.intro}</p>}
+          {weatherNote && <p className="mb-3 text-[13px] text-muted">{weatherNote}</p>}
           <List>
             {plan.days.map((d) => {
               const isToday = d.date === today
@@ -100,6 +117,12 @@ export function TripCoach({ trip, editable }: { trip: Trip; editable: boolean })
                       </span>
                       <span className="block truncate text-[15px] font-semibold">{d.titel}</span>
                     </span>
+                    {d.weer && (
+                      <span className="flex shrink-0 items-center gap-1 text-[13px] text-muted">
+                        <Icon name={wmoIcon(d.weerCode ?? 3)} size={16} />
+                        {d.weer}
+                      </span>
+                    )}
                     {s ? (
                       <Icon name="check" size={18} className="shrink-0 text-accent-text" />
                     ) : (
@@ -144,7 +167,7 @@ export function TripCoach({ trip, editable }: { trip: Trip; editable: boolean })
               onClick={() => confirm('Een nieuw plan laten maken? Het oude gaat weg.') && void make()}
               className="mt-2 w-full py-2 text-center text-[15px] text-muted disabled:opacity-40"
             >
-              {busy ? 'Coach denkt na…' : 'Nieuw plan'}
+              {busy ? 'Coach denkt na…' : weatherNow ? 'Nieuw plan met het weer van nu' : 'Nieuw plan'}
             </button>
           )}
           {error && (

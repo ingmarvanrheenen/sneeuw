@@ -71,6 +71,7 @@ export const TRIPPLAN_INSTRUCTIONS = `Maak een plan voor deze trip: per dag éé
 - Past het bij het resort en het niveau, dan mag er een park- of freeride-dag in; nooit off-piste voor beginners.
 - "trickId": de trick uit de bijbel waar die dag om draait, of null. Kies iets wat nog niet beheerst is en binnen bereik ligt.
 - Een wens van de rider in <wens> weegt zwaar mee.
+- Staat er weer in <trip>, gebruik het: verse sneeuw (vanaf 10-15 cm) is een poederdag als het niveau het toelaat (anders: genieten op de piste, de verse sneeuw is zachter om op te vallen); veel wind, storm of mist is een rustige dag op lagere pistes of tussen de bomen, geen park; na een koude heldere nacht is de piste 's ochtends hard, na warme dagen 's middags zwaar. Zeg het in de focus als het weer de dag bepaalt. Geen weer voor een dag? Plan dan zoals je zou doen.
 - Toon: chill en direct, zoals in de rest van de app. Geen emoji.`
 
 // Avondterugblik op een tripdag: zelfde als de dagreview, met het plan erbij.
