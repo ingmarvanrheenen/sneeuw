@@ -622,3 +622,69 @@ function drawPill(c: CanvasRenderingContext2D, text: string, p: { x: number; y: 
     c.textBaseline = 'alphabetic'
   })
 }
+
+// ── Potje van de trip ────────────────────────────────────────────────────────
+
+/** De stand van het potje als story: wat de crew uitgaf, en wie wie nog betaalt (max 9 regels). */
+export async function renderPotCard(trip: string, spent: string, lines: { text: string; amount: string }[]): Promise<Blob> {
+  await fontsReady()
+  const canvas = document.createElement('canvas')
+  canvas.width = W
+  canvas.height = H
+  const c = canvas.getContext('2d')!
+  const mascot = await mascotImg(170)
+  c.fillStyle = INK
+  c.fillRect(0, 0, W, H)
+  peaks(c, W - 760, H - 640, 860, 'rgba(245,245,239,0.07)')
+
+  caps(c, 30)
+  c.fillStyle = LIME
+  c.fillText(`POTJE · ${trip.toUpperCase()}`.slice(0, 40), 70, 170)
+  resetSpacing(c)
+  c.fillStyle = MUTED
+  c.font = `600 46px ${SANS}`
+  c.fillText('Uitgegeven', 70, 290)
+  c.fillStyle = PAPER
+  const size = fitDisplay(c, spent, 220, W - 140)
+  c.fillText(spent, 64, 290 + size * 0.95)
+  resetSpacing(c)
+
+  let y = 290 + size * 0.95 + 150
+  caps(c, 30)
+  c.fillStyle = LIME
+  c.fillText(lines.length ? 'WIE BETAALT WIE' : 'IEDEREEN STAAT QUITTE', 70, y)
+  resetSpacing(c)
+  y += 70
+  const shown = lines.slice(0, 9)
+  for (const l of shown) {
+    c.fillStyle = 'rgba(245,245,239,0.08)'
+    c.beginPath()
+    c.roundRect(60, y, W - 120, 104, 14)
+    c.fill()
+    c.fillStyle = PAPER
+    c.font = `700 44px ${SANS}`
+    c.textBaseline = 'middle'
+    c.fillText(l.text, 96, y + 54, W - 480)
+    c.textAlign = 'right'
+    display(c, 54)
+    c.fillStyle = LIME
+    c.fillText(l.amount, W - 96, y + 56)
+    resetSpacing(c)
+    c.textAlign = 'left'
+    c.textBaseline = 'alphabetic'
+    y += 124
+  }
+  if (lines.length > shown.length) {
+    c.fillStyle = MUTED
+    c.font = `600 40px ${SANS}`
+    c.fillText(`en nog ${lines.length - shown.length} in de app`, 70, y + 40)
+  }
+
+  caps(c, 30)
+  c.fillStyle = MUTED
+  c.fillText('SNEEUW DADDY', 70, H - 100)
+  resetSpacing(c)
+  if (mascot) rotated(c, W - 160, H - 160, 12, () => c.drawImage(mascot, W - 245, H - 245, 170, 170))
+  grain(c, 0.07)
+  return toPng(canvas)
+}

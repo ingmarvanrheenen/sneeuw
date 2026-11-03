@@ -86,7 +86,7 @@ export default function CrewTripDetail() {
       <GroupList tripId={ct.id} crewId={ct.crewId} ownerId={ct.ownerId} />
       <CarPool tripId={ct.id} crewId={ct.crewId} />
       <HouseNote tripId={ct.id} crewId={ct.crewId} ownerId={ct.ownerId} trip={t} />
-      <TripPot tripId={ct.id} crewId={ct.crewId} ownerId={ct.ownerId} />
+      <TripPot tripId={ct.id} crewId={ct.crewId} ownerId={ct.ownerId} tripName={ct.trip.name} />
       <List className="mt-8">
         <Row icon="phone" title="Noodkaart" detail="Alarmnummers, je plek en je gegevens, ook offline" to="/nood" />
       </List>
