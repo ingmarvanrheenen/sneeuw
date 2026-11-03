@@ -12,6 +12,7 @@ import {
   fmtEuro,
   listExpenses,
   parseEuro,
+  potLines,
   recordPayment,
   rememberPot,
   removeExpense,
@@ -28,8 +29,21 @@ import { fmtShort } from '../lib/format'
 import { sfx } from '../lib/sounds'
 import { toast } from '../lib/toast'
 import { errMsg } from '../lib/errors'
+import { renderPotCard, shareImage } from '../lib/shareCard'
 
-export function TripPot({ tripId, crewId, ownerId, ready = true }: { tripId: string; crewId: string; ownerId?: string; ready?: boolean }) {
+export function TripPot({
+  tripId,
+  crewId,
+  ownerId,
+  ready = true,
+  tripName = 'De trip',
+}: {
+  tripId: string
+  crewId: string
+  ownerId?: string
+  ready?: boolean
+  tripName?: string
+}) {
   const me = getCurrentUserId() ?? ''
   const [expenses, setExpenses] = useState<Expense[] | null>(null)
   const [members, setMembers] = useState<CrewMember[]>([])
@@ -79,6 +93,20 @@ export function TripPot({ tripId, crewId, ownerId, ready = true }: { tripId: str
   const { spent, mine } = totals(list, me)
   const myBalance = bal.get(me) ?? 0
   const canEdit = online && ready
+
+  async function shareStand() {
+    setBusy(true)
+    try {
+      // op de kaart met namen, niet "Jij": hij gaat naar de hele crew
+      const plain = (id: string) => members.find((m) => m.user_id === id)?.display_name ?? 'Iemand'
+      const blob = await renderPotCard(tripName, fmtEuro(spent), potLines(payments, plain))
+      await shareImage(blob, 'potje.png', `Potje ${tripName}`)
+    } catch (e) {
+      toast({ title: 'Delen lukte niet', body: errMsg(e), tone: 'error', icon: 'alert' })
+    } finally {
+      setBusy(false)
+    }
+  }
 
   async function pay(p: Payment) {
     setBusy(true)
@@ -147,6 +175,17 @@ export function TripPot({ tripId, crewId, ownerId, ready = true }: { tripId: str
         </>
       )}
       {list.length > 0 && !payments.length && <p className="mb-2 text-[15px] text-muted">Iedereen staat quitte.</p>}
+      {list.length > 0 && (
+        <Button
+          variant="ghost"
+          className="mt-3 w-full"
+          icon={<Icon name="share" size={18} />}
+          disabled={busy}
+          onClick={() => void shareStand()}
+        >
+          Deel de stand
+        </Button>
+      )}
       {!list.length && expenses !== null && (
         <p className="mb-3 text-[15px] text-muted">
           Nog niks in het potje. Boodschappen, skipassen, het huisje: zet het erin, dan rekent de app uit wie wie moet betalen.

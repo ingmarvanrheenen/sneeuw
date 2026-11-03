@@ -12,6 +12,8 @@ vi.mock('../lib/supabase', async () => {
 })
 const crew = vi.hoisted(() => ({ crewMembers: vi.fn() }))
 vi.mock('../lib/crew', async (orig) => ({ ...(await orig<typeof import('../lib/crew')>()), crewMembers: crew.crewMembers }))
+const card = vi.hoisted(() => ({ renderPotCard: vi.fn(), shareImage: vi.fn() }))
+vi.mock('../lib/shareCard', async (orig) => ({ ...(await orig<typeof import('../lib/shareCard')>()), ...card }))
 
 import { TripPot } from '../components/TripPot'
 import {
@@ -21,6 +23,7 @@ import {
   checkInput,
   fmtEuro,
   parseEuro,
+  potLines,
   recordPayment,
   settle,
   shares,
@@ -129,6 +132,12 @@ describe('rekenen', () => {
     expect(totals(list, 'me')).toEqual({ spent: 3000, mine: 1000 })
   })
 
+  it('regels voor de deelkaart', () => {
+    const name = (id: string) => ({ a: 'Sam', b: 'Noor' })[id] ?? 'Iemand'
+    expect(potLines([{ from: 'b', to: 'a', cents: 4000 }], name)).toEqual([{ text: 'Noor betaalt Sam', amount: '€ 40' }])
+    expect(potLines([], name)).toEqual([])
+  })
+
   it('aanpassen mag wie hem toevoegde, wie betaalde, of de trip-eigenaar (weghalen)', () => {
     const e = exp({ created_by: 'daan', paid_by: 'noor' })
     expect(canChange(e, 'daan')).toBe(true)
@@ -234,6 +243,27 @@ describe('potje op de trippagina', () => {
     expect(screen.getByText('Iedereen staat quitte.')).toBeTruthy()
     expect(screen.getByText('Jij → Daan')).toBeTruthy()
     expect(toastStore.get().at(-1)?.title).toBe('Vastgelegd')
+  })
+
+  it('de stand delen: een kaart met de tripnaam, het totaal en wie wie betaalt, met namen in plaats van Jij', async () => {
+    const user = userEvent.setup()
+    card.renderPotCard.mockReset().mockResolvedValue(new Blob(['png']))
+    card.shareImage.mockReset().mockResolvedValue(undefined)
+    rows = [exp({ title: 'Skipassen', paid_by: 'daan', created_by: 'daan', amount_cents: 6000, split_between: ['me', 'daan'] })]
+    render(<TripPot tripId="t1" crewId="c1" ownerId="daan" tripName="Tignes 2027" />)
+    await user.click(await screen.findByRole('button', { name: 'Deel de stand' }))
+    await waitFor(() => expect(card.shareImage).toHaveBeenCalled())
+    const [trip, spent, lines] = card.renderPotCard.mock.calls[0]
+    expect(trip).toBe('Tignes 2027')
+    expect(spent).toBe('€ 60')
+    expect(lines).toEqual([{ text: expect.stringMatching(/betaalt Daan$/), amount: '€ 30' }])
+    expect(lines[0].text).not.toMatch(/^Jij/)
+  })
+
+  it('leeg potje: niks te delen', async () => {
+    render(<TripPot tripId="t1" crewId="c1" ownerId="me" />)
+    await screen.findByText(/Nog niks in het potje/)
+    expect(screen.queryByRole('button', { name: 'Deel de stand' })).toBeNull()
   })
 
   it('eigen uitgave aanpassen en weghalen; voor niemand mag niet', async () => {

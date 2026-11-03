@@ -112,6 +112,11 @@ export function totals(expenses: Expense[], me: string) {
   }
 }
 
+/** De stand als regels voor de deelkaart: "Noor betaalt Sam" en het bedrag, of iedereen quitte. */
+export function potLines(payments: Payment[], name: (id: string) => string): { text: string; amount: string }[] {
+  return payments.map((p) => ({ text: `${name(p.from)} betaalt ${name(p.to)}`, amount: fmtEuro(p.cents) }))
+}
+
 /** Mag jij deze aanpassen of weghalen? (zelfde regel als de database) */
 export const canChange = (e: Pick<Expense, 'created_by' | 'paid_by'>, me: string, tripOwner?: string) =>
   e.created_by === me || e.paid_by === me || tripOwner === me

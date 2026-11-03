@@ -80,7 +80,7 @@ function CrewShare({ trip }: { trip: Trip }) {
           <GroupList tripId={trip.id} crewId={shared.id} ownerId={trip.userId ?? user.id} ready={ready} />
           <CarPool tripId={trip.id} crewId={shared.id} ready={ready} />
           <HouseNote tripId={trip.id} crewId={shared.id} ownerId={trip.userId ?? user.id} trip={trip} ready={ready} />
-          <TripPot tripId={trip.id} crewId={shared.id} ownerId={trip.userId ?? user.id} ready={ready} />
+          <TripPot tripId={trip.id} crewId={shared.id} ownerId={trip.userId ?? user.id} ready={ready} tripName={trip.name} />
         </>
       )}
     </>
