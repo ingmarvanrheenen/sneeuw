@@ -564,3 +564,94 @@ export function planText(today?: TripPlanDay | null, tomorrow?: TripPlanDay | nu
     d ? `${label} (dag ${d.dag}): ${d.titel}. ${d.focus} Oefeningen: ${d.oefeningen.join(' / ')}` : ''
   return [one('Plan vandaag', today), one('Plan morgen', tomorrow)].filter(Boolean).join('\n').slice(0, 1500)
 }
+
+// ── Eigen programma: een reeks dagen op jouw niveau, zoals de kant-en-klare ───────
+
+export const PROGRAM_DAYS = { min: 2, max: 7 }
+export const PROGRAM_PISTES = ['groen', 'blauw', 'rood', 'zwart'] as const
+export type ProgramPiste = (typeof PROGRAM_PISTES)[number]
+
+export interface ProgramDayOut {
+  titel: string
+  doel: string
+  piste: ProgramPiste | null
+  oefeningen: string[]
+  tricks: string[]
+}
+
+export interface ProgramOut {
+  naam: string
+  blurb: string
+  start: string
+  dagen: ProgramDayOut[]
+}
+
+/** Input voor een eigen programma: wat je wilt leren (mag leeg) en het aantal dagen. */
+export function checkProgramInput(body: Record<string, unknown>): { wish: string; days: number } | { error: string } {
+  const days = Math.round(Number(body.days))
+  if (!Number.isFinite(days) || days < PROGRAM_DAYS.min || days > PROGRAM_DAYS.max)
+    return { error: `Een programma van ${PROGRAM_DAYS.min} tot ${PROGRAM_DAYS.max} dagen` }
+  return { wish: text(body.wish, 300), days }
+}
+
+export function programSchema(trickIds: readonly string[], days: number) {
+  return {
+    type: 'object',
+    properties: {
+      naam: { type: 'string', description: 'Naam van het programma, max 5 woorden.' },
+      blurb: { type: 'string', description: 'Waar je naartoe werkt, één korte zin.' },
+      start: { type: 'string', description: 'Voor wie: wat je al moet kunnen en waar je begint, één zin.' },
+      dagen: {
+        type: 'array',
+        description: `Precies ${days} dagen, in volgorde. Elke dag bouwt voort op de vorige.`,
+        items: {
+          type: 'object',
+          properties: {
+            titel: { type: 'string', description: 'Thema van de dag, max 4 woorden.' },
+            doel: { type: 'string', description: 'Wat je aan het eind van de dag kunt, één zin.' },
+            piste: {
+              anyOf: [{ type: 'string', enum: [...PROGRAM_PISTES] }, { type: 'null' }],
+              description: 'De piste voor die dag, of null (park, hal of maakt niet uit).',
+            },
+            oefeningen: { type: 'array', items: { type: 'string' }, description: '2-4 concrete oefeningen, elk één korte zin.' },
+            tricks: {
+              type: 'array',
+              items: trickIds.length ? { type: 'string', enum: [...trickIds] } : { type: 'string' },
+              description: '1-3 tricks uit de bijbel waar die dag om draait.',
+            },
+          },
+          required: ['titel', 'doel', 'piste', 'oefeningen', 'tricks'],
+          additionalProperties: false,
+        },
+      },
+    },
+    required: ['naam', 'blurb', 'start', 'dagen'],
+    additionalProperties: false,
+  }
+}
+
+/** Checkt en begrenst het programma; precies `days` bruikbare dagen (met oefeningen en een bestaande trick). */
+export function checkProgram(raw: unknown, trickIds: readonly string[], days: number): ProgramOut | null {
+  const r = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>
+  const naam = text(r.naam, 60)
+  if (!naam) return null
+  const list = (Array.isArray(r.dagen) ? r.dagen : []) as Record<string, unknown>[]
+  const dagen = list
+    .map((d): ProgramDayOut | null => {
+      const titel = text(d?.titel, 60)
+      const oefeningen = (Array.isArray(d?.oefeningen) ? d.oefeningen : [])
+        .map((o) => text(o, 200))
+        .filter(Boolean)
+        .slice(0, 4)
+      const tricks = [
+        ...new Set((Array.isArray(d?.tricks) ? d.tricks : []).filter((t): t is string => typeof t === 'string' && trickIds.includes(t))),
+      ].slice(0, 3)
+      if (!titel || !oefeningen.length || !tricks.length) return null
+      const piste = PROGRAM_PISTES.find((p) => p === d.piste) ?? null
+      return { titel, doel: text(d.doel, 240), piste, oefeningen, tricks }
+    })
+    .filter((d): d is ProgramDayOut => !!d)
+    .slice(0, days)
+  if (dagen.length !== days) return null
+  return { naam, blurb: text(r.blurb, 160), start: text(r.start, 200), dagen }
+}

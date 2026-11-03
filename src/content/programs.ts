@@ -17,6 +17,8 @@ export interface Program {
   /** voor wie: wat je al moet kunnen */
   start: string
   days: ProgramDay[]
+  /** door Coach Daddy gemaakt, op jouw niveau (alleen op dit toestel) */
+  coach?: { wish: string; createdAt: number }
 }
 
 export const PROGRAMS: Program[] = [

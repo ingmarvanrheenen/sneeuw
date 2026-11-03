@@ -78,3 +78,12 @@ export const TRIPPLAN_INSTRUCTIONS = `Maak een plan voor deze trip: per dag éé
 export const EVENING_INSTRUCTIONS = `Dit is een dag van een trip met een plan (zie <plan>). Vergelijk wat er gelogd is met het plan van vandaag.
 - "morgen": hoe je het plan van morgen aanpast op wat er vandaag gebeurde (sneller door, of juist een stap terug, of rust bij pijn). 1-2 zinnen. Geen plan voor morgen (laatste dag)? Zeg kort hoe je de trip afsluit.
 - "morgenDag" (alleen als er een plan voor morgen is): het plan van morgen zoals het nu moet worden, met titel, focus, 2-3 oefeningen en een trick. Verander alleen wat vandaag daar reden voor geeft; klopte het al, geef het dan (bijna) hetzelfde terug. Bij pijn of een blessure: een rustige dag.`
+
+// Eigen programma: een reeks dagen zoals de kant-en-klare programma's, maar op het niveau van de rider.
+export const PROGRAM_INSTRUCTIONS = `Maak een eigen programma voor deze rider: een reeks dagen op de berg naar één duidelijk doel, voor op een telefoonscherm.
+- Baseer je op het niveau, wat al lukt, waar de rider mee bezig is en de doelen in <rider_context>. Verzin niets wat er niet staat.
+- Een wens in <wens> is het doel. Geen wens? Kies de logische volgende stap uit het niveau en de open doelen.
+- Begin waar de rider nu is (niet bij nul als er al veel lukt) en volg de gewone lesvolgorde: elke dag bouwt voort op de vorige, en de laatste dag haal je het doel. Is het doel te ver voor dit aantal dagen, kies dan een tussendoel en zeg dat in "blurb".
+- Per dag: een titel, een doel, de piste die past (groen, blauw, rood, zwart, of null voor park of hal), 2-4 oefeningen die je op die piste kunt doen, en 1-3 tricks uit de bijbel. Liever kleine stappen die lukken.
+- Nooit off-piste of park voor beginners. Vallen hoort erbij; bouw rust in als het zwaar wordt.
+- Toon: chill en direct, zoals in de rest van de app. Geen emoji.`
