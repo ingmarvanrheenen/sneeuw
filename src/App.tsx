@@ -33,6 +33,7 @@ const Weather = lazy(() => import('./pages/Weather'))
 const GearPage = lazy(() => import('./pages/Gear'))
 const Offline = lazy(() => import('./pages/Offline'))
 const Alarm = lazy(() => import('./pages/Alarm'))
+const SeasonBook = lazy(() => import('./pages/SeasonBook'))
 const Rider = lazy(() => import('./pages/Rider'))
 const Snow = lazy(() => import('./pages/Snow'))
 const Wrapped = lazy(() => import('./pages/Wrapped'))
@@ -64,7 +65,7 @@ export function TabBar() {
   if (pathname === '/log/nieuw' || pathname.endsWith('/bewerk') || pathname === '/coach') return null
   const active = activeTab(pathname)
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-30 px-3 pb-[max(env(safe-area-inset-bottom),10px)]">
+    <nav className="no-print fixed inset-x-0 bottom-0 z-30 px-3 pb-[max(env(safe-area-inset-bottom),10px)]">
       <div className="relative mx-auto flex h-[62px] max-w-xl items-center rounded-[22px] bg-[var(--tab)] p-1.5 shadow-[0_8px_24px_rgba(0,0,0,0.25)]">
         <span
           aria-hidden
@@ -200,6 +201,7 @@ export default function App() {
               <Route path="/gear" element={<GearPage />} />
               <Route path="/offline" element={<Offline />} />
               <Route path="/wekker" element={<Alarm />} />
+              <Route path="/seizoensboek" element={<SeasonBook />} />
               <Route path="/rider/:id" element={<Rider />} />
               <Route path="/snow/:id" element={<Snow />} />
               <Route path="/wrapped" element={<Wrapped />} />

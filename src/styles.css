@@ -468,3 +468,18 @@ body::after {
     animation: none;
   }
 }
+
+/* Seizoensboek als PDF: alleen het boek, zonder knoppen en tabbalk, kleuren mee en niet halverwege afbreken */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  .book-page,
+  .book-month {
+    break-inside: avoid;
+  }
+}
