@@ -166,6 +166,8 @@ describe('stickerboek-pagina', () => {
     expect(page.tricks.map((t: { id: string }) => t.id)).toEqual(['ollie'])
     expect(totals.total).toBeGreaterThan(totals.have)
     expect(share.shareImage.mock.calls[0][1]).toBe('stickerboek-24-25.png')
+    // en het seizoensboek van die pagina
+    expect(screen.getByRole('link', { name: /Seizoensboek 24\/25/ }).getAttribute('href')).toBe('/seizoensboek?seizoen=24%2F25')
   })
 
   it('delen mislukt: een melding', async () => {

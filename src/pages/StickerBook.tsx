@@ -119,6 +119,14 @@ export default function StickerBook() {
 
       <List className="mb-6 mt-8">
         <Row icon="trophy" title="Alle badges" detail="Ook die je nog kunt halen" to="/badges" />
+        {page.days > 0 && (
+          <Row
+            icon="book"
+            title={`Seizoensboek ${page.season}`}
+            detail="Je seizoen als boek, ook als PDF"
+            to={`/seizoensboek?seizoen=${encodeURIComponent(page.season)}`}
+          />
+        )}
       </List>
     </Page>
   )
