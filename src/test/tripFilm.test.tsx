@@ -455,7 +455,12 @@ describe('stijlen en opener', () => {
       createElement: () => ({
         width: 0,
         height: 0,
-        getContext: () => ({ createImageData: (w: number, h: number) => ({ data: new Uint8ClampedArray(w * h * 4) }), putImageData() {} }),
+        getContext: () => ({
+          createImageData: (w: number, h: number) => ({ data: new Uint8ClampedArray(w * h * 4) }),
+          putImageData() {},
+          createPattern: () => null,
+          fillRect() {},
+        }),
       }),
     })
     try {

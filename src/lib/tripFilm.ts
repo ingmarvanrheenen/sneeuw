@@ -169,21 +169,27 @@ function coverSource(c: CanvasRenderingContext2D, src: Source, zoom = 1) {
   c.drawImage(src, (W - sw * r) / 2, (H - sh * r) / 2, sw * r, sh * r)
 }
 
-let grainTile: HTMLCanvasElement | null = null
+let grainLayer: HTMLCanvasElement | null = null
+/** Korrel over het hele beeld. Eén keer getekend en daarna als één laag erover: veel goedkoper per frame. */
 function grain(c: CanvasRenderingContext2D) {
-  if (!grainTile) {
-    grainTile = document.createElement('canvas')
-    grainTile.width = grainTile.height = 128
-    const t = grainTile.getContext('2d')!
+  if (!grainLayer) {
+    const tile = document.createElement('canvas')
+    tile.width = tile.height = 128
+    const t = tile.getContext('2d')!
     const img = t.createImageData(128, 128)
     for (let i = 0; i < img.data.length; i += 4) {
       img.data[i] = img.data[i + 1] = img.data[i + 2] = Math.random() * 255
       img.data[i + 3] = 16
     }
     t.putImageData(img, 0, 0)
+    grainLayer = document.createElement('canvas')
+    grainLayer.width = W
+    grainLayer.height = H
+    const g = grainLayer.getContext('2d')!
+    g.fillStyle = g.createPattern(tile, 'repeat')!
+    g.fillRect(0, 0, W, H)
   }
-  c.fillStyle = c.createPattern(grainTile, 'repeat')!
-  c.fillRect(0, 0, W, H)
+  c.drawImage(grainLayer, 0, 0)
 }
 
 function label(c: CanvasRenderingContext2D, text: string, x: number, y: number, size: number, bg: string, fg: string, tilt: number, s = 1) {
@@ -540,14 +546,14 @@ function loadVideo(url: string): Promise<HTMLVideoElement | null> {
   })
 }
 
-interface Loaded {
+export interface Loaded {
   src: Source | null
   audio: AudioBuffer | null
   url?: string
 }
 
 /** Clip ophalen als bestand: één keer downloaden voor beeld én geluid (en geen cross-origin gedoe op het canvas). */
-async function loadClip(m: MediaMeta, ctx: BaseAudioContext | null): Promise<Loaded> {
+export async function loadClip(m: MediaMeta, ctx: BaseAudioContext | null): Promise<Loaded> {
   const thumb = async (): Promise<Loaded> => ({ src: m.thumb ? await loadImg(m.thumb) : null, audio: null })
   const remote = await mediaUrl(m).catch(() => null)
   if (!remote) return thumb()
@@ -587,6 +593,8 @@ export interface FilmOptions {
   onThumb?: (dataUrl: string) => void
   /** look van de film */
   style?: FilmStyle
+  /** false: altijd in echte tijd opnemen (anders eerst de snelle manier, als de browser die kan) */
+  fast?: boolean
 }
 
 /**
@@ -595,6 +603,17 @@ export interface FilmOptions {
  */
 export async function renderFilm(plan: FilmPlan, opts: FilmOptions = {}): Promise<Blob> {
   const track = opts.music && opts.music !== 'geen' ? TRACK_BY_ID.get(opts.music) : undefined
+  // eerst sneller dan in echte tijd (WebCodecs); kan de browser dat niet of gaat het mis, dan zoals altijd
+  if (opts.fast !== false && fastSupported()) {
+    try {
+      const fast = await import('./filmFast')
+      const codecs = await fast.pickCodecs(!!track || !!opts.clipAudio)
+      if (codecs) return await fast.renderFilmFast(plan, opts, codecs)
+    } catch (e) {
+      if ((e as Error).name === 'AbortError') throw e
+      console.warn('snelle film lukte niet, nu in echte tijd', e)
+    }
+  }
   let ctx = opts.audio ?? null
   if (ctx && ctx.state !== 'running') await ctx.resume().catch(() => {})
   if (ctx && ctx.state !== 'running') ctx = null // geen geluid mogelijk: dan maar stil
@@ -791,4 +810,9 @@ export async function saveFilm(blob: Blob, trip: FilmTrip & { id: string }, thum
 export async function savedFilms(tripId?: string): Promise<MediaMeta[]> {
   const all = (await db.records.where('kind').equals('media').toArray()) as MediaMeta[]
   return all.filter((m) => !m.deleted && m.tripFilm && (!tripId || m.tripFilm.tripId === tripId)).sort((a, b) => b.createdAt - a.createdAt)
+}
+
+/** Kan deze browser een film sneller dan in echte tijd maken (WebCodecs en offline audio)? */
+export function fastSupported(): boolean {
+  return typeof VideoEncoder !== 'undefined' && typeof VideoFrame !== 'undefined' && typeof OfflineAudioContext !== 'undefined'
 }

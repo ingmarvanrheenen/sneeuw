@@ -23,7 +23,7 @@ import {
   type FilmTrip,
 } from '../lib/tripFilm'
 import { TRACK_BY_ID, TRACKS, type TrackId } from '../lib/filmMusic'
-import { drawFrame, FILM_STYLES, isFilmStyle, type FilmStyle } from '../lib/tripFilm'
+import { drawFrame, fastSupported, FILM_STYLES, isFilmStyle, type FilmStyle } from '../lib/tripFilm'
 import { loadBracket, layout } from '../lib/tournament'
 import { fontsReady } from '../lib/shareCard'
 import { shareFile } from '../lib/shareCard'
@@ -314,7 +314,9 @@ export function TripFilm({ tripId, crewId, trip, ready = true }: { tripId: strin
             </div>
             <Progress value={stage.done} />
             <p className="mt-2 text-[13px] text-muted">
-              Hou het scherm aan en blijf hier tot hij klaar is; hij wordt in echte tijd gemaakt.
+              {fastSupported()
+                ? 'Blijf even op dit scherm tot hij klaar is.'
+                : 'Hou het scherm aan en blijf hier tot hij klaar is; hij wordt in echte tijd gemaakt.'}
             </p>
           </div>
         )}
