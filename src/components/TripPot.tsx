@@ -1,6 +1,8 @@
 // Potje van de trip: wat de crew uitgaf, wie nog wie moet betalen (met één tik "Betaald"), en alle uitgaven.
+// Uitgaven in euro of CHF (vaste koers per trip), gelijk of in delen verdeeld, met een bonnetje als foto.
 import { useCallback, useEffect, useState, type CSSProperties } from 'react'
-import { Button, Chip, Field, Heading, List, Sheet, cx, inputCls } from './ui'
+import { Button, Chip, Field, Heading, List, Segmented, Sheet, Stepper, cx, inputCls } from './ui'
+import { MediaThumb, MediaViewer } from './Media'
 import { Icon, Spinner } from '../design/icons'
 import { crewMembers, type CrewMember } from '../lib/crew'
 import {
@@ -11,8 +13,15 @@ import {
   checkInput,
   fmtEuro,
   listExpenses,
+  fmtChf,
+  loadReceipt,
   parseEuro,
+  parseRate,
   potLines,
+  toEuro,
+  tripRate,
+  type Currency,
+  type ExpenseInput,
   recordPayment,
   rememberPot,
   removeExpense,
@@ -30,6 +39,8 @@ import { sfx } from '../lib/sounds'
 import { toast } from '../lib/toast'
 import { errMsg } from '../lib/errors'
 import { renderPotCard, shareImage } from '../lib/shareCard'
+import { addMediaFiles } from '../lib/media'
+import type { MediaMeta } from '../lib/types'
 
 export function TripPot({
   tripId,
@@ -50,6 +61,7 @@ export function TripPot({
   const [edit, setEdit] = useState<Expense | 'new' | null>(null)
   const [busy, setBusy] = useState(false)
   const [online, setOnline] = useState(navigator.onLine)
+  const [viewing, setViewing] = useState<MediaMeta | null>(null)
 
   const load = useCallback(async () => {
     if (!navigator.onLine || !ready) return
@@ -204,10 +216,15 @@ export function TripPot({
           <List>
             {list.map((e) => {
               const mayEdit = canEdit && canChange(e, me, ownerId)
+              const forWho = e.weights
+                ? 'in delen'
+                : e.split_between.length === members.length && members.length > 1
+                  ? 'iedereen'
+                  : e.split_between.length
               const detail =
                 e.kind === 'transfer'
                   ? `${name(e.paid_by)} → ${name(e.split_between[0])}`
-                  : `${name(e.paid_by)} betaalde · voor ${e.split_between.length === members.length && members.length > 1 ? 'iedereen' : e.split_between.length}${e.spent_on ? ' · ' + fmtShort(e.spent_on) : ''}`
+                  : `${name(e.paid_by)} betaalde · voor ${forWho}${e.currency === 'CHF' && e.orig_cents ? ` · ${fmtChf(e.orig_cents)}` : ''}${e.spent_on ? ' · ' + fmtShort(e.spent_on) : ''}`
               const body = (
                 <>
                   <Icon name={e.kind === 'transfer' ? 'arrow' : 'euro'} size={20} className="shrink-0 text-muted" />
@@ -218,18 +235,31 @@ export function TripPot({
                   <span className="num shrink-0 text-[15px]">{fmtEuro(e.amount_cents)}</span>
                 </>
               )
-              return mayEdit ? (
+              const receipt = e.receipt ? (
                 <button
-                  key={e.id}
                   type="button"
-                  onClick={() => setEdit(e)}
-                  className="flex w-full items-center gap-3 px-4 py-2.5 text-left"
+                  aria-label={`Bonnetje van ${e.title}`}
+                  onClick={() =>
+                    void loadReceipt(e.receipt!).then((m) =>
+                      m ? setViewing(m) : toast({ title: 'Bonnetje niet gevonden', icon: 'alert' }),
+                    )
+                  }
+                  className="grid size-9 shrink-0 place-items-center rounded-full bg-surface-2"
                 >
-                  {body}
+                  <Icon name="image" size={16} />
                 </button>
+              ) : null
+              return mayEdit ? (
+                <div key={e.id} className="flex items-center gap-2 pr-3">
+                  <button type="button" onClick={() => setEdit(e)} className="flex min-w-0 flex-1 items-center gap-3 py-2.5 pl-4 text-left">
+                    {body}
+                  </button>
+                  {receipt}
+                </div>
               ) : (
                 <div key={e.id} className="flex items-center gap-3 px-4 py-2.5">
                   {body}
+                  {receipt}
                 </div>
               )
             })}
@@ -243,6 +273,8 @@ export function TripPot({
         members={members}
         me={me}
         name={name}
+        crewId={crewId}
+        rate={tripRate(list.filter((x) => edit === 'new' || !edit || x.id !== edit.id))}
         onClose={() => setEdit(null)}
         onSave={async (input) => {
           if (edit && edit !== 'new') await updateExpense(edit.id, input)
@@ -257,6 +289,7 @@ export function TripPot({
           await load()
         }}
       />
+      <MediaViewer m={viewing} onClose={() => setViewing(null)} />
     </section>
   )
 }
@@ -267,6 +300,8 @@ function ExpenseSheet({
   members,
   me,
   name,
+  crewId,
+  rate: fixedRate,
   onClose,
   onSave,
   onRemove,
@@ -276,8 +311,11 @@ function ExpenseSheet({
   members: CrewMember[]
   me: string
   name: (id: string) => string
+  crewId: string
+  /** de vaste CHF-koers van de trip, als er al een CHF-uitgave is */
+  rate: number | null
   onClose: () => void
-  onSave: (i: { title: string; amount_cents: number; paid_by: string; split_between: string[]; spent_on: string | null }) => Promise<void>
+  onSave: (i: ExpenseInput) => Promise<void>
   onRemove: () => Promise<void>
 }) {
   const everyone = members.map((m) => m.user_id)
@@ -288,12 +326,26 @@ function ExpenseSheet({
   const [day, setDay] = useState(todayISO())
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
+  const [currency, setCurrency] = useState<Currency>('EUR')
+  const [rateText, setRateText] = useState('')
+  const [inParts, setInParts] = useState(false)
+  const [parts, setParts] = useState<Record<string, number>>({})
+  const [receipt, setReceipt] = useState<MediaMeta | null>(null)
+  const [uploading, setUploading] = useState(false)
 
   useEffect(() => {
     if (!open) return
     setError('')
     setTitle(expense?.title ?? '')
-    setAmount(expense ? (expense.amount_cents / 100).toFixed(2).replace('.', ',').replace(',00', '') : '')
+    const chf = expense?.currency === 'CHF' && expense.orig_cents
+    setCurrency(chf ? 'CHF' : 'EUR')
+    setRateText(String(expense?.rate ?? fixedRate ?? '').replace('.', ','))
+    const shown = chf ? expense!.orig_cents! : expense?.amount_cents
+    setAmount(shown ? (shown / 100).toFixed(2).replace('.', ',').replace(',00', '') : '')
+    setInParts(!!expense?.weights)
+    setParts(Object.fromEntries((expense?.split_between ?? []).map((id, i) => [id, expense?.weights?.[i] ?? 1])))
+    setReceipt(null)
+    if (expense?.receipt) void loadReceipt(expense.receipt).then(setReceipt)
     setPaidBy(expense?.paid_by ?? me)
     setSplit(expense?.split_between ?? everyone)
     setDay(expense?.spent_on ?? todayISO())
@@ -302,15 +354,48 @@ function ExpenseSheet({
   }, [open, expense])
 
   const transfer = expense?.kind === 'transfer'
-  const cents = parseEuro(amount)
-  const per = cents && split.length ? shares(cents, split) : null
+  const typed = parseEuro(amount)
+  const rate = fixedRate ?? parseRate(rateText)
+  const chf = currency === 'CHF' && !transfer
+  const cents = typed && chf ? (rate ? toEuro(typed, rate) : null) : typed
+  const weights = inParts ? split.map((id) => parts[id] ?? 1) : null
+  const per = cents && split.length ? shares(cents, split, weights) : null
   const perMin = per ? Math.min(...per.values()) : 0
   const perMax = per ? Math.max(...per.values()) : 0
   const toggle = (id: string) => setSplit((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]))
 
+  async function addReceipt(files: FileList | null) {
+    if (!files?.length) return
+    setUploading(true)
+    try {
+      const { added } = await addMediaFiles([files[0]], { crewId })
+      if (added[0]) setReceipt(added[0])
+    } catch (e) {
+      setError(errMsg(e))
+    } finally {
+      setUploading(false)
+    }
+  }
+
   async function save() {
-    const input = { title, amount_cents: cents ?? 0, paid_by: paidBy, split_between: split, spent_on: day || null }
-    const bad = amount && !cents ? 'Dat bedrag snap ik niet. Bijvoorbeeld 12,50' : checkInput(input)
+    const input: ExpenseInput = {
+      title,
+      amount_cents: cents ?? 0,
+      paid_by: paidBy,
+      split_between: split,
+      spent_on: day || null,
+      currency: chf ? 'CHF' : 'EUR',
+      orig_cents: chf ? typed : null,
+      rate: chf ? rate : null,
+      weights,
+      receipt: receipt?.id ?? null,
+    }
+    const bad =
+      amount && !typed
+        ? 'Dat bedrag snap ik niet. Bijvoorbeeld 12,50'
+        : chf && !rate
+          ? 'Vul de koers in: hoeveel euro is 1 frank?'
+          : checkInput(input)
     if (bad) return setError(bad)
     setBusy(true)
     setError('')
@@ -340,16 +425,41 @@ function ExpenseSheet({
             placeholder="Bijv. boodschappen, skipassen"
           />
         </Field>
-        <Field label="Bedrag">
+        {!transfer && (
+          <Segmented
+            value={currency}
+            onChange={setCurrency}
+            options={[
+              { value: 'EUR', label: 'Euro' },
+              { value: 'CHF', label: 'CHF' },
+            ]}
+          />
+        )}
+        <Field label="Bedrag" hint={chf && cents ? `= ${fmtEuro(cents)}` : undefined}>
           <input
             className={inputCls}
             value={amount}
             inputMode="decimal"
             onChange={(e) => setAmount(e.target.value)}
             placeholder="0,00"
-            aria-label="Bedrag in euro"
+            aria-label={chf ? 'Bedrag in CHF' : 'Bedrag in euro'}
           />
         </Field>
+        {chf &&
+          (fixedRate ? (
+            <p className="text-[13px] text-muted">Koers: 1 frank = {fmtEuro(Math.round(fixedRate * 100))}, vast voor deze trip.</p>
+          ) : (
+            <Field label="Koers: hoeveel euro is 1 frank?" hint="Geldt daarna voor alle CHF-uitgaven van deze trip">
+              <input
+                className={inputCls}
+                value={rateText}
+                inputMode="decimal"
+                onChange={(e) => setRateText(e.target.value)}
+                placeholder="1,06"
+                aria-label="Koers"
+              />
+            </Field>
+          ))}
         {!transfer && (
           <>
             <Field label="Wie betaalde" group>
@@ -382,6 +492,51 @@ function ExpenseSheet({
                   </Chip>
                 ))}
               </div>
+            </Field>
+            {split.length > 1 && (
+              <Segmented
+                value={inParts ? 'delen' : 'gelijk'}
+                onChange={(v) => setInParts(v === 'delen')}
+                options={[
+                  { value: 'gelijk', label: 'Gelijk verdelen' },
+                  { value: 'delen', label: 'In delen' },
+                ]}
+              />
+            )}
+            {inParts && split.length > 1 && (
+              <List>
+                {split.map((id) => (
+                  <div key={id} role="group" aria-label={`Delen ${name(id)}`} className="flex items-center justify-between gap-3 px-4 py-2">
+                    <span className="min-w-0 truncate text-[15px]">{name(id)}</span>
+                    <span className="flex items-center gap-2">
+                      <span className="num text-[13px] text-muted">{per ? fmtEuro(per.get(id) ?? 0) : ''}</span>
+                      <Stepper value={parts[id] ?? 1} min={1} max={20} onChange={(v) => setParts((p) => ({ ...p, [id]: v }))} />
+                    </span>
+                  </div>
+                ))}
+              </List>
+            )}
+            <Field label="Bonnetje" group>
+              {receipt ? (
+                <div className="flex items-center gap-3">
+                  <MediaThumb m={receipt} className="size-14" />
+                  <button type="button" onClick={() => setReceipt(null)} className="text-[15px] text-muted">
+                    Weghalen
+                  </button>
+                </div>
+              ) : (
+                <label className="flex h-11 cursor-pointer items-center gap-2 rounded-full border hairline px-4 text-[15px] font-semibold">
+                  <Icon name="camera" size={18} />
+                  {uploading ? 'Even bewaren…' : 'Foto van het bonnetje'}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="sr-only"
+                    aria-label="Foto van het bonnetje"
+                    onChange={(e) => void addReceipt(e.target.files)}
+                  />
+                </label>
+              )}
             </Field>
             <Field label="Wanneer">
               <input type="date" className={inputCls} value={day} onChange={(e) => setDay(e.target.value)} aria-label="Datum" />
