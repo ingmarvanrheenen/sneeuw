@@ -35,6 +35,7 @@ import { riderProfiles, type CrewRider } from '../lib/riders'
 import { SnowGames } from '../components/SnowParts'
 import { CrewLadder } from '../components/Ladder'
 import { CrewWeekGoal } from '../components/CrewWeekGoal'
+import { CrewMeetPoint } from '../components/CrewMeetPoint'
 import { CrewWhere } from '../components/CrewWhere'
 
 function NeedAccount() {
@@ -359,6 +360,7 @@ export default function Crew() {
           {tab === 'feed' && !loading && crew && members.length > 0 && (
             <>
               <CrewWhere members={members} me={user.id} />
+              <CrewMeetPoint crewId={crew.id} members={members} me={user.id} />
               <CrewWeekGoal crewId={crew.id} members={members} posts={posts} me={user.id} />
             </>
           )}
