@@ -35,6 +35,17 @@ describe('programma-content', () => {
     }
   })
 
+  it('ook switch, butters, eerste keer poeder en bulten', () => {
+    for (const id of ['switch', 'butters', 'eerste-poeder', 'bulten']) expect(PROGRAM_BY_ID.has(id), id).toBe(true)
+    expect(PROGRAM_BY_ID.get('switch')!.days.every((d) => d.tricks.includes('switch'))).toBe(true)
+    expect(PROGRAM_BY_ID.get('butters')!.days.at(-1)!.tricks).toContain('butter-360')
+    // poeder: veiligheid vanaf dag 1, en de bomen pas aan het eind en nooit alleen
+    const powder = PROGRAM_BY_ID.get('eerste-poeder')!
+    expect(powder.days[0].tricks).toContain('offpiste-veilig')
+    expect(powder.days[0].tasks.join(' ')).toMatch(/lawinebericht/)
+    expect(powder.days.at(-1)!.tasks.join(' ')).toMatch(/Nooit alleen/)
+  })
+
   it('van groen naar rood eindigt echt op rood', () => {
     expect(PROGRAM_BY_ID.get('groen-naar-rood')!.days.at(-1)!.piste).toBe('rood')
   })
