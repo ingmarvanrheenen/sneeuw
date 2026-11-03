@@ -93,6 +93,8 @@ export default function LogDetail() {
           {!!s.runs && (
             <span className="flex items-center gap-1.5">
               <Icon name="lift" size={18} /> {s.runs} {s.runs === 1 ? 'run' : 'runs'}
+              {!!s.topSpeed && ` · ${s.topSpeed} km/u top`}
+              {!!s.vert && ` · ${s.vert} m omlaag`}
             </span>
           )}
           {s.pistes.map((p) => {

@@ -8,7 +8,21 @@ import type { ReactElement } from 'react'
 import Runs from '../pages/Runs'
 import Home from '../pages/Home'
 import LogDetail from '../pages/LogDetail'
-import { dropRun, fmtClock, fmtSpan, loadRunDay, resetRunDay, runsForDay, runStats, startRun, stateOf, stopRun, undoRun } from '../lib/runs'
+import {
+  dropRun,
+  fmtClock,
+  fmtSpan,
+  loadRunDay,
+  resetRunDay,
+  runsForDay,
+  runStats,
+  setRunGps,
+  startRun,
+  stateOf,
+  stopRun,
+  undoRun,
+} from '../lib/runs'
+import { emptyGps } from '../lib/runGps'
 import { smartDraft, EMPTY_DRAFT } from '../lib/sessions'
 import { create } from '../lib/repo'
 import { db } from '../lib/db'
@@ -185,6 +199,24 @@ describe('run-teller in de app', () => {
     const card = await screen.findByRole('button', { name: 'Run-teller' })
     expect(within(card).getByText('Run 1')).toBeTruthy()
     expect(within(card).getByText('2:00')).toBeTruthy()
+  })
+
+  it('zet in je dag: met GPS ook topsnelheid en hoogtemeters', async () => {
+    const user = userEvent.setup()
+    const t = clock - 30 * MIN
+    await startRun(t)
+    await setRunGps(t, { ...emptyGps(), top: 57.4, drop: 380, dist: 1900, fixes: 40 })
+    await stopRun(t + 6 * MIN)
+    const s = await create('session', { ...EMPTY_DRAFT, date: todayISO(), resortName: 'Tignes' })
+    at('/runs', <Runs />)
+    await user.click(await screen.findByRole('button', { name: 'Zet in je dag' }))
+    await waitFor(async () => expect(await db.records.get(s.id)).toMatchObject({ runs: 1, topSpeed: 57, vert: 380 }))
+  })
+
+  it('je dag laat topsnelheid en hoogtemeters zien als ze er zijn', async () => {
+    const s = await create('session', { ...EMPTY_DRAFT, date: '2027-01-10', runs: 14, topSpeed: 61, vert: 2100 })
+    at(`/log/${s.id}`, <LogDetail />, '/log/:id')
+    expect(await screen.findByText('14 runs · 61 km/u top · 2100 m omlaag')).toBeTruthy()
   })
 
   it('je dag laat de runs zien', async () => {

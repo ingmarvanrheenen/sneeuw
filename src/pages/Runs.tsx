@@ -6,6 +6,7 @@ import { Button, Heading, List, Page, PageHeader, Row, Stat, StatGroup, Toggle, 
 import { Peaks } from '../components/Poster'
 import { Icon } from '../design/icons'
 import {
+  dayTotals,
   dropRun,
   gpsPref,
   loadGpsPref,
@@ -119,7 +120,7 @@ export default function Runs() {
 
   async function toDay() {
     if (!today) return nav('/log/nieuw')
-    await update(today, { runs: s.runs })
+    await update(today, dayTotals(day))
     sfx.success()
     toast({
       title: 'In je dag gezet',

@@ -4,7 +4,7 @@
 import { kvGet, kvSet } from './db'
 import { createStore } from './store'
 import { todayISO } from './ids'
-import type { RunGps } from './runGps'
+import { dayGps, type RunGps } from './runGps'
 
 export interface Run {
   start: number
@@ -170,10 +170,18 @@ export function fmtSpan(ms: number): string {
   return `${h} u${min % 60 ? ` ${min % 60}` : ''}`
 }
 
+/** Wat de teller voor je dag heeft: runs, en met GPS ook topsnelheid en hoogtemeters. */
+export function dayTotals(day: RunDay, now = Date.now()): { runs: number; topSpeed?: number; vert?: number } {
+  const s = runStats(day, now)
+  const g = dayGps(day.runs.filter((r) => r.end !== undefined))
+  return { runs: s.runs, ...(g ? { topSpeed: Math.round(g.top), vert: g.drop } : {}) }
+}
+
 /** Voor je dag: aantal runs en uren op de berg (op een half uur), als de teller iets heeft. */
-export async function runsForDay(date: string): Promise<{ runs: number; hours: number } | null> {
+export async function runsForDay(date: string): Promise<{ runs: number; hours: number; topSpeed?: number; vert?: number } | null> {
   const day = await kvGet<RunDay>(key(date), empty(date))
-  const s = runStats(day, day.runs.at(-1)?.end ?? Date.now())
+  const now = day.runs.at(-1)?.end ?? Date.now()
+  const s = runStats(day, now)
   if (!s.runs) return null
-  return { runs: s.runs, hours: Math.max(0.5, Math.round((s.dayMs / 3_600_000) * 2) / 2) }
+  return { ...dayTotals(day, now), hours: Math.max(0.5, Math.round((s.dayMs / 3_600_000) * 2) / 2) }
 }

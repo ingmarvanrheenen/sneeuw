@@ -1,7 +1,7 @@
 // Trip-recap: wat de hele crew deze trip gedaan heeft, uit de met de crew gedeelde dagen.
 import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Heading, List, Row, Sheet, Stat, StatGroup } from './ui'
+import { Heading, List, Row, Segmented, Sheet, Stat, StatGroup, cx } from './ui'
 import { Spinner } from '../design/icons'
 import { MediaThumb, MediaViewer } from './Media'
 import { crewMembers, type CrewMember } from '../lib/crew'
@@ -11,6 +11,10 @@ import {
   castVote,
   computeRecap,
   listVotes,
+  RANKS,
+  ranking,
+  type RankKey,
+  type RecapPerson,
   removeVote,
   tripDays,
   tripMedia,
@@ -96,6 +100,7 @@ export function TripRecap({ tripId, crewId, trip }: { tripId: string; crewId: st
             <Stat label="Uren" value={recap.hours.toLocaleString('nl-NL')} />
             <Stat label="Valpartijen" value={recap.falls} />
           </StatGroup>
+          {recap.runs > 0 && <p className="mt-2 text-[13px] text-muted">Samen {plural(recap.runs, 'run', 'runs')} op de teller.</p>}
 
           {awards.length > 0 && (
             <>
@@ -119,6 +124,8 @@ export function TripRecap({ tripId, crewId, trip }: { tripId: string; crewId: st
             </>
           )}
 
+          <Ranking people={recap.people} me={me} />
+
           {members.length > 1 && (
             <Votes tripId={tripId} crewId={crewId} members={members} media={media} me={me ?? ''} nameOf={nameOf} names={names} />
           )}
@@ -135,6 +142,7 @@ export function TripRecap({ tripId, crewId, trip }: { tripId: string; crewId: st
                   <span className="block truncate text-[15px] font-medium">{name(p)}</span>
                   <span className="block text-[13px] text-muted">
                     {plural(p.days, 'dag', 'dagen')} · {plural(p.landed.length, 'trick', 'tricks')} geland
+                    {p.runs > 0 && ` · ${plural(p.runs, 'run', 'runs')}`}
                   </span>
                 </span>
                 <span className="num shrink-0 text-right text-[15px]">
@@ -152,6 +160,45 @@ export function TripRecap({ tripId, crewId, trip }: { tripId: string; crewId: st
         </>
       )}
     </section>
+  )
+}
+
+/** Ranglijst van de crew: runs, topsnelheid of hoogtemeters. Alleen wat iemand in de crew echt telde. */
+function Ranking({ people, me }: { people: RecapPerson[]; me: string | null }) {
+  const options = RANKS.filter((r) => ranking(people, r.id).length > 0)
+  const [pick, setPick] = useState<RankKey>('runs')
+  if (people.length < 2 || !options.length) return null
+  const key = options.some((o) => o.id === pick) ? pick : options[0].id
+  const rank = RANKS.find((r) => r.id === key)!
+  const rows = ranking(people, key)
+  const missing = people.length - rows.length
+  return (
+    <>
+      <h3 className="display mb-2 mt-6 text-[20px] uppercase">Ranglijst</h3>
+      {options.length > 1 && (
+        <div className="mb-3">
+          <Segmented value={key} onChange={setPick} options={options.map((o) => ({ value: o.id, label: o.label }))} />
+        </div>
+      )}
+      <List>
+        {rows.map(({ person, place, value }) => (
+          <div
+            key={person.userId}
+            className={cx('flex items-center gap-3 px-4 py-3', person.userId === me && 'bg-accent-soft')}
+            aria-label={`${place}. ${person.userId === me ? 'Jij' : person.name}: ${rank.unit(value)}`}
+          >
+            <span className={cx('display num w-8 shrink-0 text-[26px]', place === 1 && 'text-accent-text')}>{place}</span>
+            <span className="min-w-0 flex-1 truncate text-[15px] font-medium">{person.userId === me ? 'Jij' : person.name}</span>
+            <span className="num shrink-0 text-[15px] font-semibold">{rank.unit(value)}</span>
+          </div>
+        ))}
+      </List>
+      {missing > 0 && (
+        <p className="mt-2 text-[13px] text-muted">
+          {missing === 1 ? '1 rider telde' : `${missing} riders telden`} {key === 'runs' ? 'geen runs' : 'niet met GPS'}.
+        </p>
+      )}
+    </>
   )
 }
 
