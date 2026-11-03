@@ -10,6 +10,7 @@ import {
   REVIEW_INSTRUCTIONS,
   SYSTEM_PROMPT,
   TRIPPLAN_INSTRUCTIONS,
+  PROGRAM_INSTRUCTIONS,
 } from './prompt.ts'
 import {
   COMPARE_SCHEMA,
@@ -30,6 +31,9 @@ import {
   checkPlanDay,
   planDaySchema,
   tripPlanSchema,
+  checkProgram,
+  checkProgramInput,
+  programSchema,
   drillSchema,
   effortFor,
   encodeEvent,
@@ -103,6 +107,7 @@ Deno.serve(async (req) => {
   if (body.mode === 'drill') return drill(body, countUsage)
   if (body.mode === 'compare') return compare(body, countUsage)
   if (body.mode === 'tripplan') return tripPlan(body, countUsage)
+  if (body.mode === 'program') return program(body, countUsage)
 
   const tricks = checkTricks(body.tricks)
   const trickIds = tricks.map((t) => t.id)
@@ -381,4 +386,28 @@ async function tripPlan(body: Record<string, unknown>, countUsage: (u: Anthropic
   if (out instanceof Response) return out
   const plan = checkTripPlan(out, trickIds, input.days)
   return plan ? json(200, plan) : json(502, { error: 'Coach gaf geen bruikbaar plan terug. Probeer het nog eens.' })
+}
+
+/** Eigen programma: een reeks dagen naar één doel, op het niveau van de rider. */
+async function program(body: Record<string, unknown>, countUsage: (u: Anthropic.Beta.BetaUsage) => unknown): Promise<Response> {
+  const input = checkProgramInput(body)
+  if ('error' in input) return json(400, { error: input.error })
+  const context = (typeof body.context === 'string' ? body.context : '').slice(0, LIMITS.context)
+  const trickIds = checkTrickIds(body.trickIds)
+  if (!trickIds.length) return json(400, { error: 'Geen tricks meegestuurd' })
+  const out = await structured(
+    [
+      { type: 'text', text: `<rider_context>\n${context}\n</rider_context>` },
+      {
+        type: 'text',
+        text: `${PROGRAM_INSTRUCTIONS}\n\nAantal dagen: ${input.days}\n\n<wens>\n${input.wish || '-'}\n</wens>`,
+      },
+    ],
+    programSchema(trickIds, input.days),
+    'medium',
+    countUsage,
+  )
+  if (out instanceof Response) return out
+  const p = checkProgram(out, trickIds, input.days)
+  return p ? json(200, p) : json(502, { error: 'Coach gaf geen bruikbaar programma terug. Probeer het nog eens.' })
 }

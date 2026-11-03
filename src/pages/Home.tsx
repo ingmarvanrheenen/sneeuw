@@ -8,8 +8,7 @@ import { QuickLog } from '../components/QuickLog'
 import { MemoRecorder } from '../components/VoiceMemos'
 import { looseMemos } from '../lib/memo'
 import { fmtClock, loadRunDay, runStats, runStore, stateOf } from '../lib/runs'
-import { loadPrograms, nextDay, programStore } from '../lib/programs'
-import { PROGRAM_BY_ID } from '../content/programs'
+import { loadPrograms, nextDay, programById, programStore } from '../lib/programs'
 import { planDay } from '../lib/coach'
 import { toast } from '../lib/toast'
 import { useLiveQuery } from 'dexie-react-hooks'
@@ -110,7 +109,7 @@ export default function Home() {
   useEffect(() => void loadRunDay(), [])
   const programs = programStore.use()
   useEffect(() => void loadPrograms(), [])
-  const program = programs.active ? PROGRAM_BY_ID.get(programs.active) : undefined
+  const program = programs.active ? programById(programs, programs.active) : undefined
   const programDay = program ? nextDay(program, programs.runs[program.id]) : null
   const coachTrip = (trips ?? []).find((t) => planDay(t, today))
   const coachToday = coachTrip ? planDay(coachTrip, today) : null

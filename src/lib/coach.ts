@@ -26,7 +26,9 @@ import {
 } from '../../supabase/functions/coach/protocol'
 
 export type { CoachAction, CoachImage, Comparison, Drill, PlanDay } from '../../supabase/functions/coach/protocol'
-import { checkPlanDay, checkTripPlan, planText, TRIP_MAX_DAYS } from '../../supabase/functions/coach/protocol'
+import { checkPlanDay, checkProgram, checkTripPlan, planText, TRIP_MAX_DAYS } from '../../supabase/functions/coach/protocol'
+import { addCustomProgram } from './programs'
+import type { Program } from '../content/programs'
 
 export interface CoachMessage extends WireMessage {
   /** indexen van `actions` waar de rider al op getikt heeft */
@@ -503,4 +505,38 @@ export async function askTripPlan(t: Trip, wish = ''): Promise<TripPlan> {
   }
   await update(t, { coachPlan: plan })
   return plan
+}
+
+// ── Eigen programma ─────────────────────────────────────────────────────────
+
+/**
+ * Coach Daddy maakt een programma op jouw niveau, in dezelfde vorm als de kant-en-klare (dagen met doel,
+ * piste, oefeningen en tricks). Hij krijgt de tricks die je nog niet beheerst; het programma wordt bewaard
+ * bij je programma's op dit toestel.
+ */
+export async function askProgram(wish: string, days: number): Promise<Program> {
+  const [context, input] = await Promise.all([buildContext(), loadProgressInput()])
+  const done = new Set(input.tricks.filter((x) => x.status === 'beheerst').map((x) => x.trickId))
+  const trickIds = TRICKS.map((x) => x.id).filter((id) => !done.has(id))
+  const w = wish.trim().slice(0, 300)
+  const res = await coachRequest({ mode: 'program', context, wish: w, days, trickIds })
+  const out = checkProgram(await res.json(), trickIds, days)
+  if (!out) throw new CoachError('Coach gaf geen bruikbaar programma terug. Probeer het nog eens.')
+  const createdAt = Date.now()
+  const p: Program = {
+    id: `coach-${createdAt.toString(36)}`,
+    name: out.naam,
+    blurb: out.blurb,
+    start: out.start,
+    days: out.dagen.map((d) => ({
+      title: d.titel,
+      goal: d.doel,
+      ...(d.piste ? { piste: d.piste } : {}),
+      tricks: d.tricks.filter((t) => TRICK_BY_ID.has(t)),
+      tasks: d.oefeningen,
+    })),
+    coach: { wish: w, createdAt },
+  }
+  await addCustomProgram(p)
+  return p
 }
