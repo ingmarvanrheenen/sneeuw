@@ -19,6 +19,7 @@ import { DailyChallenge } from '../components/DailyChallenge'
 import { DailyDrill } from '../components/DailyDrill'
 import { sessionsSorted, useKind } from '../lib/repo'
 import { dueNow, dueText } from '../lib/maintenance'
+import { StartSteps } from '../components/StartSteps'
 import { getProfile } from '../lib/auth'
 import { TRICKS, TRICK_BY_ID } from '../content/tricks'
 import { isIOS, isStandalone } from '../lib/pwa'
@@ -146,6 +147,7 @@ export default function Home() {
     <Page>
       <PageHeader subtitle={fmtDate(today, true)} title={greet} outline={name || undefined} right={<SyncBadge />} />
       <InstallHint />
+      <StartSteps className="mt-4" />
 
       {lvl && <LevelPoster level={lvl} badges={progress.badges.length} season={season} onClick={() => nav('/badges')} className="mt-2" />}
 
