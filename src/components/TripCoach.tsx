@@ -132,6 +132,7 @@ export function TripCoach({ trip, editable }: { trip: Trip; editable: boolean })
                           <span className="block truncate text-[15px] font-semibold">{d.titel}</span>
                           <span className="block text-[13px] text-muted">
                             {shortDate(d.date)}
+                            {d.aangepast ? ' · bijgestuurd' : ''}
                             {s && <span className="sr-only">, gelogd</span>}
                           </span>
                         </span>
@@ -153,6 +154,9 @@ export function TripCoach({ trip, editable }: { trip: Trip; editable: boolean })
                       </button>
                       {expanded && (
                         <div className="px-4 pb-4 pl-16">
+                          {d.aangepast && (
+                            <p className="mb-1 text-[13px] text-muted">Bijgestuurd na je terugblik. Eerst: {d.aangepast.van}.</p>
+                          )}
                           <p className="text-[15px]">{d.focus}</p>
                           <ul className="mt-2 space-y-1.5">
                             {d.oefeningen.map((o) => (
@@ -259,10 +263,16 @@ function DayPoster({ plan, today, loggedOn }: { plan: TripPlan; today: string; l
           </span>
         </Sticker>
       )}
-      {s && (
+      {s ? (
         <Stamp className="absolute bottom-4 right-4" tilt={-6}>
           Gelogd
         </Stamp>
+      ) : (
+        d.aangepast && (
+          <Stamp className="absolute bottom-4 right-4" tilt={-6}>
+            Bijgestuurd
+          </Stamp>
+        )
       )}
     </div>
   )
@@ -273,6 +283,9 @@ function DayDetails({ day, logged, isToday }: { day: PlanDay; logged?: Session; 
   const trick = day.trickId ? TRICK_BY_ID.get(day.trickId) : undefined
   return (
     <>
+      {day.aangepast && (
+        <p className="mt-3 text-[13px] text-muted">Bijgestuurd na je terugblik van gisteren. Eerst: {day.aangepast.van}.</p>
+      )}
       <List className="mt-3">
         {day.oefeningen.map((o) => (
           <div key={o} className="flex gap-3 px-4 py-3 text-[15px]">

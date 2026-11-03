@@ -9,9 +9,18 @@ vi.mock('../lib/auth', async (orig) => ({ ...(await orig<typeof import('../lib/a
 vi.mock('../lib/supabase', () => ({ supabase: null, hasBackend: true, backendInfo: {} }))
 vi.mock('../lib/ids', async (orig) => ({ ...(await orig<typeof import('../lib/ids')>()), todayISO: () => '2027-01-17' }))
 
-import { checkTripInput, checkTripPlan, planText, tripPlanSchema, TRIP_MAX_DAYS } from '../../supabase/functions/coach/protocol'
+import {
+  checkPlanDay,
+  checkTripInput,
+  checkTripPlan,
+  planDaySchema,
+  planText,
+  tripPlanSchema,
+  TRIP_MAX_DAYS,
+} from '../../supabase/functions/coach/protocol'
 import { askTripPlan, planDay, reviewDay, tripDates, tripText } from '../lib/coach'
 import { TripCoach } from '../components/TripCoach'
+import { DayReview } from '../components/DayReview'
 import Home from '../pages/Home'
 import { authStore } from '../lib/auth'
 import { create, listKind } from '../lib/repo'
@@ -45,6 +54,28 @@ describe('server: tripplan checken', () => {
     expect(p.dagen[1].trickId).toBeNull()
     expect(checkTripPlan({ intro: '', dagen: [day(1)] }, ['ollie'], 2)).toBeNull()
     expect(checkTripPlan({ dagen: [{ ...day(1), oefeningen: [] }] }, [], 1)).toBeNull()
+  })
+
+  it('aangepaste dag van morgen: opgeschoond, verzonnen trick wordt null, zonder oefeningen onbruikbaar', () => {
+    expect(
+      checkPlanDay(
+        { titel: '  Rustig   aan ', focus: 'Knie ontzien', oefeningen: ['Een', '', 'Twee', 'Drie', 'Vier'], trickId: 'ollie' },
+        ['ollie'],
+        3,
+      ),
+    ).toEqual({
+      dag: 3,
+      titel: 'Rustig aan',
+      focus: 'Knie ontzien',
+      oefeningen: ['Een', 'Twee', 'Drie'],
+      trickId: 'ollie',
+    })
+    expect(checkPlanDay({ ...day(1), trickId: 'verzonnen' }, ['ollie'], 1)?.trickId).toBeNull()
+    expect(checkPlanDay({ titel: 'x', oefeningen: [] }, [], 1)).toBeNull()
+    expect(checkPlanDay(null, [], 1)).toBeNull()
+    const schema = planDaySchema(['ollie']) as { required: string[]; properties: { trickId: { anyOf: { enum?: string[] }[] } } }
+    expect(schema.required).toEqual(['titel', 'focus', 'oefeningen', 'trickId'])
+    expect(schema.properties.trickId.anyOf[0].enum).toEqual(['ollie'])
   })
 
   it('plan als tekst voor de avond: vandaag en morgen', () => {
@@ -148,6 +179,126 @@ describe('app: plan maken en gebruiken', () => {
     const r2 = await reviewDay(other)
     expect(sent(1).plan).toBeUndefined()
     expect(r2.morgen).toBeNull()
+  })
+
+  it('na de terugblik wordt het plan van morgen echt aangepast; het weer blijft, de oude titel wordt onthouden', async () => {
+    const plan: TripPlan = {
+      intro: '',
+      days: ['2027-01-16', '2027-01-17', '2027-01-18'].map((date, i) => ({
+        date,
+        titel: `Dag ${i + 1}`,
+        focus: 'F',
+        oefeningen: ['O'],
+        trickId: null,
+        weer: 'Zon · 2°',
+        weerCode: 0,
+      })),
+      createdAt: 1,
+    }
+    const t = await newTrip({ coachPlan: plan })
+    const s = await create('session', { ...EMPTY_DRAFT, date: '2027-01-17', tripId: t.id, falls: 14, pains: ['knie'] })
+    const morgenDag = {
+      titel: 'Rustige herstel-dag',
+      focus: 'Knie ontzien, lage snelheid.',
+      oefeningen: ['Brede blauwe in grote bochten', 'Stop op tijd'],
+      trickId: 'snelheid',
+    }
+    reply({ goed: 'g', focus: 'f', oefening: 'o', trickId: null, veiligheid: 'Laat je knie checken', morgen: 'Morgen rustiger', morgenDag })
+    const r = await reviewDay(s)
+    expect(r.morgenDag).toBe('Rustige herstel-dag')
+    const [saved] = await listKind('trip')
+    expect(saved.coachPlan!.days[2]).toMatchObject({
+      date: '2027-01-18',
+      titel: 'Rustige herstel-dag',
+      oefeningen: ['Brede blauwe in grote bochten', 'Stop op tijd'],
+      trickId: 'snelheid',
+      weer: 'Zon · 2°',
+      aangepast: { van: 'Dag 3' },
+    })
+    expect(saved.coachPlan!.days[1].titel).toBe('Dag 2')
+
+    // nog een keer bijsturen: "eerst" blijft de allereerste titel
+    reply({
+      goed: 'g',
+      focus: 'f',
+      oefening: 'o',
+      trickId: null,
+      veiligheid: null,
+      morgen: 'x',
+      morgenDag: { ...morgenDag, titel: 'Toch rustig' },
+    })
+    await reviewDay(s)
+    expect((await listKind('trip'))[0].coachPlan!.days[2].aangepast?.van).toBe('Dag 3')
+  })
+
+  it('klopte morgen al, of is het antwoord kapot, of is het de laatste dag: niks aangepast', async () => {
+    const plan: TripPlan = {
+      intro: '',
+      days: ['2027-01-17', '2027-01-18'].map((date, i) => ({ date, titel: `Dag ${i + 1}`, focus: 'F', oefeningen: ['O'], trickId: null })),
+      createdAt: 1,
+    }
+    const t = await newTrip({ coachPlan: plan, startDate: '2027-01-17', endDate: '2027-01-18' })
+    const s = await create('session', { ...EMPTY_DRAFT, date: '2027-01-17', tripId: t.id })
+    reply({
+      goed: 'g',
+      focus: 'f',
+      oefening: 'o',
+      trickId: null,
+      veiligheid: null,
+      morgen: 'x',
+      morgenDag: { titel: 'Dag 2', focus: 'F', oefeningen: ['O'], trickId: null },
+    })
+    expect((await reviewDay(s)).morgenDag).toBeUndefined()
+    reply({ goed: 'g', focus: 'f', oefening: 'o', trickId: null, veiligheid: null, morgen: 'x', morgenDag: { titel: '', oefeningen: [] } })
+    expect((await reviewDay(s)).morgenDag).toBeUndefined()
+    expect((await listKind('trip'))[0].coachPlan!.days[1].aangepast).toBeUndefined()
+    // laatste dag: geen plan voor morgen mee
+    const last = await create('session', { ...EMPTY_DRAFT, date: '2027-01-18', tripId: t.id })
+    reply({ goed: 'g', focus: 'f', oefening: 'o', trickId: null, veiligheid: null, morgen: 'Afsluiten' })
+    await reviewDay(last)
+    expect(sent(2).plan).not.toMatch(/Plan morgen/)
+  })
+
+  it('je ziet dat het plan bijgestuurd is: in de review en op de trippagina', async () => {
+    const days = ['2027-01-16', '2027-01-17', '2027-01-18'].map((date, i) => ({
+      date,
+      titel: `Dag ${i + 1}`,
+      focus: 'F',
+      oefeningen: ['O'],
+      trickId: null,
+    }))
+    days[1] = { ...days[1], titel: 'Rustige herstel-dag', aangepast: { at: 1, van: 'Carven op rood' } } as (typeof days)[number]
+    const t = await newTrip({ coachPlan: { intro: '', days, createdAt: 1 } })
+    render(
+      <MemoryRouter>
+        <TripCoach trip={t} editable={false} />
+      </MemoryRouter>,
+    )
+    const poster = screen.getByRole('group', { name: 'Dag 2 van 3' })
+    expect(within(poster).getByText('Bijgestuurd')).toBeTruthy()
+    expect(screen.getByText(/Bijgestuurd na je terugblik van gisteren. Eerst: Carven op rood/)).toBeTruthy()
+    cleanup()
+    const s = await create('session', {
+      ...EMPTY_DRAFT,
+      date: '2027-01-16',
+      tripId: t.id,
+      review: {
+        goed: 'g',
+        focus: 'f',
+        oefening: 'o',
+        trickId: null,
+        veiligheid: null,
+        morgen: 'Rustiger',
+        morgenDag: 'Rustige herstel-dag',
+        createdAt: 1,
+      },
+    })
+    render(
+      <MemoryRouter>
+        <DayReview session={s} />
+      </MemoryRouter>,
+    )
+    expect(screen.getByRole('link', { name: /Morgen: Rustige herstel-dag/ }).getAttribute('href')).toBe(`/reizen/${t.id}`)
   })
 
   it('op de trippagina: knop, dan het plan met vandaag open; op Home de dag van vandaag', async () => {

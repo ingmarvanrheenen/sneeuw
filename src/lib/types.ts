@@ -53,13 +53,25 @@ export interface DayReview {
   veiligheid: string | null
   /** op een trip met een coach-plan: hoe je morgen bijstuurt */
   morgen?: string | null
+  /** de titel van het aangepaste plan van morgen, als de coach het veranderde */
+  morgenDag?: string
   createdAt: number
 }
 
 /** Coach op de trip: per tripdag een thema, gemaakt door Coach Daddy en bewaard bij de trip. */
 export interface TripPlan {
   intro: string
-  days: { date: string; titel: string; focus: string; oefeningen: string[]; trickId: string | null; weer?: string; weerCode?: number }[]
+  days: {
+    date: string
+    titel: string
+    focus: string
+    oefeningen: string[]
+    trickId: string | null
+    weer?: string
+    weerCode?: number
+    /** aangepast na een avondterugblik: wanneer, en hoe de dag eerst heette */
+    aangepast?: { at: number; van: string }
+  }[]
   wish?: string
   /** voor hoeveel dagen het weer bekend was toen het plan gemaakt werd */
   weatherDays?: number

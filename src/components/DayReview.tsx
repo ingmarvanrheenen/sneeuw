@@ -1,7 +1,7 @@
 // Dagreview van Coach Daddy: opt-in per dag (kost een coach-bericht), bewaard bij de dag.
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Button, Heading, List, cx } from './ui'
+import { Button, Heading, List, Row, cx } from './ui'
 import { Icon, Spinner } from '../design/icons'
 import { CoachError, reviewDay } from '../lib/coach'
 import { create, update, useKind } from '../lib/repo'
@@ -86,6 +86,15 @@ export function DayReview({ session }: { session: Session }) {
           </Item>
         )}
       </List>
+      {r.morgenDag && (
+        <List className="mt-3">
+          {session.tripId ? (
+            <Row icon="replay" title={`Morgen: ${r.morgenDag}`} detail="Je tripplan is bijgestuurd" to={`/reizen/${session.tripId}`} />
+          ) : (
+            <Row icon="replay" title={`Morgen: ${r.morgenDag}`} detail="Je tripplan is bijgestuurd" />
+          )}
+        </List>
+      )}
       {trick && (
         <List className="mt-3">
           <Link to={`/tricks/${trick.id}`} className="flex items-center gap-3 px-4 py-3 active:bg-surface-2">

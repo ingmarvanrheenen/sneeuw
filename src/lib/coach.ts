@@ -26,7 +26,7 @@ import {
 } from '../../supabase/functions/coach/protocol'
 
 export type { CoachAction, CoachImage, Comparison, Drill, PlanDay } from '../../supabase/functions/coach/protocol'
-import { checkTripPlan, planText, TRIP_MAX_DAYS } from '../../supabase/functions/coach/protocol'
+import { checkPlanDay, checkTripPlan, planText, TRIP_MAX_DAYS } from '../../supabase/functions/coach/protocol'
 
 export interface CoachMessage extends WireMessage {
   /** indexen van `actions` waar de rider al op getikt heeft */
@@ -198,13 +198,26 @@ export async function reviewDay(s: Session): Promise<DayReview> {
   const trickIds = TRICKS.map((t) => t.id).filter((id) => !done.has(id))
   // dag van een trip met een coach-plan: het plan van vandaag en morgen gaat mee
   const plan = await planFor(s)
-  const res = await coachRequest({ mode: 'review', context, day: dayText(s), trickIds, ...(plan ? { plan } : {}) })
-  const r = (await res.json()) as Omit<DayReview, 'createdAt'>
+  const res = await coachRequest({ mode: 'review', context, day: dayText(s), trickIds, ...(plan ? { plan: plan.text } : {}) })
+  const r = (await res.json()) as Omit<DayReview, 'createdAt'> & { morgenDag?: unknown }
   if (!r?.focus) throw new CoachError('Coach gaf geen bruikbare review terug.')
+  // het plan van morgen echt aanpassen, niet alleen een zin
+  const tomorrow =
+    plan && plan.tomorrow !== null
+      ? checkPlanDay(
+          r.morgenDag,
+          TRICKS.map((x) => x.id),
+          plan.tomorrow + 1,
+        )
+      : null
+  const changed = tomorrow && plan ? await applyTomorrow(plan.trip, plan.tomorrow!, tomorrow) : null
+  const { morgenDag: _md, ...rest } = r
+  void _md
   return {
-    ...r,
+    ...rest,
     trickId: r.trickId && TRICK_BY_ID.has(r.trickId) ? r.trickId : null,
     morgen: plan && typeof r.morgen === 'string' ? r.morgen : null,
+    ...(changed ? { morgenDag: changed.titel } : {}),
     createdAt: Date.now(),
   }
 }
@@ -416,15 +429,44 @@ export function planDay(t: Pick<Trip, 'coachPlan'> | undefined, date: string) {
   return t?.coachPlan?.days.find((d) => d.date === date) ?? null
 }
 
-async function planFor(s: Session): Promise<string | null> {
+/** Het tripplan rond deze dag: de tekst voor de coach, de trip en welke dag morgen is. */
+async function planFor(s: Session): Promise<{ text: string; trip: Trip; tomorrow: number | null } | null> {
   const trips = await listKind('trip')
   const t = trips.find((x) => (s.tripId ? x.id === s.tripId : x.startDate && x.startDate <= s.date && (x.endDate ?? x.startDate) >= s.date))
   const days = t?.coachPlan?.days ?? []
   const i = days.findIndex((d) => d.date === s.date)
-  if (i < 0) return null
+  if (!t || i < 0) return null
   const wire = (d: (typeof days)[number] | undefined, n: number) =>
     d ? { dag: n + 1, titel: d.titel, focus: d.focus, oefeningen: d.oefeningen, trickId: d.trickId } : null
-  return planText(wire(days[i], i), wire(days[i + 1], i + 1)) || null
+  const text = planText(wire(days[i], i), wire(days[i + 1], i + 1))
+  return text ? { text, trip: t, tomorrow: days[i + 1] ? i + 1 : null } : null
+}
+
+/** Het plan van morgen vervangen door de aangepaste dag van de coach (weer en datum blijven; de oude titel onthouden). */
+export async function applyTomorrow(
+  t: Trip,
+  index: number,
+  day: { titel: string; focus: string; oefeningen: string[]; trickId: string | null },
+) {
+  const plan = t.coachPlan
+  const old = plan?.days[index]
+  if (!plan || !old) return null
+  const changed =
+    old.titel !== day.titel ||
+    old.focus !== day.focus ||
+    old.oefeningen.join('|') !== day.oefeningen.join('|') ||
+    old.trickId !== day.trickId
+  if (!changed) return null
+  const next = {
+    ...old,
+    titel: day.titel,
+    focus: day.focus,
+    oefeningen: day.oefeningen,
+    trickId: day.trickId && TRICK_BY_ID.has(day.trickId) ? day.trickId : null,
+    aangepast: { at: Date.now(), van: old.aangepast?.van ?? old.titel },
+  }
+  await update(t, { coachPlan: { ...plan, days: plan.days.map((d, i) => (i === index ? next : d)) } })
+  return next
 }
 
 /** Vraag de coach om een plan voor deze trip. Telt als één coach-bericht; bewaart het bij de trip. */

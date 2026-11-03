@@ -76,4 +76,5 @@ export const TRIPPLAN_INSTRUCTIONS = `Maak een plan voor deze trip: per dag éé
 
 // Avondterugblik op een tripdag: zelfde als de dagreview, met het plan erbij.
 export const EVENING_INSTRUCTIONS = `Dit is een dag van een trip met een plan (zie <plan>). Vergelijk wat er gelogd is met het plan van vandaag.
-- "morgen": hoe je het plan van morgen aanpast op wat er vandaag gebeurde (sneller door, of juist een stap terug, of rust bij pijn). 1-2 zinnen. Geen plan voor morgen (laatste dag)? Zeg kort hoe je de trip afsluit.`
+- "morgen": hoe je het plan van morgen aanpast op wat er vandaag gebeurde (sneller door, of juist een stap terug, of rust bij pijn). 1-2 zinnen. Geen plan voor morgen (laatste dag)? Zeg kort hoe je de trip afsluit.
+- "morgenDag" (alleen als er een plan voor morgen is): het plan van morgen zoals het nu moet worden, met titel, focus, 2-3 oefeningen en een trick. Verander alleen wat vandaag daar reden voor geeft; klopte het al, geef het dan (bijna) hetzelfde terug. Bij pijn of een blessure: een rustige dag.`
