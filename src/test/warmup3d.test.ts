@@ -1,8 +1,8 @@
-// Warming-up in 3D: elke oefening heeft een beweging, de rider blijft op zijn plek op vlakke sneeuw,
+// Warming-up en cooling-down in 3D: elke oefening heeft een beweging, de rider blijft op zijn plek op vlakke sneeuw,
 // het board gaat nooit door de sneeuw, en elke oefening doet ook echt wat erop staat.
 import { describe, expect, it } from 'vitest'
 import { Vector3 } from 'three'
-import { WARMUP } from '../content/warmup'
+import { ALL_EXERCISES as WARMUP } from '../content/warmup'
 import { WARMUP_3D } from '../anim3d/warmup'
 import { Track } from '../anim3d/interp'
 import { solve } from '../anim3d/solve'
@@ -65,6 +65,16 @@ describe('warming-up 3D', () => {
     expect(hops.filter((on, i) => on && !hops[i - 1]).length).toBe(3)
     expect(range('hops', 'y')[1]).toBeLessThan(0.2)
     expect(range('ollie', 'y')[1]).toBeGreaterThan(0.2)
+    // cooling-down: echt diep zitten, ver draaien, en de armen gaan omhoog en naar de sneeuw
+    expect(range('hurk', 'crouch')[1]).toBeGreaterThan(0.95)
+    const rug = range('rug', 'twist')
+    expect(rug[0]).toBeLessThan(-40)
+    expect(rug[1]).toBeGreaterThan(40)
+    expect(new Set(WARMUP_3D.rekken().keys.map((k) => k.arms))).toContain('omhoog')
+    expect(new Set(WARMUP_3D.hamstrings().keys.map((k) => k.arms))).toContain('sneeuw')
+    const kuit = range('kuiten', 'lean')
+    expect(kuit[0]).toBeLessThan(-0.9)
+    expect(kuit[1]).toBeGreaterThan(0.9)
     const p = range('press', 'pitch')
     expect(p[0]).toBeLessThan(-8)
     expect(p[1]).toBeGreaterThan(8)

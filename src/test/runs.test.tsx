@@ -213,6 +213,13 @@ describe('run-teller in de app', () => {
     await waitFor(async () => expect(await db.records.get(s.id)).toMatchObject({ runs: 1, topSpeed: 57, vert: 380 }))
   })
 
+  it('na je runs: een rij naar de cooling-down', async () => {
+    await startRun(clock - 10 * MIN)
+    await stopRun(clock - 4 * MIN)
+    at('/runs', <Runs />)
+    expect((await screen.findByRole('link', { name: /Cooling-down/ })).getAttribute('href')).toBe('/cooling-down')
+  })
+
   it('je dag laat topsnelheid en hoogtemeters zien als ze er zijn', async () => {
     const s = await create('session', { ...EMPTY_DRAFT, date: '2027-01-10', runs: 14, topSpeed: 61, vert: 2100 })
     at(`/log/${s.id}`, <LogDetail />, '/log/:id')

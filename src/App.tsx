@@ -177,6 +177,7 @@ export default function App() {
               <Route path="/runs" element={<Runs />} />
               <Route path="/nood" element={<Emergency />} />
               <Route path="/warming-up" element={<Warmup />} />
+              <Route path="/cooling-down" element={<Warmup cool />} />
               <Route path="/stickerboek" element={<StickerBook />} />
               <Route path="/programmas" element={<Programs />} />
               <Route path="/programmas/:id" element={<Programs />} />

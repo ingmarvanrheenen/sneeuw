@@ -1,20 +1,25 @@
-// Warming-up voor de eerste lift: 5 minuten, de rider doet elke oefening voor, met een klok en een piepje
-// bij de wissel. Scherm blijft aan waar dat kan. Werkt offline.
+// Warming-up voor de eerste lift (3, 5 of 10 minuten) en cooling-down na je laatste run: de rider doet elke
+// oefening voor, met een klok en een piepje bij de wissel. Scherm blijft aan waar dat kan. Werkt offline.
 import { lazy, Suspense, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Button, List, Page, PageHeader, cx } from '../components/ui'
+import { Button, List, Page, PageHeader, Segmented, cx } from '../components/ui'
 import { Segments, Stamp } from '../components/Poster'
 import { TrickAnimation } from '../anim/TrickAnimation'
 import { Icon } from '../design/icons'
-import { WARMUP, WARMUP_SECS } from '../content/warmup'
+import { ROUTINES, WARMUP_CHOICES, routineSecs, type RoutineId } from '../content/warmup'
 import { elapsed, fmtSecs, keepAwake, pause, position, resume, skip, startClock, type WarmupClock } from '../lib/warmup'
 import { sfx } from '../lib/sounds'
 import { WARMUP_3D } from '../anim3d/warmup'
 
 const Loop3D = lazy(() => import('../anim3d/Loop3D'))
 
-export default function Warmup() {
+export default function Warmup({ cool = false }: { cool?: boolean }) {
   const nav = useNavigate()
+  const [choice, setChoice] = useState<RoutineId>('normaal')
+  const routine = ROUTINES[cool ? 'cooldown' : choice]
+  const WARMUP = routine.exercises
+  const minutes = Math.round(routineSecs(routine) / 60)
+  const title = cool ? 'Cooling-down' : 'Warming-up'
   const [clock, setClock] = useState<WarmupClock | null>(null)
   const [now, setNow] = useState(Date.now())
   const last = useRef({ index: -1, sec: -1 })
@@ -60,10 +65,25 @@ export default function Warmup() {
   if (!clock || !p)
     return (
       <Page>
-        <PageHeader title="Warming-up" subtitle={`${Math.round(WARMUP_SECS / 60)} minuten, met je board aan`} back />
+        <PageHeader
+          title={title}
+          subtitle={cool ? `${minutes} minuten rekken na je laatste run` : `${minutes} minuten, met je board aan`}
+          back
+        />
         <p className="text-[15px] text-muted">
-          Voor de eerste lift, of boven voor je eerste run. Koude spieren scheuren sneller; vijf minuten is genoeg.
+          {cool
+            ? 'Na je laatste run, met je board nog aan of ernaast. Rustig rekken scheelt stijve benen morgen; houd elke houding vast en ga niet veren.'
+            : 'Voor de eerste lift, of boven voor je eerste run. Koude spieren scheuren sneller; een paar minuten is genoeg.'}
         </p>
+        {!cool && (
+          <div className="mt-4">
+            <Segmented
+              value={choice}
+              onChange={setChoice}
+              options={WARMUP_CHOICES.map((id) => ({ value: id, label: ROUTINES[id].label }))}
+            />
+          </div>
+        )}
         <List className="mt-4">
           {WARMUP.map((e) => (
             <div key={e.id} className="flex items-center gap-3 px-4 py-3">
@@ -71,7 +91,7 @@ export default function Warmup() {
                 <span className="block text-[15px] font-semibold">{e.name}</span>
                 <span className="block truncate text-[13px] text-muted">{e.how}</span>
               </span>
-              <span className="num shrink-0 text-[15px] text-muted">{e.secs} s</span>
+              <span className="num shrink-0 text-[15px] text-muted">{e.secs >= 60 ? fmtSecs(e.secs * 1000) : `${e.secs} s`}</span>
             </div>
           ))}
         </List>
@@ -94,17 +114,23 @@ export default function Warmup() {
   if (p.done)
     return (
       <Page>
-        <PageHeader title="Warming-up" back />
+        <PageHeader title={title} back />
         <div role="group" aria-label="Klaar" className="relative mt-4 overflow-hidden rounded-[6px] bg-block p-6 text-block-ink">
-          <div className="text-[12px] font-extrabold uppercase tracking-[0.1em]">Vijf minuten</div>
-          <div className="display rise mt-1 text-[56px] uppercase leading-[0.9]">Warm</div>
+          <div className="text-[12px] font-extrabold uppercase tracking-[0.1em]">{minutes} minuten</div>
+          <div className="display rise mt-1 text-[56px] uppercase leading-[0.9]">{cool ? 'Uitgerekt' : 'Warm'}</div>
           <Stamp className="absolute right-4 top-4" tilt={8}>
-            Klaar voor de lift
+            {cool ? 'Goed gereden' : 'Klaar voor de lift'}
           </Stamp>
         </div>
-        <Button size="lg" className="mt-5 w-full" icon={<Icon name="lift" size={20} />} onClick={() => nav('/runs')}>
-          Naar de run-teller
-        </Button>
+        {cool ? (
+          <Button size="lg" className="mt-5 w-full" icon={<Icon name="log" size={20} />} onClick={() => nav('/log/nieuw')}>
+            Log je dag
+          </Button>
+        ) : (
+          <Button size="lg" className="mt-5 w-full" icon={<Icon name="lift" size={20} />} onClick={() => nav('/runs')}>
+            Naar de run-teller
+          </Button>
+        )}
         <Button variant="ghost" className="mt-2 w-full" onClick={() => setClock(null)}>
           Nog een keer
         </Button>
@@ -117,7 +143,7 @@ export default function Warmup() {
   const paused = clock.pausedAt !== null
   return (
     <Page>
-      <PageHeader title="Warming-up" subtitle={`${p.index + 1} van ${WARMUP.length}`} back />
+      <PageHeader title={title} subtitle={`${p.index + 1} van ${WARMUP.length}`} back />
       <Segments value={p.total} count={WARMUP.length * 3} className="mb-3 text-text" />
       {flat ? (
         <div key={e.id} className="rise">
