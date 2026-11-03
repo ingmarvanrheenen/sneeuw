@@ -1,9 +1,9 @@
-// Mascotte-ontwerper: je eigen Episch-sticker. Kleuren, goggles, wat er op je hoofd zit en je lach.
+// Mascotte-ontwerper: je eigen Episch-sticker. Kleuren, goggles, wat er op je hoofd zit, je lach en een extraatje.
 import type { CSSProperties } from 'react'
 import { Button, Chip, Sheet, cx } from './ui'
 import { MascotSticker } from '../design/Mascot'
 import { Icon } from '../design/icons'
-import { checkMascot, FACES, GOGGLES, HEADS, MOUTHS, randomMascot, STARS, type Mascot } from '../lib/mascot'
+import { checkMascot, EXTRAS, FACES, GOGGLES, HEADS, MOUTHS, randomMascot, STARS, type Mascot } from '../lib/mascot'
 
 function Swatches({
   label,
@@ -85,7 +85,7 @@ export function MascotDesigner({
       <div className="grid place-items-center rounded-[6px] bg-block py-5">
         {/* key: bij elke wijziging klapt hij opnieuw op de pas */}
         <span key={JSON.stringify(m)} className="slap block" style={{ '--tilt': '-6deg', '--delay': '0ms' } as CSSProperties}>
-          <MascotSticker mascot={m} size={150} label="Je mascotte" />
+          <MascotSticker mascot={m} size={150} label="Je mascotte" alive />
         </span>
       </div>
       <p className="mb-4 mt-2 text-center text-[13px] text-muted">
@@ -108,6 +108,7 @@ export function MascotDesigner({
         />
         <Chips label="Op je hoofd" options={HEADS} value={m.hoofd} onPick={(hoofd) => set({ hoofd: hoofd as Mascot['hoofd'] })} />
         <Chips label="Lach" options={MOUTHS} value={m.mond} onPick={(mond) => set({ mond: mond as Mascot['mond'] })} />
+        <Chips label="Extra" options={EXTRAS} value={m.extra} onPick={(extra) => set({ extra: extra as Mascot['extra'] })} />
       </div>
 
       <div className="mb-6 mt-6 flex gap-2">

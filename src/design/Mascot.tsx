@@ -1,4 +1,5 @@
-// De mascotte als sticker: ster, gezicht, goggles, hoofddeksel en lach, in het 64-grid van de stickers.
+// De mascotte als sticker: ster, gezicht, goggles, hoofddeksel, lach en extraatje, in het 64-grid van de stickers.
+import { useState } from 'react'
 import { checkMascot, FACES, GOGGLES, hexOf, STARS, type Mascot } from '../lib/mascot'
 
 const INK = '#0d0d0f'
@@ -31,7 +32,29 @@ export function mascotInner(raw: Partial<Mascot> | undefined): string {
     pet: `<path d="M10 24c0-18 44-18 44 0z" fill="${INK}"/><path d="M40 22h18c0 3-3 6-7 6H38z" fill="${INK}"/><circle cx="32" cy="9" r="2" fill="${star}" stroke="none"/>`,
     // zilveren helm met een glimlijn, goggles erop
     helm: `<path d="M8 30c0-25 48-25 48 0z" fill="#b9bec8"/><path d="M15 17c4-5 10-8 16-8" stroke="${WHITE}" stroke-width="2.4"/>${goggles}`,
+    // capuchon: hoort om het gezicht (zie onder), hier alleen de goggles erop
+    capuchon: goggles,
   }[m.hoofd]
+  // capuchon in de sterkleur, achter het gezicht zodat er een rand omheen staat, met koordjes
+  const hood =
+    m.hoofd === 'capuchon'
+      ? `<path d="M5 42c0-34 54-34 54 0v6c0 5-3 8-8 8H13c-5 0-8-3-8-8z" fill="${star}"/>` +
+        `<path d="M25 56v5M39 56v5" stroke="${WHITE}" stroke-width="2.2"/><circle cx="25" cy="61.5" r="1.6" fill="${WHITE}" stroke="none"/><circle cx="39" cy="61.5" r="1.6" fill="${WHITE}" stroke="none"/>`
+      : ''
+  const extra = {
+    geen: '',
+    // sjaal om de nek, oranje met lime strepen, een slip naar rechts
+    sjaal:
+      `<path d="M11 49c11 7 31 7 42 0l2 7c-13 8-33 8-46 0z" fill="${HOT}"/>` +
+      `<path d="M40 55l5 8h6l-4-9z" fill="${HOT}"/><path d="M19 53l-1 5M27 55v5M36 55l1 5M46 58h4" stroke="#d7ff3c" stroke-width="2"/>`,
+    // het handje dat je board vasthoudt (het board zelf staat achter je gezicht, zie onder)
+    board: `<circle cx="53" cy="47" r="4.6" fill="${face}"/>`,
+  }[m.extra]
+  // board schuin achter je, steekt rechts boven en onder uit
+  const board =
+    m.extra === 'board'
+      ? `<g transform="rotate(24 50 34)"><rect x="45" y="2" width="11" height="60" rx="5.5" fill="${INK}" stroke="${WHITE}" stroke-width="2"/><path d="M50.5 9v46" stroke="#d7ff3c" stroke-width="2.2"/></g>`
+      : ''
   const mouth = {
     lach: `<path d="M20 40h24c0 8-5 12-12 12s-12-4-12-12z" fill="${INK}"/><path d="M26 47c3-2 9-2 12 0" stroke="${HOT}" stroke-width="3"/>`,
     grijns: `<path d="M23 45c5 3 13 2 18-3"/>`,
@@ -40,10 +63,13 @@ export function mascotInner(raw: Partial<Mascot> | undefined): string {
   return (
     `<g stroke="${WHITE}" stroke-width="5" stroke-linejoin="round">${burst(31, 24, WHITE)}</g>` +
     burst(30, 23, star) +
+    board +
+    hood +
     `<circle cx="32" cy="34" r="23" fill="${face}"/>` +
     head +
     '<path d="M20 33c1.5-2.5 5-2.5 6.5 0M37.5 33c1.5-2.5 5-2.5 6.5 0"/>' +
-    mouth
+    mouth +
+    extra
   )
 }
 
@@ -60,13 +86,17 @@ export function MascotSticker({
   size = 64,
   label,
   className,
+  alive = false,
 }: {
   mascot?: Partial<Mascot>
   size?: number
   label?: string
   className?: string
+  /** deint rustig en wiebelt als je erop tikt */
+  alive?: boolean
 }) {
-  return (
+  const [wiggle, setWiggle] = useState(0)
+  const svg = (
     <svg
       viewBox="0 0 64 64"
       width={size}
@@ -84,5 +114,21 @@ export function MascotSticker({
       // eigen tekening uit vaste ids (checkMascot), geen invoer van buiten
       dangerouslySetInnerHTML={{ __html: mascotInner(mascot) }}
     />
+  )
+  if (!alive) return svg
+  return (
+    <span className="mascot-bob inline-block">
+      <span
+        key={wiggle}
+        role="button"
+        tabIndex={0}
+        aria-label={label ? `${label}, tik om te wiebelen` : 'Tik om te wiebelen'}
+        className={wiggle > 0 ? 'mascot-wiggle inline-block cursor-pointer' : 'inline-block cursor-pointer'}
+        onClick={() => setWiggle((n) => n + 1)}
+        onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && setWiggle((n) => n + 1)}
+      >
+        {svg}
+      </span>
+    </span>
   )
 }

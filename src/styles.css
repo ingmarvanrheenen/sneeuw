@@ -414,6 +414,40 @@ body::after {
   animation-delay: var(--delay, 120ms);
 }
 
+/* mascotte die meebeweegt: rustig deinen, en wiebelen als je erop tikt */
+@keyframes mascot-bob {
+  0%,
+  100% {
+    transform: translateY(0) rotate(-2deg);
+  }
+  50% {
+    transform: translateY(-4%) rotate(2deg);
+  }
+}
+@keyframes mascot-wiggle {
+  0% {
+    transform: rotate(0) scale(1);
+  }
+  20% {
+    transform: rotate(-14deg) scale(1.08);
+  }
+  45% {
+    transform: rotate(11deg) scale(1.04);
+  }
+  70% {
+    transform: rotate(-6deg) scale(1.02);
+  }
+  100% {
+    transform: rotate(0) scale(1);
+  }
+}
+.mascot-bob {
+  animation: mascot-bob 2.8s ease-in-out infinite;
+}
+.mascot-wiggle {
+  animation: mascot-wiggle 0.6s cubic-bezier(0.3, 1.6, 0.5, 1);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .pop-in,
   .sheet-in,
@@ -428,7 +462,9 @@ body::after {
   .shadow-hard:active:not(:disabled) {
     transform: none;
   }
-  .cue-ring {
+  .cue-ring,
+  .mascot-bob,
+  .mascot-wiggle {
     animation: none;
   }
 }

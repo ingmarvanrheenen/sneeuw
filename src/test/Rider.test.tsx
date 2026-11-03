@@ -223,11 +223,19 @@ describe('je eigen skipas', () => {
     await user.click(within(sheet).getByRole('button', { name: 'Muts' }))
     await user.click(within(sheet).getByRole('button', { name: 'Tong' }))
     await user.click(within(within(sheet).getByRole('group', { name: 'Goggles' })).getByRole('button', { name: 'Spiegel' }))
+    await user.click(within(sheet).getByRole('button', { name: 'Sjaal' }))
     expect(art()).toContain('#ffa463')
     await user.click(within(sheet).getByRole('button', { name: 'Klaar' }))
     await user.click(within(screen.getByRole('dialog', { name: 'Profiel bewerken' })).getByRole('button', { name: 'Klaar' }))
     await waitFor(async () =>
-      expect((await getProfile()).mascot).toEqual({ face: 'oranje', ster: 'lime', goggles: 'spiegel', hoofd: 'muts', mond: 'tong' }),
+      expect((await getProfile()).mascot).toEqual({
+        face: 'oranje',
+        ster: 'lime',
+        goggles: 'spiegel',
+        hoofd: 'muts',
+        mond: 'tong',
+        extra: 'sjaal',
+      }),
     )
     expect(screen.getByRole('group', { name: /Skipas/ }).innerHTML).toContain('#ffa463')
   })

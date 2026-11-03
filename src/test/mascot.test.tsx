@@ -1,7 +1,7 @@
 // Mascotte aanpassen: geldige opties, Verras me, de tekening, en waar hij verschijnt (skipas, deelkaart).
 import { afterEach, describe, expect, it } from 'vitest'
-import { cleanup, render, screen, within } from '@testing-library/react'
-import { checkMascot, DEFAULT_MASCOT, FACES, GOGGLES, HEADS, MOUTHS, randomMascot, STARS } from '../lib/mascot'
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
+import { checkMascot, DEFAULT_MASCOT, EXTRAS, FACES, GOGGLES, HEADS, MOUTHS, randomMascot, STARS } from '../lib/mascot'
 import { mascotInner, mascotSvg, MascotSticker } from '../design/Mascot'
 import { stickerSvg } from '../design/Stickers'
 import { RiderAvatar, SkiPass } from '../components/RiderParts'
@@ -35,7 +35,7 @@ describe('mascotte-opties', () => {
 
   it('alle kleuren zijn hex en elke optie heeft een naam', () => {
     for (const c of [...FACES, ...STARS, ...GOGGLES]) expect(c.hex).toMatch(/^#[0-9a-f]{6}$/)
-    for (const o of [...FACES, ...STARS, ...GOGGLES, ...HEADS, ...MOUTHS]) expect(o.name.length).toBeGreaterThan(1)
+    for (const o of [...FACES, ...STARS, ...GOGGLES, ...HEADS, ...MOUTHS, ...EXTRAS]) expect(o.name.length).toBeGreaterThan(1)
   })
 })
 
@@ -55,8 +55,38 @@ describe('mascotte-tekening', () => {
       ...GOGGLES.slice(1).map((g) => ({ ...DEFAULT_MASCOT, goggles: g.id })),
       ...HEADS.slice(1).map((h) => ({ ...DEFAULT_MASCOT, hoofd: h.id })),
       ...MOUTHS.slice(1).map((m) => ({ ...DEFAULT_MASCOT, mond: m.id })),
+      ...EXTRAS.slice(1).map((x) => ({ ...DEFAULT_MASCOT, extra: x.id })),
     ]
     expect(new Set(variants.map(mascotInner)).size).toBe(variants.length)
+  })
+
+  it('nieuw: capuchon, sjaal en board vast; een oude mascotte zonder extra krijgt niks', () => {
+    expect(HEADS.map((h) => h.id)).toContain('capuchon')
+    expect(EXTRAS.map((x) => x.id)).toEqual(['geen', 'sjaal', 'board'])
+    const old = { face: 'roze', ster: 'paars', goggles: 'zwart', hoofd: 'pet', mond: 'grijns' }
+    expect(checkMascot(old)).toEqual({ ...old, extra: 'geen' })
+    expect(checkMascot({ ...old, extra: 'board' }).extra).toBe('board')
+    // de capuchon heeft de kleur van je ster en koordjes; met goggles erop
+    const hood = mascotInner({ ...DEFAULT_MASCOT, hoofd: 'capuchon', ster: 'paars' })
+    expect(hood).toContain('#8f6bff')
+    expect(hood).toContain('<rect x="18" y="14"')
+    expect(mascotInner({ ...DEFAULT_MASCOT, extra: 'sjaal' })).not.toBe(mascotInner(DEFAULT_MASCOT))
+  })
+
+  it('levend: deint, en wiebelt opnieuw bij elke tik', () => {
+    render(<MascotSticker mascot={DEFAULT_MASCOT} label="Je mascotte" alive />)
+    const tap = screen.getByRole('button', { name: 'Je mascotte, tik om te wiebelen' })
+    expect(tap.parentElement!.className).toContain('mascot-bob')
+    expect(tap.className).not.toContain('mascot-wiggle')
+    fireEvent.click(tap)
+    const after = screen.getByRole('button', { name: 'Je mascotte, tik om te wiebelen' })
+    expect(after.className).toContain('mascot-wiggle')
+    fireEvent.keyDown(after, { key: 'Enter' })
+    expect(screen.getByRole('button', { name: 'Je mascotte, tik om te wiebelen' })).not.toBe(after)
+    // zonder alive: gewoon een plaatje
+    cleanup()
+    render(<MascotSticker mascot={DEFAULT_MASCOT} label="Je mascotte" />)
+    expect(screen.queryByRole('button')).toBeNull()
   })
 
   it('rare waarden van buiten komen nooit in de svg terecht', () => {
