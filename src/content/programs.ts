@@ -237,6 +237,192 @@ export const PROGRAMS: Program[] = [
       },
     ],
   },
+  {
+    id: 'switch',
+    name: 'Switch leren',
+    blurb: 'Rijden met je andere voet voor, tot een hele blauwe switch.',
+    start: 'Je rijdt gekoppelde bochten op blauw, regular.',
+    days: [
+      {
+        title: 'Weer beginner',
+        goal: 'Glijden en remmen met je andere voet voor, op een flauw stuk.',
+        piste: 'groen',
+        tricks: ['switch', 'sideslip-heel', 'falling-leaf-heel'],
+        tasks: [
+          'Skaat een stukje met je achterste voet vast, die is nu je voorste',
+          'Sideslip switch op je hielen, rustig van boven naar beneden',
+          'Falling leaf switch, links en rechts, kijk over je nieuwe voorste schouder',
+        ],
+      },
+      {
+        title: 'Eerste switch-bochten',
+        goal: 'Bochtjes switch op één edge, dan een hele bocht.',
+        piste: 'groen',
+        tricks: ['switch', 'garlands', 'j-turn'],
+        tasks: [
+          'Garlands switch op je heelside, dan op je toeside',
+          'J-turn switch tot stilstand, naar allebei de kanten',
+          'Tel hardop bij elke edgewissel, dat houdt je rustig',
+        ],
+      },
+      {
+        title: 'Koppelen',
+        goal: 'Bocht na bocht switch op groen, zonder te stoppen.',
+        piste: 'groen',
+        tricks: ['switch', 'gekoppelde-bochten'],
+        tasks: [
+          'Drie bochten switch achter elkaar, dan stoppen en ademen',
+          'Wissel per run: een run regular, een run switch',
+          'Laag in je knieën, gewicht op je nieuwe voorvoet',
+        ],
+      },
+      {
+        title: 'Switch op blauw',
+        goal: 'Een hele blauwe afdaling switch, op jouw tempo.',
+        piste: 'blauw',
+        tricks: ['switch', 'gekoppelde-bochten', 'revert'],
+        tasks: [
+          'Begin op het flauwste stuk en maak brede, ronde bochten',
+          'Hele blauwe afdaling switch, stoppen mag',
+          'Bonus: draai halverwege een revert en rij regular verder',
+        ],
+      },
+    ],
+  },
+  {
+    id: 'butters',
+    name: 'Butters',
+    blurb: 'Spelen op de vlakte: van een nose press tot een butter 360.',
+    start: 'Je rijdt rustig op blauw en kunt een ollie.',
+    days: [
+      {
+        title: 'Press',
+        goal: 'Je neus en je tail van de sneeuw tillen en vasthouden.',
+        piste: 'groen',
+        tricks: ['nose-press', 'tail-press'],
+        tasks: [
+          'Op de plek: druk je neus omhoog, houd hem drie tellen vast',
+          'Rijdend een tail press op een vlak stuk, armen uit voor je balans',
+          'Hetzelfde met je neus, gewicht boven je voorste been',
+        ],
+      },
+      {
+        title: 'Draaien op je neus',
+        goal: 'Een nose butter: draaien op je neus terwijl je tail van de sneeuw komt.',
+        piste: 'groen',
+        tricks: ['nose-butter', 'nose-press'],
+        tasks: [
+          'Nose press en zwaai je tail een kwartslag rond',
+          'Kijk waar je heen draait, je schouders gaan voor',
+          'Vijf keer, eerst stilstaand, dan langzaam rijdend',
+        ],
+      },
+      {
+        title: 'Draaien op je tail',
+        goal: 'Een tail butter, en terug naar rijden.',
+        piste: 'groen',
+        tricks: ['tail-butter', 'revert'],
+        tasks: [
+          'Tail press en draai je neus rond',
+          'Eindig switch of draai een revert terug',
+          'Wissel af: nose butter, tail butter, nose butter',
+        ],
+      },
+      {
+        title: 'Rond',
+        goal: 'Een butter 360 op een vlak stuk blauw.',
+        piste: 'blauw',
+        tricks: ['butter-360', 'nose-butter', 'tail-butter'],
+        tasks: [
+          'Wind je bovenlijf op voor je de butter inzet',
+          'Eerst een halve, dan steeds verder rond',
+          'Laat iemand filmen en zet je beste in de kluis',
+        ],
+      },
+    ],
+  },
+  {
+    id: 'eerste-poeder',
+    name: 'Eerste keer poeder',
+    blurb: 'Drijven in de verse sneeuw, naast de piste en veilig.',
+    start: 'Je rijdt dynamische bochten op rood. Er ligt verse sneeuw.',
+    days: [
+      {
+        title: 'Naast de piste',
+        goal: 'Voelen hoe je board drijft in de verse sneeuw langs de rand van de piste.',
+        piste: 'blauw',
+        tricks: ['poeder', 'offpiste-veilig'],
+        tasks: [
+          'Lees eerst het lawinebericht en blijf vandaag binnen de paaltjes',
+          'Rij de verse rand van de piste, gewicht iets naar achteren',
+          'Grote, ronde bochten, niet remmen: snelheid houdt je boven',
+        ],
+      },
+      {
+        title: 'Drijven',
+        goal: 'Een paar bochten achter elkaar in de verse sneeuw.',
+        piste: 'rood',
+        tricks: ['poeder', 'dynamische-bochten'],
+        tasks: [
+          'Kies een breed stuk verse sneeuw tussen de pistes',
+          'Op en neer bewegen: omhoog bij de edgewissel, door je knieën in de bocht',
+          'Gevallen? Leg je board dwars, dan kom je makkelijker overeind',
+        ],
+      },
+      {
+        title: 'Tussen de bomen',
+        goal: 'Rustig door een open bos, met iemand bij je.',
+        piste: 'rood',
+        tricks: ['bomen', 'poeder', 'offpiste-veilig'],
+        tasks: [
+          'Nooit alleen: houd elkaar in zicht en spreek af waar je uitkomt',
+          'Kijk naar de gaten tussen de bomen, niet naar de bomen',
+          'Blijf uit de holtes rond boomstammen',
+        ],
+      },
+    ],
+  },
+  {
+    id: 'bulten',
+    name: 'Bulten',
+    blurb: 'Rustig door de bulten zonder er tegenaan te knallen.',
+    start: 'Je rijdt dynamische bochten op rood.',
+    days: [
+      {
+        title: 'Lezen',
+        goal: 'De bulten leren lezen: draaien op de top, glijden in het dal.',
+        piste: 'rood',
+        tricks: ['bulten', 'sideslip-heel'],
+        tasks: [
+          'Sideslip langs een bultenveld en kijk waar de lijnen lopen',
+          'Draai je board op de top van een bult, daar is hij het lichtst',
+          'Rem in het dal achter de bult, niet ervoor',
+        ],
+      },
+      {
+        title: 'Absorberen',
+        goal: 'Je benen als schokbrekers: knieën omhoog op de bult, uitstrekken in het dal.',
+        piste: 'rood',
+        tricks: ['bulten', 'dynamische-bochten'],
+        tasks: [
+          'Rechtuit over een paar kleine bulten, laat je knieën meeveren',
+          'Bovenlijf stil, alleen je benen bewegen',
+          'Drie bochten in de bulten, dan eruit en uitrusten',
+        ],
+      },
+      {
+        title: 'Een hele lijn',
+        goal: 'Een stuk bultenpiste in één keer, op jouw tempo.',
+        piste: 'zwart',
+        tricks: ['bulten'],
+        tasks: [
+          'Kies een lijn en kijk twee bulten vooruit',
+          'Korte bochten, snelheid onder controle, stoppen mag',
+          'Log je dag en noteer hoe ver je kwam zonder stop',
+        ],
+      },
+    ],
+  },
 ]
 
 export const PROGRAM_BY_ID = new Map(PROGRAMS.map((p) => [p.id, p]))
