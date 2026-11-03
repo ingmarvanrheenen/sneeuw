@@ -103,3 +103,56 @@ export async function fetchWeather(resorts: Resort[]): Promise<Record<string, Re
   await kvSet(CACHE, cache)
   return cache
 }
+
+// ── Weer voor de dagen van een trip (voor het tripplan van de coach) ───────────
+
+/** Zo ver vooruit heeft Open-Meteo een verwachting. */
+export const FORECAST_DAYS = 16
+
+/** De verwachting voor het resort op de gevraagde dagen (plus de dag ervoor, voor sneeuw van de nacht). */
+export async function tripForecast(resort: Resort, dates: string[]): Promise<DayForecast[]> {
+  if (resort.indoor || !dates.length) return []
+  const params = new URLSearchParams({
+    latitude: String(resort.lat),
+    longitude: String(resort.lon),
+    elevation: String(Math.round((resort.base + resort.top) / 2)),
+    daily: 'weather_code,temperature_2m_max,temperature_2m_min,snowfall_sum,wind_speed_10m_max',
+    past_days: '1',
+    forecast_days: String(FORECAST_DAYS),
+    timezone: 'Europe/Paris',
+  })
+  const res = await fetch(`https://api.open-meteo.com/v1/forecast?${params}`, { signal: AbortSignal.timeout(12000) })
+  if (!res.ok) throw new Error(`Weer ophalen mislukt (${res.status})`)
+  const w = (await res.json()) as OMResponse
+  const all: DayForecast[] = w.daily.time.map((date, d) => ({
+    date,
+    code: w.daily.weather_code[d],
+    tMax: w.daily.temperature_2m_max[d],
+    tMin: w.daily.temperature_2m_min[d],
+    snowCm: w.daily.snowfall_sum[d] ?? 0,
+    windMax: w.daily.wind_speed_10m_max[d],
+  }))
+  // sneeuw van de dag ervoor telt mee als verse sneeuw voor de eerste tripdag
+  return dates
+    .map((date) => {
+      const i = all.findIndex((x) => x.date === date)
+      if (i < 0) return null
+      const prev = i > 0 && date === dates[0] ? all[i - 1].snowCm : 0
+      return { ...all[i], snowCm: all[i].snowCm + prev }
+    })
+    .filter((x): x is DayForecast => !!x)
+}
+
+/** Eén regel voor de coach: "2027-01-16: Sneeuw, 18 cm vers, -9/-3 °C, wind tot 45 km/u". */
+export function weatherLine(d: DayForecast): string {
+  const parts = [wmoLabel(d.code)]
+  if (d.snowCm >= 1) parts.push(`${Math.round(d.snowCm)} cm vers`)
+  parts.push(`${Math.round(d.tMin)}/${Math.round(d.tMax)} °C`)
+  parts.push(`wind tot ${Math.round(d.windMax)} km/u`)
+  return `${d.date}: ${parts.join(', ')}`
+}
+
+/** Kort voor in het plan: "18 cm vers · -3°", of "Zon · 2°". */
+export function weatherShort(d: DayForecast): string {
+  return d.snowCm >= 5 ? `${Math.round(d.snowCm)} cm vers · ${Math.round(d.tMax)}°` : `${wmoLabel(d.code)} · ${Math.round(d.tMax)}°`
+}

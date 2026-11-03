@@ -9,6 +9,7 @@ import { PISTES, SNOW, WEATHER } from '../content/logOptions'
 import { MOOD_LABELS } from '../design/icons'
 import type { DayReview, Session, Trip, TripPlan } from './types'
 import { RESORTS } from '../content/resorts'
+import { tripForecast, weatherLine, weatherShort, type DayForecast } from './weather'
 import { sessionsSorted } from './repo'
 import { todayISO, uid } from './ids'
 import {
@@ -388,13 +389,26 @@ export function tripDates(t: Pick<Trip, 'startDate' | 'endDate'>): string[] {
 }
 
 /** De trip in een paar regels voor de coach. */
-export function tripText(t: Trip): string {
+export function tripText(t: Trip, weather: DayForecast[] = [], dates: string[] = []): string {
   const resort = RESORTS.find((r) => r.id === t.resortId)
+  const known = new Set(weather.map((w) => w.date))
+  const unknown = dates.filter((d) => !known.has(d))
   return [
     `Trip: ${t.name}`,
     `Waar: ${t.resortName || resort?.name || 'onbekend'}${resort ? ` (${resort.region}, ${resort.base}-${resort.top} m, beginners ${resort.beginner}/5, ${resort.park ? 'met park' : 'geen park'}${resort.indoor ? ', indoor' : ''})` : ''}`,
     `Van ${t.startDate} tot ${t.endDate ?? t.startDate}`,
-  ].join('\n')
+    weather.length ? `Weer (verwachting Open-Meteo, op middelhoogte):\n${weather.map((w) => `- ${weatherLine(w)}`).join('\n')}` : '',
+    weather.length && unknown.length ? `Nog geen verwachting voor: ${unknown.join(', ')}` : '',
+  ]
+    .filter(Boolean)
+    .join('\n')
+}
+
+/** Het weer voor de dagen van de trip, als het resort buiten is en de trip binnen twee weken valt. Mislukt: leeg. */
+export async function tripWeather(t: Trip, dates: string[]): Promise<DayForecast[]> {
+  const resort = RESORTS.find((r) => r.id === t.resortId)
+  if (!resort || resort.indoor || !navigator.onLine) return []
+  return tripForecast(resort, dates).catch(() => [])
 }
 
 /** Het plan van vandaag op een trip, als die er is. */
@@ -417,13 +431,14 @@ async function planFor(s: Session): Promise<string | null> {
 export async function askTripPlan(t: Trip, wish = ''): Promise<TripPlan> {
   const dates = tripDates(t)
   if (!dates.length) throw new CoachError('Zet eerst de data van je trip.')
-  const [context, input] = await Promise.all([buildContext(), loadProgressInput()])
+  const [context, input, weather] = await Promise.all([buildContext(), loadProgressInput(), tripWeather(t, dates)])
   const done = new Set(input.tricks.filter((x) => x.status === 'beheerst').map((x) => x.trickId))
   const trickIds = TRICKS.map((x) => x.id).filter((id) => !done.has(id))
+  const byDate = new Map(weather.map((w) => [w.date, w]))
   const res = await coachRequest({
     mode: 'tripplan',
     context,
-    trip: tripText(t),
+    trip: tripText(t, weather, dates),
     days: dates.length,
     wish: wish.trim().slice(0, 300),
     trickIds,
@@ -438,8 +453,10 @@ export async function askTripPlan(t: Trip, wish = ''): Promise<TripPlan> {
       focus: d.focus,
       oefeningen: d.oefeningen,
       trickId: d.trickId && TRICK_BY_ID.has(d.trickId) ? d.trickId : null,
+      ...(byDate.get(dates[i]) ? { weer: weatherShort(byDate.get(dates[i])!), weerCode: byDate.get(dates[i])!.code } : {}),
     })),
     ...(wish.trim() ? { wish: wish.trim().slice(0, 300) } : {}),
+    weatherDays: weather.length,
     createdAt: Date.now(),
   }
   await update(t, { coachPlan: plan })
