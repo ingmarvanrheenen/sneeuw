@@ -127,13 +127,14 @@ describe('run-pagina', () => {
     await user.click(screen.getByRole('button', { name: 'Start run 1' }))
     expect(await within(now).findByText('Run 1')).toBeTruthy()
     clock += 4 * MIN + 7000
-    await user.click(screen.getByRole('button', { name: 'Beneden' }))
+    await user.click(await screen.findByRole('button', { name: 'Beneden' }))
     expect(await within(now).findByText('In de lift')).toBeTruthy()
     expect(within(now).getByText('1 run erin')).toBeTruthy()
     clock += 9 * MIN
     await user.click(screen.getByRole('button', { name: 'Start run 2' }))
     clock += 3 * MIN
-    await user.click(screen.getByRole('button', { name: 'Beneden' }))
+    // starten slaat async op: wachten tot de knop Beneden is
+    await user.click(await screen.findByRole('button', { name: 'Beneden' }))
     await waitFor(() => expect(screen.getByText('Langste run 4:07 · gemiddeld 3:33', { exact: false })).toBeTruthy())
     expect(screen.getByText('9 min')).toBeTruthy() // in de lift
     const rows = within(screen.getByRole('heading', { name: 'Runs' }).closest('section')!).getAllByText(/^\d+:\d{2}$/)

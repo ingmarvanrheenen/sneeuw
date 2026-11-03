@@ -4,10 +4,13 @@
 import { kvGet, kvSet } from './db'
 import { createStore } from './store'
 import { todayISO } from './ids'
+import type { RunGps } from './runGps'
 
 export interface Run {
   start: number
   end?: number
+  /** topsnelheid, hoogtemeters en afstand, als GPS aan stond */
+  gps?: RunGps
 }
 
 export interface RunDay {
@@ -67,7 +70,8 @@ export async function undoRun(date = todayISO()) {
   const day = await kvGet<RunDay>(key(date), empty(date))
   const last = day.runs.at(-1)
   if (!last) return day
-  const runs = last.end !== undefined ? [...day.runs.slice(0, -1), { start: last.start }] : day.runs.slice(0, -1)
+  const reopened: Run = { start: last.start, ...(last.gps ? { gps: last.gps } : {}) }
+  const runs = last.end !== undefined ? [...day.runs.slice(0, -1), reopened] : day.runs.slice(0, -1)
   return save({ date, runs })
 }
 
@@ -76,6 +80,27 @@ export async function dropRun(date = todayISO()) {
   const day = await kvGet<RunDay>(key(date), empty(date))
   if (day.runs.at(-1)?.end !== undefined) return day
   return save({ date, runs: day.runs.slice(0, -1) })
+}
+
+/** GPS-teller van een run bijwerken (op zijn starttijd; weg of vervangen = niets doen). */
+export async function setRunGps(start: number, gps: RunGps, date = todayISO()) {
+  const day = await kvGet<RunDay>(key(date), empty(date))
+  const i = day.runs.findIndex((r) => r.start === start)
+  if (i < 0) return day
+  return save({ date, runs: day.runs.map((r, j) => (j === i ? { ...r, gps } : r)) })
+}
+
+const GPS_KEY = 'run-gps'
+/** GPS aan of uit (standaard uit): een voorkeur op dit toestel. */
+export const gpsPref = createStore<boolean>(false)
+export async function loadGpsPref() {
+  const on = await kvGet<boolean>(GPS_KEY, false)
+  gpsPref.set(on)
+  return on
+}
+export async function setGpsPref(on: boolean) {
+  await kvSet(GPS_KEY, on)
+  gpsPref.set(on)
 }
 
 export async function resetRunDay(date = todayISO()) {
