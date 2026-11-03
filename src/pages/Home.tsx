@@ -18,6 +18,7 @@ import { LiftQuestion } from '../components/LiftQuestion'
 import { DailyChallenge } from '../components/DailyChallenge'
 import { DailyDrill } from '../components/DailyDrill'
 import { sessionsSorted, useKind } from '../lib/repo'
+import { dueNow, dueText } from '../lib/maintenance'
 import { getProfile } from '../lib/auth'
 import { TRICKS, TRICK_BY_ID } from '../content/tricks'
 import { isIOS, isStandalone } from '../lib/pwa'
@@ -111,6 +112,8 @@ export default function Home() {
   useEffect(() => void loadPrograms(), [])
   const program = programs.active ? programById(programs, programs.active) : undefined
   const programDay = program ? nextDay(program, programs.runs[program.id]) : null
+  const gear = useKind('gear')
+  const care = dueNow(gear ?? [], sessions ?? [])[0]
   const coachTrip = (trips ?? []).find((t) => planDay(t, today))
   const coachToday = coachTrip ? planDay(coachTrip, today) : null
   // lopende teller: elke seconde bijwerken
@@ -250,6 +253,14 @@ export default function Home() {
           />
         ) : (
           <Row icon="list" title="Programma's" detail="Van groen naar rood in vijf dagen, en meer" to="/programmas" />
+        )}
+        {care && (
+          <Row
+            icon="board"
+            title={`${care.due.label}: ${[care.gear.brand, care.gear.name].filter(Boolean).join(' ')}`}
+            detail={dueText(care.due)}
+            to="/gear"
+          />
         )}
         <Row icon="replay" title="Trick-roulette" detail="Weet je niet wat je moet oefenen?" to="/tricks?roulette=1" />
         <Row icon="chat" title="Coach Daddy" detail="Vraag om tips of een oefenplan" to="/coach" />

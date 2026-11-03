@@ -131,6 +131,8 @@ export interface Gear extends BaseRecord {
   size?: string
   owned: 'eigen' | 'huur' | 'wishlist'
   notes?: string
+  /** laatste keer onderhoud (datum), zie src/lib/maintenance.ts */
+  care?: { wax?: string; edges?: string }
 }
 
 export interface MediaMeta extends BaseRecord {

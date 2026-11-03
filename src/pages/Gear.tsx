@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Button, Card, Empty, Field, Page, PageHeader, Section, Segmented, Sheet, Stepper, cx, inputCls } from '../components/ui'
+import { dueFor, dueText, needsCare, TASKS } from '../lib/maintenance'
+import { todayISO } from '../lib/ids'
 import { Icon, type IconName } from '../design/icons'
 import { create, remove, update, useKind } from '../lib/repo'
 import { getProfile, saveProfile } from '../lib/auth'
@@ -29,6 +31,8 @@ function boardAdvice(heightCm: number, weightKg: number, style: 'park' | 'allrou
 
 export default function GearPage() {
   const gear = useKind('gear')
+  const sessions = useKind('session')
+  const boards = (gear ?? []).filter(needsCare)
   const [profile, setProfile] = useState<Profile | null>(null)
   const [edit, setEdit] = useState<Partial<Gear> | null>(null)
   const [h, setH] = useState(180)
@@ -178,6 +182,44 @@ export default function GearPage() {
           <p className="mt-2 text-xs text-muted">Vuistregel. Gewicht telt meer dan lengte. Schoenmaat 44+? Kijk naar een wide board.</p>
         </Card>
       </Section>
+
+      {boards.length > 0 && (
+        <Section title="Onderhoud">
+          <div className="card divide-y divide-[var(--line)] overflow-hidden">
+            {boards.flatMap((g) =>
+              dueFor(g, sessions ?? []).map((d) => {
+                const t = TASKS.find((x) => x.id === d.task)!
+                const name = [g.brand, g.name].filter(Boolean).join(' ')
+                return (
+                  <div key={g.id + d.task} className="flex items-center gap-3 px-4 py-3" aria-label={`${d.label} ${name}`} role="group">
+                    <Icon name={d.task === 'wax' ? 'snowflake' : 'bolt'} size={22} className={d.due ? 'text-hot-text' : 'text-muted'} />
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate text-[15px] font-medium">
+                        {d.label}
+                        {boards.length > 1 ? ` · ${name}` : ''}
+                      </div>
+                      <div className="text-[13px] text-muted">{dueText(d)}</div>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant={d.due ? 'primary' : 'ghost'}
+                      onClick={async () => {
+                        await update(g, { care: { ...g.care, [d.task]: todayISO() } })
+                        toast({ title: `${t.done}`, body: `Weer ${t.every} dagen vooruit.`, icon: 'check' })
+                      }}
+                    >
+                      Gedaan
+                    </Button>
+                  </div>
+                )
+              }),
+            )}
+          </div>
+          <p className="mt-2 text-xs text-muted">
+            Vuistregel: waxen na zo'n 5 dagen op de plank, edges na 15. Elke gelogde dag telt voor al je eigen boards.
+          </p>
+        </Section>
+      )}
 
       <Section
         title="Je gear"
