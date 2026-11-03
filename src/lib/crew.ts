@@ -147,6 +147,13 @@ export interface FeedPost {
   memos?: MediaMeta[]
 }
 
+/** Alle met de crew gedeelde foto's en clips (ook die niet bij een dag of trick horen), met van wie ze zijn. */
+export function crewMediaOf(items: FeedItem[]): MediaMeta[] {
+  return items
+    .filter((i) => i.kind === 'media')
+    .map((i) => ({ ...(i.data as MediaMeta), userId: (i.data as MediaMeta).userId ?? i.user_id }))
+}
+
 export function toPosts(items: FeedItem[]): FeedPost[] {
   const media = items.filter((i) => i.kind === 'media').map((i) => i.data as MediaMeta)
   const posts: FeedPost[] = []
