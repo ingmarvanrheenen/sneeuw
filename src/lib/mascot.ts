@@ -1,11 +1,13 @@
-// Je eigen mascotte: de Episch-sticker uit het app-icoon, met jouw kleuren, goggles, hoofddeksel en lach.
+// Je eigen mascotte: de Episch-sticker uit het app-icoon, met jouw kleuren, goggles, hoofddeksel, lach en een
+// extraatje (sjaal of je board).
 // Opgeslagen in je profiel als ids (synct mee, je crew ziet hem); de tekening staat in src/design/Mascot.tsx.
 
 export type FaceId = 'lime' | 'ijs' | 'roze' | 'paars' | 'wit' | 'oranje'
 export type StarId = 'oranje' | 'lime' | 'ijs' | 'roze' | 'paars'
 export type GoggleId = 'wit' | 'oranje' | 'lime' | 'spiegel' | 'zwart'
-export type HeadId = 'geen' | 'muts' | 'pet' | 'helm'
+export type HeadId = 'geen' | 'muts' | 'pet' | 'helm' | 'capuchon'
 export type MouthId = 'lach' | 'grijns' | 'tong'
+export type ExtraId = 'geen' | 'sjaal' | 'board'
 
 export interface Mascot {
   face: FaceId
@@ -13,6 +15,7 @@ export interface Mascot {
   goggles: GoggleId
   hoofd: HeadId
   mond: MouthId
+  extra: ExtraId
 }
 
 /** Artwork-kleuren (zoals de stickers): in licht en donker hetzelfde. */
@@ -43,15 +46,21 @@ export const HEADS: { id: HeadId; name: string }[] = [
   { id: 'muts', name: 'Muts' },
   { id: 'pet', name: 'Pet' },
   { id: 'helm', name: 'Helm' },
+  { id: 'capuchon', name: 'Capuchon' },
 ]
 export const MOUTHS: { id: MouthId; name: string }[] = [
   { id: 'lach', name: 'Lach' },
   { id: 'grijns', name: 'Grijns' },
   { id: 'tong', name: 'Tong' },
 ]
+export const EXTRAS: { id: ExtraId; name: string }[] = [
+  { id: 'geen', name: 'Niks' },
+  { id: 'sjaal', name: 'Sjaal' },
+  { id: 'board', name: 'Board vast' },
+]
 
 /** De mascotte van het app-icoon. */
-export const DEFAULT_MASCOT: Mascot = { face: 'lime', ster: 'oranje', goggles: 'wit', hoofd: 'geen', mond: 'lach' }
+export const DEFAULT_MASCOT: Mascot = { face: 'lime', ster: 'oranje', goggles: 'wit', hoofd: 'geen', mond: 'lach', extra: 'geen' }
 
 const one = <T extends { id: string }>(list: T[], v: unknown, fallback: T['id']): T['id'] => list.find((x) => x.id === v)?.id ?? fallback
 
@@ -64,6 +73,8 @@ export function checkMascot(raw: unknown): Mascot {
     goggles: one(GOGGLES, r.goggles, DEFAULT_MASCOT.goggles),
     hoofd: one(HEADS, r.hoofd, DEFAULT_MASCOT.hoofd),
     mond: one(MOUTHS, r.mond, DEFAULT_MASCOT.mond),
+    // nieuw veld: oudere mascottes hebben het niet, die krijgen niks
+    extra: one(EXTRAS, r.extra, DEFAULT_MASCOT.extra),
   }
 }
 
@@ -72,7 +83,14 @@ export function randomMascot(rng: () => number = Math.random): Mascot {
   const pick = <T>(xs: readonly T[]) => xs[Math.floor(rng() * xs.length)]
   const face = pick(FACES)
   const ster = pick(STARS.filter((s) => s.id !== face.id))
-  return { face: face.id, ster: ster.id, goggles: pick(GOGGLES).id, hoofd: pick(HEADS).id, mond: pick(MOUTHS).id }
+  return {
+    face: face.id,
+    ster: ster.id,
+    goggles: pick(GOGGLES).id,
+    hoofd: pick(HEADS).id,
+    mond: pick(MOUTHS).id,
+    extra: pick(EXTRAS).id,
+  }
 }
 
 export const hexOf = <T extends { id: string; hex: string }>(list: T[], id: string) => list.find((x) => x.id === id)!.hex
