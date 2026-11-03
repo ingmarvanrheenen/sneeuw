@@ -243,12 +243,18 @@ export interface RecapPerson {
   hours: number
   falls: number
   landed: string[]
+  runs: number
+  /** hoogste topsnelheid van de trip (km/u), 0 = geen GPS */
+  topSpeed: number
+  /** hoogtemeters omlaag bij elkaar */
+  vert: number
 }
 
 export interface Recap {
   days: number
   hours: number
   falls: number
+  runs: number
   /** unieke trick-ids die iemand in de crew deze trip landde */
   landed: string[]
   people: RecapPerson[]
@@ -261,10 +267,23 @@ export interface Recap {
 export function computeRecap(days: SharedDay[], names: Record<string, string>): Recap {
   const byUser = new Map<string, RecapPerson>()
   for (const { user_id, data: s } of days) {
-    const p = byUser.get(user_id) ?? { userId: user_id, name: names[user_id] ?? 'Iemand', days: 0, hours: 0, falls: 0, landed: [] }
+    const p = byUser.get(user_id) ?? {
+      userId: user_id,
+      name: names[user_id] ?? 'Iemand',
+      days: 0,
+      hours: 0,
+      falls: 0,
+      landed: [],
+      runs: 0,
+      topSpeed: 0,
+      vert: 0,
+    }
     p.days += 1
     p.hours += s.hours || 0
     p.falls += s.falls || 0
+    p.runs += s.runs || 0
+    p.topSpeed = Math.max(p.topSpeed, s.topSpeed || 0)
+    p.vert += s.vert || 0
     for (const t of s.landed ?? []) if (!p.landed.includes(t)) p.landed.push(t)
     byUser.set(user_id, p)
   }
@@ -278,12 +297,34 @@ export function computeRecap(days: SharedDay[], names: Record<string, string>): 
     days: days.length,
     hours: Math.round(people.reduce((a, p) => a + p.hours, 0) * 10) / 10,
     falls: people.reduce((a, p) => a + p.falls, 0),
+    runs: people.reduce((a, p) => a + p.runs, 0),
     landed: [...new Set(people.flatMap((p) => p.landed))],
     people,
     mostHours: people.length > 1 ? top('hours') : undefined,
     mostFalls: people.length > 1 ? top('falls') : undefined,
     mostTricks: people.length > 1 && mostTricks?.landed.length ? mostTricks : undefined,
   }
+}
+
+export type RankKey = 'runs' | 'topSpeed' | 'vert'
+
+export const RANKS: { id: RankKey; label: string; unit: (n: number) => string }[] = [
+  { id: 'runs', label: 'Runs', unit: (n) => (n === 1 ? '1 run' : `${n} runs`) },
+  { id: 'topSpeed', label: 'Topsnelheid', unit: (n) => `${n} km/u` },
+  { id: 'vert', label: 'Hoogtemeters', unit: (n) => `${n.toLocaleString('nl-NL')} m` },
+]
+
+/**
+ * Crew-ranglijst van de trip: wie het meest (of hardst) ging. Alleen wie er iets voor heeft (0 telt niet),
+ * met gedeelde plaatsen bij gelijke stand (1, 1, 3).
+ */
+export function ranking(people: RecapPerson[], key: RankKey): { person: RecapPerson; place: number; value: number }[] {
+  const rows = people
+    .filter((p) => p[key] > 0)
+    .sort((a, b) => b[key] - a[key] || a.name.localeCompare(b.name))
+    .map((person) => ({ person, value: person[key], place: 0 }))
+  rows.forEach((r, i) => (r.place = i && rows[i - 1].value === r.value ? rows[i - 1].place : i + 1))
+  return rows
 }
 
 // ── Stemronde van de crew-awards ──────────────────────────────────────────────

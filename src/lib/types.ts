@@ -30,6 +30,10 @@ export interface Session extends BaseRecord {
   falls: number
   /** afdalingen, uit de run-teller of zelf ingevuld */
   runs?: number
+  /** topsnelheid in km/u, uit de run-teller met GPS */
+  topSpeed?: number
+  /** hoogtemeters omlaag, uit de run-teller met GPS */
+  vert?: number
   mood: number // 1-5
   energy?: number // 1-5
   practiced: string[] // trick ids

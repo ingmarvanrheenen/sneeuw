@@ -2,6 +2,7 @@
 // Puur (geen netwerk) en afgeleid, zoals XP: niets wordt opgeslagen. Bij gelijkspel winnen ze samen.
 import type { IconName } from '../design/icons'
 import { TRICK_BY_ID } from '../content/tricks'
+import { plural } from './format'
 import type { SharedDay } from './crewTrips'
 
 export interface Award {
@@ -25,6 +26,8 @@ interface Rider {
   black: number
   powder: number
   pains: number
+  runs: number
+  topSpeed: number
   /** eerste dag waarop iemand een trick landde, met die trick */
   firstLanded?: { date: string; trick: string }
 }
@@ -54,6 +57,8 @@ export function crewAwards(days: SharedDay[]): Award[] {
       black: 0,
       powder: 0,
       pains: 0,
+      runs: 0,
+      topSpeed: 0,
     }
     r.days++
     r.hours += s.hours || 0
@@ -63,6 +68,8 @@ export function crewAwards(days: SharedDay[]): Award[] {
     if (s.pistes?.includes('zwart')) r.black++
     if (s.snow === 'poeder' || s.snow === 'vers') r.powder++
     r.pains += s.pains?.length ?? 0
+    r.runs += s.runs || 0
+    r.topSpeed = Math.max(r.topSpeed, s.topSpeed || 0)
     if (!r.firstLanded && s.landed?.length) r.firstLanded = { date: s.date, trick: s.landed[0] }
     by.set(user_id, r)
   }
@@ -83,7 +90,7 @@ export function crewAwards(days: SharedDay[]): Award[] {
   add(
     { id: 'tricks', title: 'Trickmachine', icon: 'bolt', blurb: 'De meeste verschillende tricks geland.' },
     leaders(riders, (r) => r.landed.size),
-    (r) => `${r.landed.size} tricks`,
+    (r) => plural(r.landed.size, 'trick', 'tricks'),
   )
   // eerste nieuwe trick: wie het vroegst in de trip iets landde
   const withFirst = riders.filter((r) => r.firstLanded)
@@ -95,6 +102,17 @@ export function crewAwards(days: SharedDay[]): Award[] {
         trick(r.firstLanded!.trick),
       )
   }
+  add(
+    // alleen tussen wie runs (of GPS) heeft: wie niet telde, verliest niet
+    { id: 'runs', title: 'Runmachine', icon: 'lift', blurb: 'De meeste afdalingen, volgens de run-teller.' },
+    leaders(riders, (r) => r.runs || null),
+    (r) => plural(r.runs, 'run', 'runs'),
+  )
+  add(
+    { id: 'snelst', title: 'Snelste van de crew', icon: 'flame', blurb: 'Hoogste topsnelheid met GPS.' },
+    leaders(riders, (r) => r.topSpeed || null),
+    (r) => `${r.topSpeed} km/u`,
+  )
   add(
     { id: 'vallen', title: 'Valkampioen', icon: 'impact', blurb: 'Wie niet valt, probeert niks. Respect.' },
     leaders(riders, (r) => r.falls),

@@ -60,6 +60,8 @@ export async function smartDraft(date = todayISO()): Promise<SessionDraft> {
   if (counted) {
     d.runs = counted.runs
     d.hours = counted.hours
+    if (counted.topSpeed !== undefined) d.topSpeed = counted.topSpeed
+    if (counted.vert !== undefined) d.vert = counted.vert
   }
   return d
 }
