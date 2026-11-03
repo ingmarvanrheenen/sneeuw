@@ -58,7 +58,7 @@ export default function Coach() {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [sheet, setSheet] = useState<'history' | 'memory' | 'check' | null>(null)
-  const [check, setCheck] = useState<{ mediaId?: string | null; trickId?: string | null }>({})
+  const [check, setCheck] = useState<{ mediaId?: string | null; trickId?: string | null; at?: number | null }>({})
   const bottom = useRef<HTMLDivElement>(null)
   const abort = useRef<AbortController | null>(null)
 
@@ -78,7 +78,8 @@ export default function Coach() {
         if (s) setInput(`Kijk naar mijn dag op ${s.date} in ${s.resortName}. Wat ging goed en waar moet ik de volgende keer op letten?`)
       }
       if (media || checkTrick) {
-        setCheck({ mediaId: media, trickId: checkTrick })
+        const at = Number(params.get('at'))
+        setCheck({ mediaId: media, trickId: checkTrick, at: Number.isFinite(at) && at > 0 ? at : null })
         setSheet('check')
       }
     })()
@@ -334,6 +335,7 @@ export default function Coach() {
         onPick={onCheck}
         mediaId={check.mediaId}
         trickId={check.trickId}
+        at={check.at}
       />
 
       <MemorySheet

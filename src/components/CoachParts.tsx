@@ -205,12 +205,15 @@ export function TechniqueSheet({
   onPick,
   mediaId,
   trickId: initialTrick,
+  at: initialAt,
 }: {
   open: boolean
   onClose: () => void
   onPick: (p: TechniquePick) => void
   mediaId?: string | null
   trickId?: string | null
+  /** moment in de video om mee te beginnen (bijv. het frame uit de tekening) */
+  at?: number | null
 }) {
   const [picked, setPicked] = useState<Picked | null>(null)
   const [trickId, setTrickId] = useState<string>(initialTrick ?? '')
@@ -334,8 +337,10 @@ export function TechniqueSheet({
                 onLoadedMetadata={(e) => {
                   const d = e.currentTarget.duration
                   setDuration(Number.isFinite(d) ? d : 0)
-                  // iOS laat pas een beeld zien na een seek
-                  e.currentTarget.currentTime = Math.min(0.05, d || 0)
+                  // iOS laat pas een beeld zien na een seek; vanuit de tekening op hetzelfde frame
+                  const start = initialAt && Number.isFinite(d) && initialAt < d ? initialAt : Math.min(0.05, d || 0)
+                  e.currentTarget.currentTime = start
+                  if (start !== Math.min(0.05, d || 0)) setAt(start)
                 }}
               />
             ) : (
