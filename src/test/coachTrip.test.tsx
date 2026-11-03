@@ -1,7 +1,7 @@
 // Coach op de trip: het plan (server-check, dagen van de trip, bewaren bij de trip), de avondterugblik met het
 // plan erbij, en het onderdeel op de trippagina en Home. Netwerk is gemockt.
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { cleanup, render, screen, waitFor } from '@testing-library/react'
+import { cleanup, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 
@@ -178,11 +178,19 @@ describe('app: plan maken en gebruiken', () => {
         <TripCoach trip={saved} editable />
       </MemoryRouter>,
     )
-    const today = screen.getByRole('button', { name: /Vandaag.*Op je edge/ })
-    expect(today.getAttribute('aria-expanded')).toBe('true')
+    // vandaag als poster, met de oefeningen eronder en een rij om je dag te loggen
+    const poster = screen.getByRole('group', { name: 'Dag 2 van 3' })
+    expect(within(poster).getByText(/vandaag/)).toBeTruthy()
+    expect(within(poster).getByRole('heading', { name: 'Op je edge' })).toBeTruthy()
     expect(screen.getByText('Heelside traverse')).toBeTruthy()
-    expect(await screen.findByText(/gelogd/)).toBeTruthy()
-    expect(screen.getByText(/Log je dag, dan krijg je vanavond de terugblik/)).toBeTruthy()
+    expect(screen.getByRole('link', { name: /Log je dag/ }).getAttribute('href')).toBe('/log/nieuw')
+    expect(screen.getByRole('link', { name: /Trick van de dag/ }).getAttribute('href')).toBe('/tricks/ollie')
+    // de andere dagen in een lijst; de gelogde dag met een vinkje
+    const first = await screen.findByRole('button', { name: /Dag 1.*gelogd/ })
+    expect(first.getAttribute('aria-expanded')).toBe('false')
+    await userEvent.setup().click(first)
+    expect(first.getAttribute('aria-expanded')).toBe('true')
+    expect(screen.getByRole('link', { name: 'Terugblik van die dag' })).toBeTruthy()
     cleanup()
 
     render(
@@ -235,6 +243,42 @@ describe('app: plan maken en gebruiken', () => {
     // de trip loopt vandaag (2027-01-17): er is nu een verwachting
     expect(screen.getByText(/Gemaakt zonder weerbericht. Er is nu een verwachting/)).toBeTruthy()
     expect(screen.getByRole('button', { name: 'Nieuw plan met het weer van nu' })).toBeTruthy()
+  })
+
+  it('voor de trip: dag 1 op de poster met "over N dagen"; na de trip: klaar', () => {
+    const plan: TripPlan = {
+      intro: 'Lijn',
+      days: ['2027-01-20', '2027-01-21'].map((date, i) => ({
+        date,
+        titel: `Dag ${i + 1}`,
+        focus: 'F',
+        oefeningen: ['O'],
+        trickId: null,
+        weer: 'Zon · 2°',
+        weerCode: 0,
+      })),
+      weatherDays: 2,
+      createdAt: 1,
+    }
+    const base = { id: 't', kind: 'trip', name: 'x', packing: [], startDate: '2027-01-20', endDate: '2027-01-21' } as unknown as Trip
+    const r = render(
+      <MemoryRouter>
+        <TripCoach trip={{ ...base, coachPlan: plan }} editable={false} />
+      </MemoryRouter>,
+    )
+    const poster = screen.getByRole('group', { name: 'Dag 1 van 2' })
+    expect(within(poster).getByText(/over 3 dagen/)).toBeTruthy()
+    expect(within(poster).getByText('Zon 2°')).toBeTruthy()
+    r.unmount()
+    render(
+      <MemoryRouter>
+        <TripCoach
+          trip={{ ...base, coachPlan: { ...plan, days: plan.days.map((d, i) => ({ ...d, date: `2027-01-1${i}` })) } }}
+          editable={false}
+        />
+      </MemoryRouter>,
+    )
+    expect(within(screen.getByRole('group', { name: 'Trip klaar' })).getByText('0 van de 2 dagen gelogd.')).toBeTruthy()
   })
 
   it('crew-trip van een ander: alleen lezen, zonder plan niks', () => {
