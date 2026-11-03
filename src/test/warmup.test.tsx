@@ -1,11 +1,12 @@
-// Warming-up: de routine (5 minuten, geldige animaties), de klok (pauze, overslaan) en de pagina.
+// Warming-up en cooling-down: de routines (3, 5, 10 minuten en rekken, geldige animaties), de klok (pauze,
+// overslaan) en de pagina's.
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 
 import Warmup from '../pages/Warmup'
-import { WARMUP, WARMUP_SECS } from '../content/warmup'
+import { ALL_EXERCISES, ROUTINES, WARMUP, WARMUP_CHOICES, WARMUP_SECS, routineSecs } from '../content/warmup'
 import { validateAnim } from '../anim/engine'
 import { elapsed, fmtSecs, pause, position, resume, skip, startClock } from '../lib/warmup'
 
@@ -21,8 +22,25 @@ describe('routine', () => {
     }
   })
 
+  it('3, 5 en 10 minuten, en een cooling-down van 5 minuten met andere oefeningen', () => {
+    expect(WARMUP_CHOICES.map((id) => routineSecs(ROUTINES[id]))).toEqual([180, 300, 600])
+    expect(routineSecs(ROUTINES.cooldown)).toBe(300)
+    const warmIds = new Set(WARMUP_CHOICES.flatMap((id) => ROUTINES[id].exercises.map((e) => e.id)))
+    expect(ROUTINES.cooldown.exercises.some((e) => warmIds.has(e.id))).toBe(false)
+    for (const r of Object.values(ROUTINES)) {
+      expect(new Set(r.exercises.map((e) => e.id)).size, r.id).toBe(r.exercises.length)
+      for (const e of r.exercises) {
+        expect(e.how.length).toBeGreaterThan(20)
+        expect(e.secs).toBeGreaterThanOrEqual(20)
+      }
+    }
+    // de korte begint ook met de knieën en eindigt met uitschudden
+    expect(ROUTINES.kort.exercises[0].id).toBe('knieen')
+    expect(ROUTINES.kort.exercises.at(-1)!.id).toBe('adem')
+  })
+
   it('elke animatie is geldig en de rider blijft op zijn plek, op de vlakte', () => {
-    for (const e of WARMUP) {
+    for (const e of ALL_EXERCISES) {
       expect(validateAnim(e.anim)).toEqual([])
       expect(e.anim.slope).toBe(0)
       expect(e.anim.keys.every((k) => k.x === 0)).toBe(true)
@@ -76,7 +94,19 @@ describe('warming-up-pagina', () => {
       <MemoryRouter initialEntries={['/warming-up']}>
         <Routes>
           <Route path="/warming-up" element={<Warmup />} />
+          <Route path="/cooling-down" element={<Warmup cool />} />
           <Route path="/runs" element={<div>run-teller</div>} />
+          <Route path="/log/nieuw" element={<div>nieuwe dag</div>} />
+        </Routes>
+      </MemoryRouter>,
+    )
+  const at = (path: string) =>
+    render(
+      <MemoryRouter initialEntries={[path]}>
+        <Routes>
+          <Route path="/warming-up" element={<Warmup />} />
+          <Route path="/cooling-down" element={<Warmup cool />} />
+          <Route path="/log/nieuw" element={<div>nieuwe dag</div>} />
         </Routes>
       </MemoryRouter>,
     )
@@ -118,5 +148,41 @@ describe('warming-up-pagina', () => {
     await user.click(screen.getByRole('button', { name: 'Start' }))
     await user.click(screen.getByRole('button', { name: 'Stoppen' }))
     expect(screen.getByRole('button', { name: 'Start' })).toBeTruthy()
+  })
+
+  it('korter of langer kiezen: de lijst en de klok passen zich aan', async () => {
+    const user = userEvent.setup()
+    page()
+    expect(screen.getByText('5 minuten, met je board aan')).toBeTruthy()
+    await user.click(screen.getByRole('tab', { name: '3 min' }))
+    expect(screen.getByText('3 minuten, met je board aan')).toBeTruthy()
+    expect(screen.getAllByText(/ s$/)).toHaveLength(ROUTINES.kort.exercises.length)
+    await user.click(screen.getByRole('button', { name: 'Start' }))
+    expect(screen.getByLabelText('Nog 0:30')).toBeTruthy()
+    expect(screen.getByText('1 van 6')).toBeTruthy()
+    clock += 181 * S
+    expect(await screen.findByText('3 minuten')).toBeTruthy()
+    cleanup()
+    page()
+    await user.click(screen.getByRole('tab', { name: '10 min' }))
+    expect(screen.getByText('10 minuten, met je board aan')).toBeTruthy()
+    // een minuut of langer als m:ss
+    expect(screen.getAllByText('1:15').length).toBe(4)
+    await user.click(screen.getByRole('button', { name: 'Start' }))
+    expect(screen.getByLabelText('Nog 1:15')).toBeTruthy()
+  })
+
+  it('cooling-down: rekken, en na afloop naar je dag', async () => {
+    const user = userEvent.setup()
+    at('/cooling-down')
+    expect(screen.getByText('5 minuten rekken na je laatste run')).toBeTruthy()
+    expect(screen.queryByRole('tab')).toBeNull()
+    await user.click(screen.getByRole('button', { name: 'Start' }))
+    expect(screen.getByRole('heading', { name: 'Kuiten en enkels' })).toBeTruthy()
+    clock += 301 * S
+    expect(await screen.findByText('Uitgerekt')).toBeTruthy()
+    expect(screen.getByText('Goed gereden')).toBeTruthy()
+    await user.click(screen.getByRole('button', { name: 'Log je dag' }))
+    expect(screen.getByText('nieuwe dag')).toBeTruthy()
   })
 })

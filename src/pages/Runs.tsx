@@ -235,6 +235,9 @@ export default function Runs() {
           <Button size="lg" className="mt-5 w-full" icon={<Icon name="log" size={20} />} onClick={() => void toDay()}>
             {today ? 'Zet in je dag' : 'Log je dag'}
           </Button>
+          <List className="mt-3">
+            <Row icon="moon" title="Cooling-down" detail="5 minuten rekken na je laatste run" to="/cooling-down" />
+          </List>
 
           <section className="mt-8">
             <Heading>Runs</Heading>

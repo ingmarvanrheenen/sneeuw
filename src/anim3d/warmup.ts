@@ -142,4 +142,80 @@ export const WARMUP_3D: Record<string, () => Motion> = {
       'Los',
       { arms: () => 'los' },
     ),
+  // cooling-down: houdingen vasthouden, rustig erin en eruit
+  kuiten: () =>
+    build(
+      8,
+      [
+        { s: 0, crouch: 0.3, lean: 0, upright: 1 },
+        { s: 1.2, crouch: 0.62, lean: 0.95 },
+        { s: 3.6, crouch: 0.62, lean: 0.95 },
+        { s: 4.4, crouch: 0.62, lean: -0.95 },
+        { s: 6.8, crouch: 0.62, lean: -0.95 },
+        { s: 8, crouch: 0.3, lean: 0 },
+      ],
+      'Vasthouden',
+      { arms: () => 'voor' },
+    ),
+  hurk: () =>
+    build(
+      7,
+      [
+        { s: 0, crouch: 0.3, upright: 1 },
+        { s: 1.6, crouch: 1 },
+        { s: 5.4, crouch: 1 },
+        { s: 7, crouch: 0.3 },
+      ],
+      'Blijf zitten',
+      { arms: () => 'voor' },
+    ),
+  hamstrings: () =>
+    build(
+      7,
+      [
+        { s: 0, crouch: 0.2, upright: 1 },
+        { s: 1.6, crouch: 0.5 },
+        { s: 5.4, crouch: 0.5 },
+        { s: 7, crouch: 0.2 },
+      ],
+      'Hangen',
+      { arms: (s) => (s > 1 && s < 6 ? 'sneeuw' : 'los') },
+    ),
+  rug: () =>
+    build(
+      9,
+      [
+        { s: 0, twist: 0, look: 70, crouch: 0.25, upright: 1 },
+        { s: 1.5, twist: 45, look: 100 },
+        { s: 3.5, twist: 45, look: 100 },
+        { s: 4.5, twist: 0, look: 70 },
+        { s: 6, twist: -45, look: 30 },
+        { s: 8, twist: -45, look: 30 },
+        { s: 9, twist: 0, look: 70 },
+      ],
+      'Langzaam draaien',
+    ),
+  rekken: () =>
+    build(
+      6,
+      [
+        { s: 0, crouch: 0.2, upright: 1 },
+        { s: 1.2, crouch: 0.02 },
+        { s: 4.6, crouch: 0.02 },
+        { s: 6, crouch: 0.2 },
+      ],
+      'Omhoog',
+      { arms: (s) => (s > 0.8 && s < 5 ? 'omhoog' : 'los') },
+    ),
+  uitademen: () =>
+    build(
+      4,
+      repeat(4, 2, (s, l) => [
+        { s, crouch: 0.15, twist: 0, upright: 1 },
+        { s: s + l / 2, crouch: 0.3, twist: 0 },
+        { s: s + l, crouch: 0.15, twist: 0 },
+      ]),
+      'Los',
+      { arms: () => 'los' },
+    ),
 }

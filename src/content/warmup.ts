@@ -1,5 +1,6 @@
-// Warming-up voor de eerste lift: 5 minuten, met je board aan (boven bij de lift of op de vlakte).
+// Warming-up voor de eerste lift (3, 5 of 10 minuten, met je board aan) en een cooling-down na je laatste run.
 // De 3D-rider doet ze voor (src/anim3d/warmup.ts); de 2D-animatie hieronder is de terugval zonder WebGL.
+// Een routine is een lijst oefeningen met hun eigen tijd; dezelfde oefening kan in een andere routine korter.
 import type { SideAnim, SideKey } from '../anim/engine'
 
 export interface Exercise {
@@ -21,7 +22,7 @@ const still = (duration: number, keys: SideKey[], label: string): SideAnim => ({
   steps: [{ t: 0, label, cue: null }],
 })
 
-export const WARMUP: Exercise[] = [
+const WARM: Exercise[] = [
   {
     id: 'knieen',
     name: 'Knieën los',
@@ -157,4 +158,153 @@ export const WARMUP: Exercise[] = [
   },
 ]
 
-export const WARMUP_SECS = WARMUP.reduce((n, e) => n + e.secs, 0)
+/** Rekken na je laatste run: rustig, elke houding vasthouden, niet veren. */
+const COOL: Exercise[] = [
+  {
+    id: 'kuiten',
+    name: 'Kuiten en enkels',
+    secs: 50,
+    how: 'Leun met gebogen knieën naar je neus tot je je kuiten voelt. Vasthouden, rustig ademen, dan naar je tail.',
+    anim: still(
+      6,
+      [
+        { t: 0, crouch: 0.3, lean: 0 },
+        { t: 0.15, crouch: 0.6, lean: 0.9 },
+        { t: 0.45, crouch: 0.6, lean: 0.9 },
+        { t: 0.55, crouch: 0.6, lean: -0.9 },
+        { t: 0.85, crouch: 0.6, lean: -0.9 },
+        { t: 1, crouch: 0.3, lean: 0 },
+      ],
+      'Vasthouden',
+    ),
+  },
+  {
+    id: 'hurk',
+    name: 'Diepe hurk',
+    secs: 50,
+    how: 'Zak zo diep als lukt, hielen plat en ellebogen tegen je knieën. Blijf zitten en voel je heupen opengaan.',
+    anim: still(
+      6,
+      [
+        { t: 0, crouch: 0.3 },
+        { t: 0.25, crouch: 1 },
+        { t: 0.8, crouch: 1 },
+        { t: 1, crouch: 0.3 },
+      ],
+      'Blijf zitten',
+    ),
+  },
+  {
+    id: 'hamstrings',
+    name: 'Naar de sneeuw',
+    secs: 50,
+    how: 'Benen bijna gestrekt, laat je bovenlijf hangen en reik naar de sneeuw. Niet veren, gewoon hangen.',
+    anim: still(
+      6,
+      [
+        { t: 0, crouch: 0.2, arms: 'los' },
+        { t: 0.25, crouch: 0.45, arms: 'los' },
+        { t: 0.8, crouch: 0.45, arms: 'los' },
+        { t: 1, crouch: 0.2, arms: 'los' },
+      ],
+      'Hangen',
+    ),
+  },
+  {
+    id: 'rug',
+    name: 'Rug draaien',
+    secs: 50,
+    how: 'Draai je bovenlijf langzaam ver naar je neus en houd het even vast. Dan naar je tail. Heupen blijven recht.',
+    anim: still(
+      7,
+      [
+        { t: 0, spin: 0, crouch: 0.25 },
+        { t: 0.2, spin: 40, crouch: 0.25 },
+        { t: 0.4, spin: 40, crouch: 0.25 },
+        { t: 0.5, spin: 0, crouch: 0.25 },
+        { t: 0.7, spin: -40, crouch: 0.25 },
+        { t: 0.9, spin: -40, crouch: 0.25 },
+        { t: 1, spin: 0, crouch: 0.25 },
+      ],
+      'Langzaam draaien',
+    ),
+  },
+  {
+    id: 'rekken',
+    name: 'Lang maken',
+    secs: 50,
+    how: 'Armen recht omhoog, maak jezelf zo lang mogelijk en reik naar de lucht. Zak dan rustig terug.',
+    anim: still(
+      5,
+      [
+        { t: 0, crouch: 0.2, arms: 'los' },
+        { t: 0.25, crouch: 0, arms: 'omhoog' },
+        { t: 0.75, crouch: 0, arms: 'omhoog' },
+        { t: 1, crouch: 0.2, arms: 'los' },
+      ],
+      'Omhoog',
+    ),
+  },
+  {
+    id: 'uitademen',
+    name: 'Uitademen',
+    secs: 50,
+    how: 'Schud je benen los en adem een paar keer diep in en uit. Drink wat en log je dag.',
+    anim: still(
+      3,
+      [
+        { t: 0, crouch: 0.15, arms: 'los' },
+        { t: 0.5, crouch: 0.25, arms: 'los' },
+        { t: 1, crouch: 0.15, arms: 'los' },
+      ],
+      'Los',
+    ),
+  },
+]
+
+const POOL = new Map([...WARM, ...COOL].map((e) => [e.id, e]))
+/** Oefening uit de pool met een eigen tijd voor deze routine. */
+const ex = (id: string, secs: number): Exercise => ({ ...POOL.get(id)!, secs })
+
+export type RoutineId = 'kort' | 'normaal' | 'lang' | 'cooldown'
+
+export interface Routine {
+  id: RoutineId
+  /** kort label voor de keuze, "5 min" */
+  label: string
+  exercises: Exercise[]
+}
+
+export const ROUTINES: Record<RoutineId, Routine> = {
+  kort: {
+    id: 'kort',
+    label: '3 min',
+    exercises: [ex('knieen', 30), ex('draaien', 30), ex('gewicht', 30), ex('hops', 30), ex('ollie', 30), ex('adem', 30)],
+  },
+  normaal: { id: 'normaal', label: '5 min', exercises: WARM },
+  lang: {
+    id: 'lang',
+    label: '10 min',
+    exercises: [
+      ex('knieen', 75),
+      ex('armen', 60),
+      ex('draaien', 75),
+      ex('gewicht', 75),
+      ex('hops', 75),
+      ex('press', 90),
+      ex('ollie', 90),
+      ex('adem', 60),
+    ],
+  },
+  cooldown: { id: 'cooldown', label: '5 min', exercises: COOL },
+}
+
+export const WARMUP_CHOICES: RoutineId[] = ['kort', 'normaal', 'lang']
+
+export const routineSecs = (r: Routine) => r.exercises.reduce((n, e) => n + e.secs, 0)
+
+/** De gewone warming-up van 5 minuten. */
+export const WARMUP = WARM
+export const WARMUP_SECS = routineSecs(ROUTINES.normaal)
+/** Alle oefeningen, voor de 3D- en content-tests. */
+export const ALL_EXERCISES = [...POOL.values()]
