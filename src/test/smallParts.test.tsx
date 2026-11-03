@@ -115,6 +115,11 @@ describe('opslaggebruik in instellingen', () => {
     expect(await screen.findByText('Je media: 15 MB')).toBeTruthy()
     expect(screen.getByText(/2 foto's · 1 video/)).toBeTruthy()
   })
+
+  it('instellingen: een rij naar de offline-check', async () => {
+    inRouter(<Settings />)
+    expect((await screen.findByRole('link', { name: /Offline-check/ })).getAttribute('href')).toBe('/offline')
+  })
 })
 
 describe('crew offline', () => {

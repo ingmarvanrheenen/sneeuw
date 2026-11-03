@@ -290,6 +290,7 @@ export default function Settings() {
       <Section title="Data">
         <List>
           <MediaUsage />
+          <Row icon="wifi" title="Offline-check" detail="Wat werkt zonder bereik, en wat nog moet syncen" to="/offline" />
           <Row icon="download" title="Exporteer je data" detail="Alles als JSON-bestand, voor een back-up" onClick={exportData} />
         </List>
       </Section>
