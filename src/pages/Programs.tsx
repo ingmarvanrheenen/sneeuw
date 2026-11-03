@@ -22,6 +22,9 @@ import {
   type ProgramState,
 } from '../lib/programs'
 import { askProgram, CoachError } from '../lib/coach'
+import { crewBoard, crewDays, setCrewDay, setSharedCrew, sharedCrew, type CrewDay } from '../lib/crewPrograms'
+import { cachedCrews, crewMembers, myCrews, type Crew, type CrewMember } from '../lib/crew'
+import { toast } from '../lib/toast'
 import { authStore } from '../lib/auth'
 import { hasBackend } from '../lib/supabase'
 import { errMsg } from '../lib/errors'
@@ -159,6 +162,29 @@ function ProgramPage({ p }: { p: Program }) {
   const navigate = useNavigate()
   const [open, setOpen] = useState<number | null>(null)
   const shown = open ?? (active ? next : null)
+  // samen met je crew (alleen kant-en-klare programma's): met welke crew, en hun dagen
+  const [crewId, setCrewId] = useState<string | null>(null)
+  const [crewRows, setCrewRows] = useState<CrewDay[]>([])
+  useEffect(() => void sharedCrew(p.id).then(setCrewId), [p.id])
+  const reloadCrew = (id = crewId) =>
+    id &&
+    navigator.onLine &&
+    void crewDays(id, p.id)
+      .then(setCrewRows)
+      .catch(() => {})
+  useEffect(() => void reloadCrew(), [crewId, p.id])
+
+  /** dag gedaan of weer open: lokaal, en bij je crew als je samen volgt */
+  async function toggleDay(i: number, done: boolean) {
+    await setDayDone(p.id, i, done)
+    if (!crewId) return
+    try {
+      await setCrewDay(crewId, p.id, i, done)
+      reloadCrew()
+    } catch (e) {
+      toast({ title: 'Niet bij je crew gezet', body: errMsg(e), tone: 'error', icon: 'alert' })
+    }
+  }
 
   return (
     <Page>
@@ -253,7 +279,7 @@ function ProgramPage({ p }: { p: Program }) {
                       icon={<Icon name={doneOn ? 'replay' : 'check'} size={18} />}
                       onClick={() => {
                         if (!doneOn) sfx.success()
-                        void setDayDone(p.id, i, !doneOn)
+                        void toggleDay(i, !doneOn)
                         setOpen(null)
                       }}
                     >
@@ -266,6 +292,27 @@ function ProgramPage({ p }: { p: Program }) {
           )
         })}
       </List>
+
+      {!p.coach && (
+        <CrewTogether
+          p={p}
+          crewId={crewId}
+          rows={crewRows}
+          onShare={async (id) => {
+            await setSharedCrew(p.id, id)
+            setCrewId(id)
+            if (!id) return setCrewRows([])
+            // wat je al deed gaat meteen mee
+            try {
+              for (const [day, on] of Object.entries(run?.done ?? {})) await setCrewDay(id, p.id, Number(day), true, on)
+              reloadCrew(id)
+              sfx.success()
+            } catch (e) {
+              toast({ title: 'Delen met je crew lukte niet', body: errMsg(e), tone: 'error', icon: 'alert' })
+            }
+          }}
+        />
+      )}
 
       {active && (
         <button type="button" onClick={() => void stopProgram()} className="mb-6 mt-4 w-full py-2 text-center text-[15px] text-muted">
@@ -286,5 +333,79 @@ function ProgramPage({ p }: { p: Program }) {
       )}
       <div className="h-4" />
     </Page>
+  )
+}
+
+/** Samen met je crew: kies een crew, dan zie je per crewgenoot welke dagen die deed. */
+function CrewTogether({
+  p,
+  crewId,
+  rows,
+  onShare,
+}: {
+  p: Program
+  crewId: string | null
+  rows: CrewDay[]
+  onShare: (crewId: string | null) => Promise<void>
+}) {
+  const { user } = authStore.use()
+  const [crews, setCrews] = useState<Crew[]>([])
+  const [members, setMembers] = useState<CrewMember[]>([])
+  useEffect(() => {
+    void cachedCrews().then(setCrews)
+    if (navigator.onLine && hasBackend && user)
+      void myCrews()
+        .then(setCrews)
+        .catch(() => {})
+  }, [user])
+  useEffect(() => {
+    if (crewId && navigator.onLine)
+      void crewMembers(crewId)
+        .then(setMembers)
+        .catch(() => {})
+  }, [crewId])
+  if (!hasBackend || !user || !crews.length) return null
+  const crew = crews.find((c) => c.id === crewId)
+  const board = crew ? crewBoard(rows, members, user.id, p.days.length) : []
+
+  return (
+    <section className="mt-8">
+      <Heading>Samen met je crew</Heading>
+      {!crew ? (
+        <>
+          <p className="mb-3 text-[15px] text-muted">Volg dit programma samen: je ziet wie welke dag deed, en zij zien jou.</p>
+          <div className="flex flex-wrap gap-2">
+            {crews.map((c) => (
+              <Button key={c.id} variant="ghost" icon={<Icon name="crew" size={18} />} onClick={() => void onShare(c.id)}>
+                Volg met {c.name}
+              </Button>
+            ))}
+          </div>
+        </>
+      ) : (
+        <>
+          <List>
+            {board.map((b) => (
+              <div key={b.userId} role="group" aria-label={`${b.name}: ${b.count} van ${p.days.length}`} className="px-4 py-3">
+                <div className="mb-2 flex items-center justify-between text-[15px]">
+                  <span className={cx('font-medium', b.userId === user.id && 'text-accent-text')}>{b.name}</span>
+                  <span className="num text-muted">
+                    {b.count} van {p.days.length}
+                  </span>
+                </div>
+                <div className="flex gap-1">
+                  {p.days.map((_, i) => (
+                    <span key={i} className={cx('h-2 flex-1 rounded-[2px]', b.done.has(i) ? 'bg-text' : 'bg-surface-2')} />
+                  ))}
+                </div>
+              </div>
+            ))}
+          </List>
+          <button type="button" onClick={() => void onShare(null)} className="mt-2 w-full py-2 text-center text-[13px] text-muted">
+            Niet meer delen met {crew.name}
+          </button>
+        </>
+      )}
+    </section>
   )
 }
