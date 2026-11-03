@@ -32,6 +32,7 @@ const CrewTripDetail = lazy(() => import('./pages/CrewTripDetail'))
 const Weather = lazy(() => import('./pages/Weather'))
 const GearPage = lazy(() => import('./pages/Gear'))
 const Offline = lazy(() => import('./pages/Offline'))
+const Alarm = lazy(() => import('./pages/Alarm'))
 const Rider = lazy(() => import('./pages/Rider'))
 const Snow = lazy(() => import('./pages/Snow'))
 const Wrapped = lazy(() => import('./pages/Wrapped'))
@@ -198,6 +199,7 @@ export default function App() {
               <Route path="/weer" element={<Weather />} />
               <Route path="/gear" element={<GearPage />} />
               <Route path="/offline" element={<Offline />} />
+              <Route path="/wekker" element={<Alarm />} />
               <Route path="/rider/:id" element={<Rider />} />
               <Route path="/snow/:id" element={<Snow />} />
               <Route path="/wrapped" element={<Wrapped />} />

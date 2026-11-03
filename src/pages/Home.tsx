@@ -20,6 +20,7 @@ import { DailyDrill } from '../components/DailyDrill'
 import { sessionsSorted, useKind } from '../lib/repo'
 import { dueNow, dueText } from '../lib/maintenance'
 import { StartSteps } from '../components/StartSteps'
+import { alarmDate } from '../lib/alarm'
 import { getProfile } from '../lib/auth'
 import { TRICKS, TRICK_BY_ID } from '../content/tricks'
 import { isIOS, isStandalone } from '../lib/pwa'
@@ -116,6 +117,9 @@ export default function Home() {
   const gear = useKind('gear')
   const care = dueNow(gear ?? [], sessions ?? [])[0]
   const coachTrip = (trips ?? []).find((t) => planDay(t, today))
+  // morgen een dag op de berg (op trip): dan een rij naar de wekker
+  const tomorrow = alarmDate()
+  const tripTomorrow = (trips ?? []).some((t) => t.startDate && t.startDate <= tomorrow && (t.endDate ?? t.startDate) >= tomorrow)
   const coachToday = coachTrip ? planDay(coachTrip, today) : null
   // lopende teller: elke seconde bijwerken
   useEffect(() => {
@@ -242,6 +246,7 @@ export default function Home() {
         {!loggedToday && !runDay.runs.length && (
           <Row icon="bolt" title="Warming-up" detail="5 minuten voor de eerste lift" to="/warming-up" />
         )}
+        {tripTomorrow && <Row icon="clock" title="Wekker voor morgen" detail="Hoe laat je op moet voor de eerste lift" to="/wekker" />}
         {coachTrip && coachToday && (
           <Row icon="chat" title={`Coach: ${coachToday.titel}`} detail={coachToday.focus} to={`/reizen/${coachTrip.id}`} />
         )}
