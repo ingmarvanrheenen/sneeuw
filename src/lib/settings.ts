@@ -5,12 +5,14 @@ export interface Settings {
   sounds: boolean
   /** animaties spiegelen voor goofy */
   goofy: boolean
+  /** scherm aan houden tijdens een run met GPS (iOS geeft geen locatie met het scherm uit) */
+  runAwake: boolean
 }
 
 const KEY = 'sd-settings'
 
 function load(): Settings {
-  const fallback: Settings = { theme: 'system', sounds: true, goofy: false }
+  const fallback: Settings = { theme: 'system', sounds: true, goofy: false, runAwake: false }
   try {
     return { ...fallback, ...JSON.parse(localStorage.getItem(KEY) ?? '{}') }
   } catch {

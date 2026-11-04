@@ -56,6 +56,54 @@ function NeedAccount() {
   )
 }
 
+/** De reacties van je crew op een post of een spraakmemo: per sticker hoeveel, en of jij er een gaf. */
+function ReactionBar({
+  reactions,
+  me,
+  onReact,
+  small,
+  label,
+}: {
+  reactions: Reaction[]
+  me: string
+  onReact: (key: string, mine: boolean) => void
+  small?: boolean
+  label?: string
+}) {
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {REACTIONS.map((r) => {
+        const all = reactions.filter((x) => x.emoji === r.key)
+        const mine = all.some((x) => x.user_id === me)
+        return (
+          <button
+            key={r.key}
+            aria-label={label ? `${r.label} ${label}` : r.label}
+            onClick={() => onReact(r.key, mine)}
+            aria-pressed={mine}
+            className={cx(
+              'flex items-center gap-1 rounded-full border pl-0.5 pr-2.5 text-[13px] font-bold transition active:scale-90',
+              small ? 'h-8' : 'h-9',
+              mine ? 'border-text bg-accent-soft text-text' : 'hairline text-muted',
+              !all.length && 'pr-0.5',
+            )}
+          >
+            {/* jouw reactie klapt erop */}
+            <span
+              key={mine ? 'aan' : 'uit'}
+              className={mine ? 'slap' : undefined}
+              style={{ '--tilt': '-6deg', '--delay': '0ms' } as CSSProperties}
+            >
+              <ReactionSticker kind={r.key} size={small ? 24 : 30} />
+            </span>
+            {all.length > 0 && <span className="num">{all.length}</span>}
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
 function Post({
   post,
   member,
@@ -69,7 +117,7 @@ function Post({
   photo?: string
   reactions: Reaction[]
   me: string
-  onReact: (key: string, mine: boolean) => void
+  onReact: (recordId: string, key: string, mine: boolean) => void
 }) {
   const [open, setOpen] = useState<MediaMeta | null>(null)
   const s = post.session
@@ -129,37 +177,26 @@ function Post({
       )}
       {!!post.memos?.length && (
         <div className="px-3 pt-3">
-          <MemoList items={post.memos} />
+          <MemoList
+            items={post.memos}
+            footer={(m) => (
+              <ReactionBar
+                small
+                label="op de memo"
+                reactions={reactions.filter((r) => r.record_id === m.id)}
+                me={me}
+                onReact={(key, mine) => onReact(m.id, key, mine)}
+              />
+            )}
+          />
         </div>
       )}
-      <div className="flex gap-1.5 p-3">
-        {REACTIONS.map((r) => {
-          const all = reactions.filter((x) => x.emoji === r.key)
-          const mine = all.some((x) => x.user_id === me)
-          return (
-            <button
-              key={r.key}
-              aria-label={r.label}
-              onClick={() => onReact(r.key, mine)}
-              aria-pressed={mine}
-              className={cx(
-                'flex h-9 items-center gap-1 rounded-full border pl-0.5 pr-2.5 text-[13px] font-bold transition active:scale-90',
-                mine ? 'border-text bg-accent-soft text-text' : 'hairline text-muted',
-                !all.length && 'pr-0.5',
-              )}
-            >
-              {/* jouw reactie klapt erop */}
-              <span
-                key={mine ? 'aan' : 'uit'}
-                className={mine ? 'slap' : undefined}
-                style={{ '--tilt': '-6deg', '--delay': '0ms' } as CSSProperties}
-              >
-                <ReactionSticker kind={r.key} size={30} />
-              </span>
-              {all.length > 0 && <span className="num">{all.length}</span>}
-            </button>
-          )
-        })}
+      <div className="p-3">
+        <ReactionBar
+          reactions={reactions.filter((r) => r.record_id === post.id)}
+          me={me}
+          onReact={(key, mine) => onReact(post.id, key, mine)}
+        />
       </div>
       <MediaViewer m={open} onClose={() => setOpen(null)} />
     </Card>
@@ -208,7 +245,7 @@ export default function Crew() {
       riderProfiles(mem.map((m) => m.user_id))
         .then(setRiders)
         .catch(() => {})
-      setReactions(await reactionsFor(p.map((x) => x.id)))
+      setReactions(await reactionsFor([...p.map((x) => x.id), ...p.flatMap((x) => (x.memos ?? []).map((m) => m.id))]))
     } catch (e) {
       if (!quiet) toast({ title: 'Offline?', body: errMsg(e), tone: 'error', icon: 'cloudOff' })
     } finally {
@@ -384,16 +421,16 @@ export default function Crew() {
                   post={p}
                   member={members.find((m) => m.user_id === p.userId)}
                   photo={riders[p.userId]?.profile.photo}
-                  reactions={reactions.filter((r) => r.record_id === p.id)}
+                  reactions={reactions}
                   me={user.id}
-                  onReact={async (key, mine) => {
+                  onReact={async (id, key, mine) => {
                     setReactions((rs) =>
                       mine
-                        ? rs.filter((r) => !(r.record_id === p.id && r.user_id === user.id && r.emoji === key))
-                        : [...rs, { record_id: p.id, user_id: user.id, emoji: key }],
+                        ? rs.filter((r) => !(r.record_id === id && r.user_id === user.id && r.emoji === key))
+                        : [...rs, { record_id: id, user_id: user.id, emoji: key }],
                     )
                     try {
-                      await toggleReaction(p.id, key, mine)
+                      await toggleReaction(id, key, mine)
                     } catch {
                       toast({ title: 'Reactie mislukt', tone: 'error', icon: 'alert' })
                     }

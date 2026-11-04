@@ -10,6 +10,7 @@ import Runs from '../pages/Runs'
 import { addFix, dayGps, emptyGps, fmtDist, fmtKmh, meters, MAX_ACC, type Fix, type RunGps } from '../lib/runGps'
 import { gpsPref, loadGpsPref, loadRunDay, resetRunDay, setGpsPref, setRunGps, startRun, stopRun, undoRun } from '../lib/runs'
 import { db } from '../lib/db'
+import { settingsStore, updateSettings } from '../lib/settings'
 
 const LAT = 45.45
 const LON = 6.98
@@ -182,5 +183,31 @@ describe('run-pagina met GPS', () => {
     act(() => onErr!({ code: 1 } as GeolocationPositionError))
     expect((await screen.findByRole('alert')).textContent).toMatch(/Geen toestemming/)
     await waitFor(() => expect(gpsPref.get()).toBe(false))
+  })
+
+  it('scherm aan: alleen als het in de instellingen aan staat, en weer los na Beneden', async () => {
+    const user = userEvent.setup()
+    const release = vi.fn(async () => {})
+    const request = vi.fn(async () => ({ release }))
+    Object.defineProperty(navigator, 'wakeLock', { configurable: true, value: { request } })
+    await setGpsPref(true)
+    updateSettings({ runAwake: false })
+    page()
+    await user.click(await screen.findByRole('button', { name: /Start run 1/ }))
+    await waitFor(() => expect(watch).toHaveBeenCalled())
+    expect(request).not.toHaveBeenCalled()
+    expect(screen.getByText(/in Instellingen kan het scherm aan blijven/)).toBeTruthy()
+    await user.click(screen.getByRole('button', { name: /Beneden/ }))
+    cleanup()
+
+    updateSettings({ runAwake: true })
+    page()
+    expect(await screen.findByText(/Je scherm blijft aan tijdens een run/)).toBeTruthy()
+    await user.click(screen.getByRole('button', { name: /Start run 2/ }))
+    await waitFor(() => expect(request).toHaveBeenCalledWith('screen'))
+    await user.click(screen.getByRole('button', { name: /Beneden/ }))
+    await waitFor(() => expect(release).toHaveBeenCalled())
+    updateSettings({ runAwake: false })
+    expect(settingsStore.get().runAwake).toBe(false)
   })
 })
