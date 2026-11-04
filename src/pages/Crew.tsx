@@ -18,6 +18,7 @@ import {
   cachedCrews,
   reactionsFor,
   toPosts,
+  crewMediaOf,
   toggleReaction,
   type Crew as CrewT,
   type CrewMember,
@@ -35,6 +36,8 @@ import { riderProfiles, type CrewRider } from '../lib/riders'
 import { SnowGames } from '../components/SnowParts'
 import { CrewLadder } from '../components/Ladder'
 import { CrewWeekGoal } from '../components/CrewWeekGoal'
+import { CrewMeetPoint } from '../components/CrewMeetPoint'
+import { CrewWeekTrick } from '../components/CrewWeekTrick'
 import { CrewWhere } from '../components/CrewWhere'
 
 function NeedAccount() {
@@ -169,6 +172,7 @@ export default function Crew() {
   const [active, setActive] = useState<string | null>(null)
   const [tab, setTab] = useState<'feed' | 'board' | 'snow'>('feed')
   const [posts, setPosts] = useState<FeedPost[]>([])
+  const [sharedMedia, setSharedMedia] = useState<MediaMeta[]>([])
   const [members, setMembers] = useState<CrewMember[]>([])
   const [riders, setRiders] = useState<Record<string, CrewRider>>({})
   const [reactions, setReactions] = useState<Reaction[]>([])
@@ -198,6 +202,7 @@ export default function Crew() {
       const [items, mem] = await Promise.all([crewFeed(crewId), crewMembers(crewId)])
       const p = toPosts(items)
       setPosts(p)
+      setSharedMedia(crewMediaOf(items))
       setMembers(mem)
       // foto's en bijnamen voor de feed; lukt het niet, dan gewoon de letter
       riderProfiles(mem.map((m) => m.user_id))
@@ -359,7 +364,9 @@ export default function Crew() {
           {tab === 'feed' && !loading && crew && members.length > 0 && (
             <>
               <CrewWhere members={members} me={user.id} />
+              <CrewMeetPoint crewId={crew.id} members={members} me={user.id} />
               <CrewWeekGoal crewId={crew.id} members={members} posts={posts} me={user.id} />
+              <CrewWeekTrick crewId={crew.id} members={members} media={sharedMedia} me={user.id} />
             </>
           )}
           {tab === 'feed' && !loading && (
