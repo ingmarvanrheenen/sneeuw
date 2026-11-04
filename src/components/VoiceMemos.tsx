@@ -4,6 +4,9 @@ import type { ReactNode } from 'react'
 import { Button, Heading, List, cx } from './ui'
 import { Icon } from '../design/icons'
 import { canRecord, fmtDuration, MEMO_MAX_S, micError, saveMemo, startRecording, type Recording } from '../lib/memo'
+import { CoachError, transcribeMemo } from '../lib/coach'
+import { settingsStore } from '../lib/settings'
+import { errMsg } from '../lib/errors'
 import { mediaUrl } from '../lib/sync'
 import { remove } from '../lib/repo'
 import { seeded } from '../lib/random'
@@ -57,6 +60,8 @@ export function MemoRecorder({
       if (!m) return toast({ title: 'Te kort', body: 'Hou hem iets langer vast, dan bewaren we hem.', icon: 'mic' })
       sfx.success()
       onSaved?.(m)
+      // tekst ervan maken als je dat aanzette (in de achtergrond; mislukt het, dan kan het later met de knop)
+      if (settingsStore.get().memoText && navigator.onLine) void transcribeMemo(m).catch(() => {})
     } catch (e) {
       toast({ title: 'Opslaan lukte niet', body: micError(e), tone: 'error', icon: 'alert' })
     }
@@ -185,6 +190,19 @@ export function MemoList({
     await Promise.resolve(a.play()).catch(() => setPlaying(null))
   }
 
+  const textOn = settingsStore.use().memoText
+  const [busy, setBusy] = useState<string | null>(null)
+  async function toText(m: MediaMeta) {
+    setBusy(m.id)
+    try {
+      await transcribeMemo(m)
+    } catch (e) {
+      toast({ title: 'Geen tekst', body: e instanceof CoachError ? e.message : errMsg(e), tone: 'error', icon: 'alert' })
+    } finally {
+      setBusy(null)
+    }
+  }
+
   const sorted = [...items].sort((a, b) => a.createdAt - b.createdAt)
   return (
     <List>
@@ -227,6 +245,17 @@ export function MemoList({
                 </button>
               )}
             </div>
+            {m.transcript && <p className="mt-1.5 pl-14 text-[15px] leading-snug">“{m.transcript}”</p>}
+            {editable && !m.transcript && textOn && (
+              <button
+                type="button"
+                disabled={busy === m.id}
+                onClick={() => void toText(m)}
+                className="ml-14 mt-1 text-[13px] font-semibold text-accent-text disabled:opacity-50"
+              >
+                {busy === m.id ? 'Even luisteren…' : 'Maak er tekst van'}
+              </button>
+            )}
             {footer && <div className="mt-2 pl-14">{footer(m)}</div>}
           </div>
         )

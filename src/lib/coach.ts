@@ -1,13 +1,13 @@
 // Coach Daddy client: bouwt de rider-context uit je eigen data en streamt antwoorden
 // van de `coach` Edge Function (de API-key staat alleen op de server).
-import { kvGet, kvSet } from './db'
+import { db, kvGet, kvSet } from './db'
 import { getAccessToken, getProfile } from './auth'
 import { create, listKind, update } from './repo'
 import { loadProgressInput, computeProgress } from './useProgress'
 import { TRICKS, TRICK_BY_ID } from '../content/tricks'
 import { PISTES, SNOW, WEATHER } from '../content/logOptions'
 import { MOOD_LABELS } from '../design/icons'
-import type { DayReview, Session, Trip, TripPlan } from './types'
+import type { DayReview, MediaMeta, Session, Trip, TripPlan } from './types'
 import { RESORTS } from '../content/resorts'
 import { tripForecast, weatherLine, weatherShort, type DayForecast } from './weather'
 import { sessionsSorted } from './repo'
@@ -200,7 +200,12 @@ export async function reviewDay(s: Session): Promise<DayReview> {
   const trickIds = TRICKS.map((t) => t.id).filter((id) => !done.has(id))
   // dag van een trip met een coach-plan: het plan van vandaag en morgen gaat mee
   const plan = await planFor(s)
-  const res = await coachRequest({ mode: 'review', context, day: dayText(s), trickIds, ...(plan ? { plan: plan.text } : {}) })
+  // wat je die dag insprak (als tekst) gaat mee
+  const memos = ((await db.records.where('kind').equals('media').toArray()) as MediaMeta[]).filter(
+    (m) => m.type === 'audio' && m.sessionId === s.id,
+  )
+  const day = [dayText(s), memoLines(memos)].filter(Boolean).join('\n')
+  const res = await coachRequest({ mode: 'review', context, day, trickIds, ...(plan ? { plan: plan.text } : {}) })
   const r = (await res.json()) as Omit<DayReview, 'createdAt'> & { morgenDag?: unknown }
   if (!r?.focus) throw new CoachError('Coach gaf geen bruikbare review terug.')
   // het plan van morgen echt aanpassen, niet alleen een zin
@@ -539,4 +544,35 @@ export async function askProgram(wish: string, days: number): Promise<Program> {
   }
   await addCustomProgram(p)
   return p
+}
+
+// ── Spraakmemo naar tekst ───────────────────────────────────────────────────
+
+async function toBase64(blob: Blob): Promise<string> {
+  const bytes = new Uint8Array(await blob.arrayBuffer())
+  let bin = ''
+  for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000))
+  return btoa(bin)
+}
+
+/**
+ * Een memo van dit toestel omzetten naar tekst (via de coach-functie naar OpenAI; de key staat alleen op de
+ * server). De tekst komt bij de memo, synct mee en gaat mee in je dagreview. Telt als één coach-bericht.
+ */
+export async function transcribeMemo(m: MediaMeta): Promise<string> {
+  const row = await db.blobs.get(m.id)
+  if (!row) throw new CoachError('Deze memo staat niet op dit toestel.')
+  const res = await coachRequest({ mode: 'transcribe', audio: { data: await toBase64(row.blob), mime: m.mime } })
+  const text = String(((await res.json()) as { text?: unknown }).text ?? '').trim()
+  await update(m, { transcript: text })
+  return text
+}
+
+/** Memo's met tekst bij een dag, als regels voor de dagreview (max 1200 tekens). */
+export function memoLines(memos: Pick<MediaMeta, 'transcript' | 'createdAt' | 'deleted'>[]): string {
+  const said = memos
+    .filter((m) => !m.deleted && m.transcript)
+    .sort((a, b) => a.createdAt - b.createdAt)
+    .map((m) => `- "${m.transcript}"`)
+  return said.length ? `Spraakmemo's van die dag:\n${said.join('\n')}`.slice(0, 1200) : ''
 }

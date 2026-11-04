@@ -284,6 +284,17 @@ export default function Settings() {
         </div>
       </Section>
 
+      <Section title="Spraakmemo's">
+        <div className="card divide-y divide-[var(--line)] p-0">
+          <Toggle
+            on={settings.memoText}
+            onChange={(memoText) => updateSettings({ memoText })}
+            label="Spraakmemo's omzetten naar tekst"
+            sub="Je opname gaat naar OpenAI, dat er tekst van maakt. De tekst staat bij de memo en gaat mee in je dagreview. Telt als een coach-bericht."
+          />
+        </div>
+      </Section>
+
       {isIOS() && !isStandalone() && (
         <Section title="Installeren op iPhone">
           <Card className="text-sm">

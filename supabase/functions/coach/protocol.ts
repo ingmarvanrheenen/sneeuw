@@ -655,3 +655,37 @@ export function checkProgram(raw: unknown, trickIds: readonly string[], days: nu
   if (dagen.length !== days) return null
   return { naam, blurb: text(r.blurb, 160), start: text(r.start, 200), dagen }
 }
+
+// ── Spraakmemo naar tekst (OpenAI) ──────────────────────────────────────────
+
+export const AUDIO_TYPES = [
+  'audio/mp4',
+  'audio/m4a',
+  'audio/x-m4a',
+  'audio/aac',
+  'audio/webm',
+  'audio/ogg',
+  'audio/mpeg',
+  'audio/wav',
+] as const
+/** base64-tekens per memo: een minuut is in de app ±0,5 MB; met ruimte ±3 MB aan bytes */
+export const AUDIO_CHARS = 4_000_000
+
+/** Woorden die een snowboarder zegt; helpt de herkenning bij Nederlands met Engelse termen. */
+export const TRANSCRIBE_PROMPT =
+  'Een snowboarder spreekt een korte memo in over de dag op de berg, in het Nederlands met Engelse snowboardtermen: ' +
+  'carve, heelside, toeside, edge, switch, ollie, nollie, butter, nose press, tail press, shifty, kicker, rail, box, ' +
+  'park, poeder, piste, lift, sleeplift, stoeltjeslift, gondel, falling leaf, J-turn, gekoppelde bochten.'
+
+export function checkAudioInput(raw: unknown): { data: string; mime: string; ext: string } | { error: string } {
+  const a = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>
+  const mime = typeof a.mime === 'string' ? a.mime.split(';')[0].trim().toLowerCase() : ''
+  if (!(AUDIO_TYPES as readonly string[]).includes(mime)) return { error: 'Dit geluidsformaat ken ik niet' }
+  if (typeof a.data !== 'string' || !a.data || a.data.length > AUDIO_CHARS || !/^[A-Za-z0-9+/=]+$/.test(a.data))
+    return { error: 'Memo te lang of leeg (max een minuut)' }
+  const ext = { 'audio/webm': 'webm', 'audio/ogg': 'ogg', 'audio/mpeg': 'mp3', 'audio/wav': 'wav' }[mime] ?? 'm4a'
+  return { data: a.data, mime, ext }
+}
+
+/** Opschonen: witruimte, max 2000 tekens; niks gezegd = leeg. */
+export const cleanTranscript = (raw: unknown) => (typeof raw === 'string' ? raw.replace(/\s+/g, ' ').trim().slice(0, 2000) : '')

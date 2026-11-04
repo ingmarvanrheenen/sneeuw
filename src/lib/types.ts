@@ -152,6 +152,8 @@ export interface MediaMeta extends BaseRecord {
   size?: number
   caption?: string
   /** lengte in seconden (spraakmemo's) */
+  /** spraakmemo als tekst (OpenAI), als je dat aanzette */
+  transcript?: string
   duration?: number
   /** een trip-film die je zelf maakte (privé, niet gedeeld met de crew) */
   tripFilm?: { tripId: string; title: string }

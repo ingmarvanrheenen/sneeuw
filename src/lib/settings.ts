@@ -7,12 +7,14 @@ export interface Settings {
   goofy: boolean
   /** scherm aan houden tijdens een run met GPS (iOS geeft geen locatie met het scherm uit) */
   runAwake: boolean
+  /** spraakmemo's omzetten naar tekst (gaat naar OpenAI), voor de dagreview */
+  memoText: boolean
 }
 
 const KEY = 'sd-settings'
 
 function load(): Settings {
-  const fallback: Settings = { theme: 'system', sounds: true, goofy: false, runAwake: false }
+  const fallback: Settings = { theme: 'system', sounds: true, goofy: false, runAwake: false, memoText: false }
   try {
     return { ...fallback, ...JSON.parse(localStorage.getItem(KEY) ?? '{}') }
   } catch {

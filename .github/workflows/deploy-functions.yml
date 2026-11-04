@@ -4,7 +4,7 @@ name: Deploy Edge Functions
 # - automatisch als er op main iets in supabase/functions verandert (dus na jouw merge)
 # - handmatig via Actions > Deploy Edge Functions > Run workflow
 # Nodig: repository secret SUPABASE_ACCESS_TOKEN (Supabase > Account > Access Tokens).
-# De Anthropic API-key blijft een Supabase secret en komt hier nooit langs.
+# De Anthropic API-key (en OPENAI_API_KEY voor spraakmemo naar tekst) blijven Supabase secrets en komen hier nooit langs.
 # De VAPID-keys voor push maakt deze workflow één keer zelf aan, rechtstreeks als Supabase secret
 # (nooit in de log). Staan ze er al, dan blijven ze staan: nieuwe keys zouden alle meldingen breken.
 

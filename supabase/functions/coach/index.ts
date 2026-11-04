@@ -32,6 +32,9 @@ import {
   planDaySchema,
   tripPlanSchema,
   checkProgram,
+  checkAudioInput,
+  cleanTranscript,
+  TRANSCRIBE_PROMPT,
   checkProgramInput,
   programSchema,
   drillSchema,
@@ -83,6 +86,7 @@ Deno.serve(async (req) => {
     trip?: unknown
     wish?: unknown
     plan?: unknown
+    audio?: unknown
   }
   try {
     body = await req.json()
@@ -108,6 +112,7 @@ Deno.serve(async (req) => {
   if (body.mode === 'compare') return compare(body, countUsage)
   if (body.mode === 'tripplan') return tripPlan(body, countUsage)
   if (body.mode === 'program') return program(body, countUsage)
+  if (body.mode === 'transcribe') return transcribe(body, countUsage)
 
   const tricks = checkTricks(body.tricks)
   const trickIds = tricks.map((t) => t.id)
@@ -410,4 +415,42 @@ async function program(body: Record<string, unknown>, countUsage: (u: Anthropic.
   if (out instanceof Response) return out
   const p = checkProgram(out, trickIds, input.days)
   return p ? json(200, p) : json(502, { error: 'Coach gaf geen bruikbaar programma terug. Probeer het nog eens.' })
+}
+
+/**
+ * Spraakmemo naar tekst met OpenAI (de Claude API neemt geen geluid). De key staat alleen als Supabase secret
+ * OPENAI_API_KEY; zonder key staat dit uit. Telt als één coach-bericht voor de daglimiet.
+ */
+async function transcribe(body: Record<string, unknown>, countUsage: (u: Anthropic.Beta.BetaUsage) => unknown): Promise<Response> {
+  const key = Deno.env.get('OPENAI_API_KEY')
+  if (!key) return json(503, { error: 'Spraak naar tekst staat nog niet aan op de server.' })
+  const input = checkAudioInput(body.audio)
+  if ('error' in input) return json(400, { error: input.error })
+  const bytes = Uint8Array.from(atob(input.data), (c) => c.charCodeAt(0))
+  const form = new FormData()
+  form.append('file', new Blob([bytes], { type: input.mime }), `memo.${input.ext}`)
+  form.append('model', Deno.env.get('OPENAI_TRANSCRIBE_MODEL') ?? 'gpt-4o-mini-transcribe')
+  form.append('language', 'nl')
+  form.append('prompt', TRANSCRIBE_PROMPT)
+  form.append('response_format', 'json')
+  try {
+    const res = await fetch('https://api.openai.com/v1/audio/transcriptions', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${key}` },
+      body: form,
+      signal: AbortSignal.timeout(45_000),
+    })
+    if (!res.ok) {
+      console.error('openai', res.status, (await res.text()).slice(0, 300))
+      if (res.status === 401) return json(502, { error: 'De OpenAI-key klopt niet (meer).' })
+      if (res.status === 429) return json(503, { error: 'Spraak naar tekst is even druk, of het tegoed is op.' })
+      return json(502, { error: 'Omzetten naar tekst lukte niet.' })
+    }
+    const text = cleanTranscript(((await res.json()) as { text?: unknown }).text)
+    await countUsage({ input_tokens: 0, output_tokens: 0 } as Anthropic.Beta.BetaUsage)
+    return json(200, { text })
+  } catch (e) {
+    console.error(e)
+    return json(504, { error: 'Omzetten naar tekst duurde te lang. Probeer het zo nog eens.' })
+  }
 }
