@@ -3,7 +3,13 @@ import { act, cleanup, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 
-const crew = vi.hoisted(() => ({ myCrews: vi.fn(), crewFeed: vi.fn(), crewMembers: vi.fn(), reactionsFor: vi.fn() }))
+const crew = vi.hoisted(() => ({
+  myCrews: vi.fn(),
+  crewFeed: vi.fn(),
+  crewMembers: vi.fn(),
+  reactionsFor: vi.fn(),
+  toggleReaction: vi.fn(),
+}))
 vi.mock('../lib/supabase', () => ({ supabase: null, hasBackend: true, backendInfo: { keyKind: 'publishable' } }))
 vi.mock('../lib/crew', async (orig) => ({ ...(await orig<typeof import('../lib/crew')>()), ...crew }))
 
@@ -116,6 +122,18 @@ describe('opslaggebruik in instellingen', () => {
     expect(screen.getByText(/2 foto's · 1 video/)).toBeTruthy()
   })
 
+  it('instellingen: scherm aan tijdens een run met GPS, standaard uit en onthouden', async () => {
+    const { settingsStore, updateSettings } = await import('../lib/settings')
+    updateSettings({ runAwake: false })
+    inRouter(<Settings />)
+    const sw = await screen.findByRole('switch', { name: /Scherm aan tijdens een run met GPS/ })
+    expect(sw.getAttribute('aria-checked')).toBe('false')
+    await userEvent.setup().click(sw)
+    expect(settingsStore.get().runAwake).toBe(true)
+    expect(JSON.parse(localStorage.getItem('sd-settings')!).runAwake).toBe(true)
+    updateSettings({ runAwake: false })
+  })
+
   it('instellingen: een rij naar de offline-check', async () => {
     inRouter(<Settings />)
     expect((await screen.findByRole('link', { name: /Offline-check/ })).getAttribute('href')).toBe('/offline')
@@ -159,6 +177,55 @@ describe('crew naar de skipas', () => {
     await userEvent.setup().click(screen.getByRole('tab', { name: 'Leaderboard' }))
     const links = await screen.findAllByRole('link', { name: /Daan/ })
     expect(links.at(-1)!.getAttribute('href')).toBe('/rider/daan')
+  })
+})
+
+describe('reageren op een spraakmemo', () => {
+  it('onder elke memo in de feed de reacties van je crew; jouw tik gaat naar die memo', async () => {
+    online(true)
+    crew.myCrews.mockResolvedValue([{ id: 'c1', name: 'Shredheads', invite_code: 'ABC123', created_by: 'me' }])
+    crew.crewFeed.mockResolvedValue([
+      {
+        id: 'd1',
+        user_id: 'daan',
+        kind: 'session',
+        updated_at: '2027-01-16',
+        data: { id: 'd1', date: '2027-01-16', resortName: 'Tignes', hours: 5, falls: 2, landed: [], mood: 4, mediaIds: [] },
+      },
+      {
+        id: 'memo1',
+        user_id: 'daan',
+        kind: 'media',
+        updated_at: '2027-01-16',
+        data: {
+          id: 'memo1',
+          kind: 'media',
+          type: 'audio',
+          mime: 'audio/mp4',
+          sessionId: 'd1',
+          userId: 'daan',
+          duration: 12,
+          createdAt: 0,
+          updatedAt: 0,
+        },
+      },
+    ])
+    crew.crewMembers.mockResolvedValue([
+      { user_id: 'daan', display_name: 'Daan', role: 'member', stats: { xp: 300 } },
+      { user_id: 'me', display_name: 'Ingmar', role: 'owner', stats: { xp: 100 } },
+    ])
+    crew.reactionsFor.mockReset().mockResolvedValue([{ record_id: 'memo1', user_id: 'daan', emoji: 'lol' }])
+    crew.toggleReaction.mockReset().mockResolvedValue(undefined)
+    inRouter(<Crew />)
+    const lol = await screen.findByRole('button', { name: 'Haha op de memo' })
+    expect(lol.textContent).toContain('1')
+    // de reacties van de memo zijn mee opgehaald, naast die van de post
+    expect(crew.reactionsFor.mock.calls.at(-1)![0]).toEqual(['d1', 'memo1'])
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Vuur op de memo' }))
+    expect(crew.toggleReaction).toHaveBeenCalledWith('memo1', 'vuur', false)
+    expect(screen.getByRole('button', { name: 'Vuur op de memo' }).getAttribute('aria-pressed')).toBe('true')
+    // de reactie op de post zelf blijft los
+    expect(screen.getByRole('button', { name: 'Vuur' }).getAttribute('aria-pressed')).toBe('false')
   })
 })
 

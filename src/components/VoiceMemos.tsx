@@ -1,5 +1,6 @@
 // Spraakmemo's bij je dag: inspreken (max 1 minuut), terugluisteren, weggooien.
 import { useEffect, useRef, useState } from 'react'
+import type { ReactNode } from 'react'
 import { Button, Heading, List, cx } from './ui'
 import { Icon } from '../design/icons'
 import { canRecord, fmtDuration, MEMO_MAX_S, micError, saveMemo, startRecording, type Recording } from '../lib/memo'
@@ -139,7 +140,18 @@ function Wave({ id, progress }: { id: string; progress: number }) {
 let current: HTMLAudioElement | null = null
 
 /** Memo's als lijst: tik om te luisteren (één tegelijk). */
-export function MemoList({ items, editable, who }: { items: MediaMeta[]; editable?: boolean; who?: string }) {
+export function MemoList({
+  items,
+  editable,
+  who,
+  footer,
+}: {
+  items: MediaMeta[]
+  editable?: boolean
+  who?: string
+  /** iets onder elke memo, bijv. de reacties van je crew */
+  footer?: (m: MediaMeta) => ReactNode
+}) {
   const [playing, setPlaying] = useState<string | null>(null)
   const [progress, setProgress] = useState(0)
   const audio = useRef<HTMLAudioElement | null>(null)
@@ -180,39 +192,42 @@ export function MemoList({ items, editable, who }: { items: MediaMeta[]; editabl
         const on = playing === m.id
         const time = new Date(m.createdAt).toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' })
         return (
-          <div key={m.id} className="flex items-center gap-3 px-3 py-2.5">
-            <button
-              type="button"
-              aria-label={`${on ? 'Pauzeer' : 'Luister'} memo ${i + 1}`}
-              aria-pressed={on}
-              onClick={() => void toggle(m)}
-              className={cx(
-                'grid size-11 shrink-0 place-items-center rounded-full',
-                on ? 'bg-hot text-hot-ink' : 'bg-accent text-accent-ink',
-              )}
-            >
-              <Icon name={on ? 'pause' : 'play'} size={16} />
-            </button>
-            <div className="min-w-0 flex-1">
-              <Wave id={m.id} progress={on ? progress : 0} />
-              <div className="mt-0.5 text-[13px] text-muted">
-                <span className="num">{fmtDuration(m.duration)}</span> · {who ? `${who}, ` : ''}
-                {time}
-              </div>
-            </div>
-            {editable && (
+          <div key={m.id} className="px-3 py-2.5">
+            <div className="flex items-center gap-3">
               <button
                 type="button"
-                aria-label={`Gooi memo ${i + 1} weg`}
-                onClick={() => {
-                  if (on) audio.current?.pause()
-                  void remove(m)
-                }}
-                className="-mr-1 grid size-9 shrink-0 place-items-center text-muted"
+                aria-label={`${on ? 'Pauzeer' : 'Luister'} memo ${i + 1}`}
+                aria-pressed={on}
+                onClick={() => void toggle(m)}
+                className={cx(
+                  'grid size-11 shrink-0 place-items-center rounded-full',
+                  on ? 'bg-hot text-hot-ink' : 'bg-accent text-accent-ink',
+                )}
               >
-                <Icon name="trash" size={16} />
+                <Icon name={on ? 'pause' : 'play'} size={16} />
               </button>
-            )}
+              <div className="min-w-0 flex-1">
+                <Wave id={m.id} progress={on ? progress : 0} />
+                <div className="mt-0.5 text-[13px] text-muted">
+                  <span className="num">{fmtDuration(m.duration)}</span> · {who ? `${who}, ` : ''}
+                  {time}
+                </div>
+              </div>
+              {editable && (
+                <button
+                  type="button"
+                  aria-label={`Gooi memo ${i + 1} weg`}
+                  onClick={() => {
+                    if (on) audio.current?.pause()
+                    void remove(m)
+                  }}
+                  className="-mr-1 grid size-9 shrink-0 place-items-center text-muted"
+                >
+                  <Icon name="trash" size={16} />
+                </button>
+              )}
+            </div>
+            {footer && <div className="mt-2 pl-14">{footer(m)}</div>}
           </div>
         )
       })}

@@ -273,6 +273,17 @@ export default function Settings() {
         </div>
       </Section>
 
+      <Section title="Run-teller">
+        <div className="card divide-y divide-[var(--line)] p-0">
+          <Toggle
+            on={settings.runAwake}
+            onChange={(runAwake) => updateSettings({ runAwake })}
+            label="Scherm aan tijdens een run met GPS"
+            sub="Met je scherm uit geeft je iPhone geen locatie. Dit houdt het aan zolang een run loopt. Kost accu, en let op tikken in je zak."
+          />
+        </div>
+      </Section>
+
       {isIOS() && !isStandalone() && (
         <Section title="Installeren op iPhone">
           <Card className="text-sm">

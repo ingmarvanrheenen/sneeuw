@@ -31,6 +31,8 @@ import { fmtDate } from '../lib/format'
 import { sfx } from '../lib/sounds'
 import { toast } from '../lib/toast'
 import { addFix, dayGps, emptyGps, fmtDist, fmtKmh, watchFixes, type RunGps } from '../lib/runGps'
+import { keepAwake } from '../lib/warmup'
+import { settingsStore } from '../lib/settings'
 
 /** Volgt GPS zolang de run loopt en GPS aan staat; bewaart elke 5 seconden en bij het stoppen. */
 function useRunGps(active: boolean, run: Run | undefined) {
@@ -63,8 +65,21 @@ function useRunGps(active: boolean, run: Run | undefined) {
         if (fatal) void setGpsPref(false)
       },
     )
+    // scherm aan (als dat in de instellingen aan staat); iOS laat het los als je de app wegzet, dus terug = opnieuw
+    let release = () => {}
+    let gone = false
+    const awake = () => {
+      if (!settingsStore.get().runAwake || document.visibilityState !== 'visible') return
+      release()
+      void keepAwake().then((r) => (gone ? r() : (release = r)))
+    }
+    awake()
+    document.addEventListener('visibilitychange', awake)
     return () => {
+      gone = true
       stop()
+      release()
+      document.removeEventListener('visibilitychange', awake)
       if (g.fixes) void setRunGps(start, g)
     }
     // alleen opnieuw bij een andere run of GPS aan/uit (de run zelf verandert bij elke save)
@@ -78,6 +93,7 @@ export default function Runs() {
   const nav = useNavigate()
   const day = runStore.use()
   const gpsOn = gpsPref.use()
+  const awakeOn = settingsStore.use().runAwake
   const sessions = useKind('session')
   const [now, setNow] = useState(Date.now())
   useEffect(() => {
@@ -202,7 +218,11 @@ export default function Runs() {
           on={gpsOn}
           onChange={(v) => void setGpsPref(v)}
           label="GPS tijdens je run"
-          sub="Topsnelheid en hoogtemeters. Alleen met de app open en je scherm aan; blijft op je telefoon."
+          sub={
+            awakeOn
+              ? 'Topsnelheid en hoogtemeters. Je scherm blijft aan tijdens een run; blijft op je telefoon.'
+              : 'Topsnelheid en hoogtemeters. Alleen met de app open en je scherm aan (in Instellingen kan het scherm aan blijven); blijft op je telefoon.'
+          }
         />
       </List>
 
